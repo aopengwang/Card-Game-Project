@@ -294,6 +294,7 @@ def test_http_and_websocket_end_to_end():
         assert content["cards"]["strike"]["title"] == "Strike"
         assert any(h["id"] == "wei_lie" for h in content["heroes"])
         assert client.get("/").status_code == 200
+        assert client.get("/debug").status_code == 200
 
         host = client.post("/api/rooms", json={"name": "Host"}).json()
         code = host["code"]
@@ -322,3 +323,15 @@ def test_http_and_websocket_end_to_end():
                     result = msg["view"]["result"]
                     break
             assert result is not None
+
+
+def test_serves_built_client_when_present(tmp_path):
+    (tmp_path / "index.html").write_text("<html>built client</html>")
+    (tmp_path / "art").mkdir()
+    app = create_app(Settings(**FAST), client_dist=tmp_path)
+    with TestClient(app) as client:
+        assert "built client" in client.get("/").text
+        assert "built client" in client.get("/?room=ABCDE").text
+        assert client.get("/art/cards/strike.png").status_code == 404  # missing art -> client fallback
+        assert client.get("/api/content").status_code == 200  # API still wins over the mount
+        assert "Cardgame" in client.get("/debug").text

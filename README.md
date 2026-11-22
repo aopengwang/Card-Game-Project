@@ -12,8 +12,22 @@ server/            Python 3.11+
   tests/           pytest suite (unit rules + hundreds of bot games)
   net/             FastAPI app: rooms, websocket protocol, static test client
   sim.py           watch a bot game in the terminal
-client/            React + TS (milestone 6)
+client/            React 19 + TypeScript + Vite
+  src/selection.ts what's clickable / when an answer is complete (pure, unit-tested)
+  src/net.ts       websocket store: reconnects, session token in localStorage
+  src/components/  Table (arena, seats, hand, action bar), hero pick, lobby, log
+  public/art/      drop card/hero PNGs here (see README there)
 ```
+
+## Client
+```powershell
+cd client
+npm install
+npm run build     # -> client/dist, served by the Python server at "/"
+npm test          # unit tests
+npm run dev       # live-reload dev server on :5173 (proxies to the Python server on :8000)
+```
+Without a build, "/" falls back to the plain test client, which is always at `/debug`.
 
 ## Dev
 ```powershell
@@ -26,6 +40,7 @@ python -m venv .venv
 
 ## Run the server and play
 ```powershell
+cd client; npm install; npm run build; cd ..   # once, and after client changes
 cd server
 .\.venv\Scripts\python -m uvicorn net.app:app --host 0.0.0.0 --port 8000
 ```
@@ -67,6 +82,6 @@ Tuning (env vars, seconds): `SGS_PLAY_TIMEOUT` (90), `SGS_RESPONSE_TIMEOUT` (20)
 3. [x] Equipment + distance modifiers, conversions ("use X as a Strike"), full 108-card deck
 4. [x] Skill system + first original heroes (13 historical figures with original skills, hero draft)
 5. [x] FastAPI WebSocket server: rooms, invite codes, timeouts, reconnect, AFK bot takeover
-   (+ a plain-HTML test client at `/`)
-6. [ ] React client
+   (+ a plain-HTML test client at `/debug`)
+6. [x] React client: table layout, hero draft, targeting, timers, animations, art slots, mobile
 7. [ ] Better bots, expansions, replays

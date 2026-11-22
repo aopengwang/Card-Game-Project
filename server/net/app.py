@@ -16,6 +16,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from content.names import content_info
@@ -24,6 +25,7 @@ from content.standard import STANDARD
 from .room import RoomError, RoomManager, Settings
 
 STATIC = Path(__file__).parent / "static"
+CLIENT_DIST = Path(__file__).resolve().parents[2] / "client" / "dist"
 
 
 def settings_from_env() -> Settings:
@@ -42,14 +44,14 @@ class NameBody(BaseModel):
     name: str = ""
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(settings: Settings | None = None, client_dist: Path = CLIENT_DIST) -> FastAPI:
     app = FastAPI(title="Cardgame server")
     manager = RoomManager(settings or settings_from_env())
     app.state.rooms = manager
     content = content_info(STANDARD)
 
-    @app.get("/")
-    async def index() -> FileResponse:
+    @app.get("/debug")
+    async def debug_client() -> FileResponse:
         return FileResponse(STATIC / "index.html")
 
     @app.get("/api/content")
@@ -105,6 +107,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             pass
         finally:
             await room.disconnect(member, conn)
+
+    # The real client (client/dist from `npm run build`) at "/"; without a build, the
+    # plain test client stands in. Mounted last so /api and /ws routes win.
+    if (client_dist / "index.html").exists():
+        app.mount("/", StaticFiles(directory=client_dist, html=True), name="client")
+    else:
+
+        @app.get("/")
+        async def index() -> FileResponse:
+            return FileResponse(STATIC / "index.html")
 
     return app
 
