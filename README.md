@@ -1,0 +1,72 @@
+# Cardgame
+
+An online hidden-role card game (Lord / Loyalist / Rebel / Spy) inspired by 三国杀,
+playable with friends from a browser link.
+
+## Layout
+```
+server/            Python 3.11+
+  engine/          pure rules engine: no I/O, seeded RNG, generator-based prompts
+  content/         card definitions + deck (standard ruleset)
+  bots/            simple rule-based bot (tests, empty seats)
+  tests/           pytest suite (unit rules + hundreds of bot games)
+  net/             FastAPI app: rooms, websocket protocol, static test client
+  sim.py           watch a bot game in the terminal
+client/            React + TS (milestone 6)
+```
+
+## Dev
+```powershell
+cd server
+python -m venv .venv
+.\.venv\Scripts\python -m pip install fastapi "uvicorn[standard]" pytest httpx
+.\.venv\Scripts\python -m pytest -q
+.\.venv\Scripts\python sim.py --players 5 --seed 7
+```
+
+## Run the server and play
+```powershell
+cd server
+.\.venv\Scripts\python -m uvicorn net.app:app --host 0.0.0.0 --port 8000
+```
+Open http://localhost:8000, create a room, and send friends the invite link
+(`/?room=CODE`). The host can add bots and start with 4-8 players. Refreshing or
+reconnecting keeps your seat (a bot plays for you while you're gone).
+
+To let friends outside your network join, either:
+- **Tailscale**: everyone installs Tailscale and joins your tailnet; share
+  `http://<your-tailscale-ip>:8000`. Nothing is exposed to the public internet.
+- **Cloudflare Tunnel**: `cloudflared tunnel --url http://localhost:8000` prints a
+  public `https://….trycloudflare.com` URL (websockets work through it).
+
+Tuning (env vars, seconds): `SGS_PLAY_TIMEOUT` (90), `SGS_RESPONSE_TIMEOUT` (20),
+`SGS_BOT_DELAY` (0.6). Rooms live in memory; restarting the server ends all games.
+
+## How the engine works
+- Every action that might need a decision is a generator. It `yield`s a `Request`
+  (`PlayRequest`, `RespondRequest`, `DiscardRequest`) and gets the answer via `send()`.
+  Invalid answers are re-asked with `req.error` set.
+- `Game.run()` plays a whole game and returns a `GameResult`.
+- Skills hook into `Event`s (damage, card used, phase start, ...) via `engine.Skill`.
+  Equipment subclasses `engine.EquipDef`: static modifiers (range, horses) plus an
+  optional `skill`, `view_as` conversion, or `assist` (armor that provides a Dodge).
+- Conversions (`engine.ViewAs`) let cards be used *as* another card; the engine builds a
+  virtual card (negative id) and moves the physical `subcards`.
+- Heroes (`content/heroes.py`) are a name, kingdom, HP, gender and a tuple of skills.
+  Skill kinds: `Skill` (triggered), `ViewAs` (conversion), `ActiveSkill` (play phase),
+  all sharing `SkillBase` modifiers (range, distance, hand limit, targeting) and flags
+  (`locked`, `lord`, `limited`, `awakening`, `per_turn`). A skill's docstring is its
+  rules text shown to players. Heroes use historical figures with our own skill designs.
+- `new_game(n, seed, draft=True)` for real games; tests pass `heroes=[...]` per seat.
+- `engine.view.view_for(game, seat)` / `log_for(...)` are the only things a client
+  should ever see (hidden hands/roles are filtered out).
+
+## Milestones
+1. [x] Engine core: zones, deck, phases, Strike/Dodge/Peach, roles, dying/death, win checks
+2. [x] Tricks (incl. Nullify chains), judgments, delayed tricks (Borrowed Sword waits for weapons)
+3. [x] Equipment + distance modifiers, conversions ("use X as a Strike"), full 108-card deck
+4. [x] Skill system + first original heroes (13 historical figures with original skills, hero draft)
+5. [x] FastAPI WebSocket server: rooms, invite codes, timeouts, reconnect, AFK bot takeover
+   (+ a plain-HTML test client at `/`)
+6. [ ] React client
+7. [ ] Better bots, expansions, replays

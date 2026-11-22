@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cardgame Table</title>
+<style>
+  :root {
+    --bg: #f4f1ea; --panel: #fffdf8; --ink: #222; --muted: #6b6b6b; --line: #d9d3c7;
+    --accent: #9b2c2c; --accent-ink: #fff; --sel: #f3c969; --ok: #2f6f3e; --red: #c0392b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #17161a; --panel: #222127; --ink: #eee; --muted: #9a98a3; --line: #38363f;
+            --accent: #d0574f; --sel: #8a6d1f; --ok: #6fbf7f; --red: #ef6f61; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: var(--bg); color: var(--ink); }
+  main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 20px; margin: 0 0 12px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+  button { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line);
+           background: var(--panel); color: var(--ink); cursor: pointer; margin: 2px; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button:disabled { opacity: .45; cursor: default; }
+  input { font: inherit; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+  .muted { color: var(--muted); }
+  .err { color: var(--red); }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .players { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+  .seat { border: 1px solid var(--line); border-radius: 8px; padding: 8px; background: var(--panel); }
+  .seat.current { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .seat.dead { opacity: .5; }
+  .seat.pickable { cursor: pointer; outline: 2px dashed var(--accent); }
+  .seat.picked { background: var(--sel); }
+  .hp { color: var(--red); letter-spacing: 1px; }
+  .card { display: inline-block; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; margin: 2px;
+          background: var(--panel); cursor: default; user-select: none; }
+  .card.red .suit { color: var(--red); }
+  .card.usable { cursor: pointer; border-color: var(--accent); }
+  .card.picked { background: var(--sel); }
+  .small { font-size: 12px; }
+  #log { height: 260px; overflow-y: auto; font-size: 13px; white-space: pre-wrap; }
+  .layout { display: grid; grid-template-columns: 1fr 340px; gap: 12px; }
+  @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+  .hero { border: 1px solid var(--line); border-radius: 8px; padding: 8px; margin: 4px 0; }
+  .tag { font-size: 11px; border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; margin-left: 4px; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Cardgame <span class="muted small" id="status"></span></h1>
+
+  <section id="home" class="panel">
+    <div class="row">
+      <input id="name" placeholder="Your name" maxlength="20">
+      <button class="primary" id="create">Create room</button>
+      <span class="muted">or</span>
+      <input id="code" placeholder="Room code" maxlength="5" size="7">
+      <button id="join">Join</button>
+    </div>
+    <p class="err" id="homeErr"></p>
+  </section>
+
+  <section id="lobby" class="panel hidden"></section>
+
+  <section id="game" class="hidden">
+    <div class="players" id="players"></div>
+    <div class="layout" style="margin-top:12px">
+      <div>
+        <div class="panel" id="prompt"></div>
+        <div class="panel"><b>Your hand</b> <span class="muted small" id="handInfo"></span><div id="hand"></div></div>
+      </div>
+      <div class="panel"><b>Log</b><div id="log"></div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const SUITS = { spade: "♠", heart: "♥", club: "♣", diamond: "♦", none: "" };
+const RANKS = { 0: "", 1: "A", 11: "J", 12: "Q", 13: "K" };
+
+let content = { cards: {}, heroes: [] };
+let session = null;          // {code, token}
+let ws = null, room = null, view = null, waiting = null;
+let request = null;          // {id, request, deadline}
+let sel = { cards: [], targets: [], mode: null }; // mode: {card_id} | {skill} | null
+let logLines = [];
+let reconnectDelay = 500;
+
+// ---------- tiny DOM helper (textContent only: never innerHTML with player data)
+function h(tag, attrs = {}, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") el.className = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (k === "disabled") el.disabled = !!v;
+    else el.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid instanceof Node ? kid : String(kid));
+  return el;
+}
+
+// ---------- content helpers
+const title = (name) => (content.cards[name] && content.cards[name].title) || name;
+const hero = (id) => content.heroes.find((x) => x.id === id);
+const pname = (seat) => (room && room.members[seat] ? room.members[seat].name : "P" + seat);
+function cardText(c) {
+  if (!c) return "?";
+  if (c.virtual) return `${title(c.name)} (${c.color})`;
+  return `${title(c.name)} ${SUITS[c.suit]}${RANKS[c.rank] ?? c.rank}`;
+}
+function findCard(id) {
+  if (!view) return null;
+  const pools = [view.hand, view.processing, ...view.players.flatMap((p) => [p.equips, p.judge])];
+  for (const pool of pools) for (const c of pool) if (c.id === id) return c;
+  return null;
+}
+function cardEl(c, opts = {}) {
+  const red = c && (c.suit === "heart" || c.suit === "diamond" || c.color === "red");
+  const el = h("span", { class: "card" + (red ? " red" : "") + (opts.usable ? " usable" : "") + (opts.picked ? " picked" : ""),
+                         title: (content.cards[c?.name] || {}).text || "" },
+    title(c?.name), " ", h("span", { class: "suit" }, (SUITS[c?.suit] || "") + (RANKS[c?.rank] ?? c?.rank ?? "")));
+  if (opts.onclick) el.addEventListener("click", opts.onclick);
+  return el;
+}
+
+// ---------- session / connection
+function saveSession(s) { session = s; try { localStorage.setItem("cardgame_session", JSON.stringify(s)); } catch {} }
+function loadSession() { try { return JSON.parse(localStorage.getItem("cardgame_session")); } catch { return null; } }
+function clearSession() { session = null; try { localStorage.removeItem("cardgame_session"); } catch {} }
+
+async function api(path, body) {
+  const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.detail || "request failed");
+  return data;
+}
+
+function connect() {
+  if (!session) return;
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  ws = new WebSocket(`${proto}://${location.host}/ws/${session.code}?token=${encodeURIComponent(session.token)}`);
+  $("status").textContent = "connecting…";
+  ws.onopen = () => { reconnectDelay = 500; $("status").textContent = "room " + session.code; };
+  ws.onmessage = (ev) => onMessage(JSON.parse(ev.data));
+  ws.onclose = () => {
+    if (!session) return;
+    $("status").textContent = "disconnected, retrying…";
+    setTimeout(connect, reconnectDelay);
+    reconnectDelay = Math.min(reconnectDelay * 2, 8000);
+  };
+}
+const send = (msg) => ws && ws.readyState === 1 && ws.send(JSON.stringify(msg));
+
+function onMessage(m) {
+  switch (m.type) {
+    case "room": room = m; logLines.length && room.status === "lobby" && (logLines = []); render(); break;
+    case "state": view = m.view; waiting = m.waiting; render(); break;
+    case "log":
+      if (m.start === 0) logLines = [];
+      for (const e of m.entries) { const line = describe(e); if (line) logLines.push(line); }
+      renderLog(); break;
+    case "request":
+      request = { id: m.id, request: m.request, deadline: Date.now() + m.timeout * 1000 };
+      sel = { cards: [], targets: [], mode: null }; render(); break;
+    case "timeout": if (request && request.id === m.id) { request = null; render(); } break;
+    case "error":
+      if (m.fatal) { clearSession(); ws.onclose = null; showHome(m.message); }
+      else flash(m.message);
+      break;
+    case "kicked": clearSession(); showHome("You were removed from the room."); break;
+  }
+}
+
+function showHome(err = "") {
+  $("home").classList.remove("hidden"); $("lobby").classList.add("hidden"); $("game").classList.add("hidden");
+  $("homeErr").textContent = err; $("status").textContent = "";
+}
+function flash(msg) { const p = $("prompt"); p.prepend(h("div", { class: "err" }, msg)); }
+
+$("create").onclick = async () => {
+  try { saveSession(await api("/api/rooms", { name: $("name").value })); connect(); }
+  catch (e) { $("homeErr").textContent = e.message; }
+};
+$("join").onclick = async () => {
+  const code = $("code").value.trim().toUpperCase();
+  try { saveSession(await api(`/api/rooms/${code}/join`, { name: $("name").value })); connect(); }
+  catch (e) { $("homeErr").textContent = e.message; }
+};
+
+// ---------- rendering
+function render() {
+  if (!room) return;
+  $("home").classList.add("hidden");
+  const inGame = room.status !== "lobby" && view;
+  $("lobby").classList.toggle("hidden", !!inGame && room.status === "playing");
+  $("game").classList.toggle("hidden", !inGame);
+  renderLobby();
+  if (inGame) { renderPlayers(); renderHand(); renderPrompt(); }
+}
+
+function renderLobby() {
+  const L = $("lobby"); L.replaceChildren();
+  const isHost = room.you === room.host;
+  const link = `${location.origin}/?room=${room.code}`;
+  L.append(h("div", { class: "row" }, h("b", {}, "Room " + room.code),
+    h("button", { onclick: () => navigator.clipboard && navigator.clipboard.writeText(link) }, "Copy invite link"),
+    h("span", { class: "muted small" }, link)));
+  const list = h("div", {});
+  room.members.forEach((m, i) => list.append(h("div", { class: "row" },
+    `${i + 1}. ${m.name}`, m.bot ? h("span", { class: "tag" }, "bot") : null,
+    i === room.host ? h("span", { class: "tag" }, "host") : null,
+    !m.connected ? h("span", { class: "tag" }, "offline") : null,
+    i === room.you ? h("span", { class: "tag" }, "you") : null,
+    isHost && i !== room.host && room.status !== "playing" ? h("button", { onclick: () => send({ type: "remove", seat: i }) }, "Remove") : null)));
+  L.append(list);
+  if (isHost && room.status !== "playing") {
+    const n = room.members.length;
+    L.append(h("div", { class: "row" },
+      h("button", { onclick: () => send({ type: "add_bot" }), disabled: n >= room.max_players }, "Add bot"),
+      h("button", { class: "primary", onclick: () => send({ type: "start" }), disabled: n < room.min_players || n > room.max_players },
+        room.status === "finished" ? "Rematch" : "Start game"),
+      h("span", { class: "muted small" }, `${n} players (need ${room.min_players}-${room.max_players})`)));
+  } else if (room.status === "lobby") {
+    L.append(h("p", { class: "muted" }, "Waiting for the host to start…"));
+  }
+  L.append(h("button", { onclick: () => { clearSession(); if (ws) { ws.onclose = null; ws.close(); } room = view = null; showHome(); } }, "Leave"));
+}
+
+function seatPickable(seat) {
+  const c = currentChoice();
+  return c && c.candidates && c.candidates.includes(seat);
+}
+
+function renderPlayers() {
+  const P = $("players"); P.replaceChildren();
+  for (const p of view.players) {
+    const hd = hero(p.hero);
+    const pick = seatPickable(p.seat) || (request && request.request.kind === "choose_player" && request.request.options.includes(p.seat));
+    const cls = "seat" + (p.seat === view.current ? " current" : "") + (p.alive ? "" : " dead") +
+      (pick ? " pickable" : "") + (sel.targets.includes(p.seat) ? " picked" : "");
+    const el = h("div", { class: cls },
+      h("div", { class: "row" }, h("b", {}, pname(p.seat)), p.seat === view.you ? h("span", { class: "tag" }, "you") : null,
+        p.role ? h("span", { class: "tag" }, p.role) : null,
+        p.distance != null ? h("span", { class: "muted small" }, "dist " + p.distance) : null),
+      h("div", {}, hd ? `${hd.name} · ${hd.kingdom}` : p.hero, " ",
+        h("span", { class: "hp" }, "♥".repeat(Math.max(p.hp, 0)) + "♡".repeat(Math.max(p.max_hp - p.hp, 0)))),
+      h("div", { class: "small muted" }, `hand ${p.hand_count}`),
+      p.equips.length ? h("div", {}, p.equips.map((c) => cardEl(c))) : null,
+      p.judge.length ? h("div", { class: "small" }, "judging: ", p.judge.map((c) => cardEl(c))) : null,
+      h("div", { class: "small" }, p.skills.map((s) => h("span", { title: s.text, class: "tag" }, skillTitle(s.id))),
+        p.spent.length ? h("span", { class: "muted" }, " spent: " + p.spent.join(", ")) : null));
+    if (pick) el.addEventListener("click", () => clickSeat(p.seat));
+    P.append(el);
+  }
+}
+const skillTitle = (id) => id.replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+
+function renderHand() {
+  const H = $("hand"); H.replaceChildren();
+  $("handInfo").textContent = `(attack range ${view.attack_range})`;
+  for (const c of view.hand) {
+    const usable = cardUsable(c.id);
+    H.append(cardEl(c, { usable, picked: sel.cards.includes(c.id), onclick: usable ? () => clickCard(c.id) : null }));
+  }
+}
+
+function renderLog() {
+  const L = $("log"); L.textContent = logLines.join("\n"); L.scrollTop = L.scrollHeight;
+}
+
+// ---------- prompt / request handling
+const R = () => request && request.request;
+
+function currentChoice() {
+  // The option whose targets are being picked right now (play phase).
+  const r = R(); if (!r || r.kind !== "play" || !sel.mode) return null;
+  if (sel.mode.card_id != null) return r.options.find((o) => o.card_id === sel.mode.card_id);
+  return [...r.conversions, ...r.skills].find((o) => o.skill === sel.mode.skill);
+}
+
+function cardUsable(id) {
+  const r = R(); if (!r) return false;
+  if (r.kind === "discard") return r.options.includes(id);
+  if (r.kind === "respond") return r.options.includes(id) || (sel.mode && sel.mode.skill && convFor(r).cards.includes(id));
+  if (r.kind === "play") {
+    if (sel.mode && sel.mode.skill) return currentChoice().cards.includes(id);
+    return r.options.some((o) => o.card_id === id);
+  }
+  return false;
+}
+const convFor = (r) => r.conversions.find((c) => c.skill === sel.mode.skill);
+
+function clickCard(id) {
+  const r = R();
+  if (r.kind === "respond" && !(sel.mode && sel.mode.skill)) return answer(id);
+  if (r.kind === "play" && !(sel.mode && sel.mode.skill)) {
+    sel = { cards: [], targets: [], mode: { card_id: id } };
+    const o = currentChoice();
+    if (o.target_count === 0) return answer({ card_id: id, targets: [] });
+  } else {
+    sel.cards = sel.cards.includes(id) ? sel.cards.filter((x) => x !== id) : [...sel.cards, id];
+  }
+  render();
+}
+
+function clickSeat(seat) {
+  const r = R();
+  if (r.kind === "choose_player") return answer(seat);
+  sel.targets = sel.targets.includes(seat) ? sel.targets.filter((x) => x !== seat) : [...sel.targets, seat];
+  render();
+}
+
+function answer(value) {
+  send({ type: "answer", id: request.id, answer: value });
+  request = null; sel = { cards: [], targets: [], mode: null }; render();
+}
+
+function reasonText(r) {
+  const about = r.about != null ? ` (${pname(r.about)})` : "";
+  return `${skillTitle(r.reason || r.kind)}${about}`;
+}
+
+function renderPrompt() {
+  const P = $("prompt"); P.replaceChildren();
+  if (view.result) {
+    P.append(h("b", {}, `Game over: ${view.result.side.toUpperCase()} side wins (${view.result.winners.map(pname).join(", ")})`));
+    return;
+  }
+  const r = R();
+  if (!r) {
+    const w = waiting;
+    P.append(h("span", { class: "muted" }, w && w.seat != null ? `Waiting for ${pname(w.seat)} (${w.kind})…` : "Waiting for other players…"));
+    return;
+  }
+  const secs = Math.max(0, Math.round((request.deadline - Date.now()) / 1000));
+  P.append(h("div", { class: "muted small" }, `${secs}s left`));
+  if (r.error) P.append(h("div", { class: "err" }, r.error));
+
+  switch (r.kind) {
+    case "choose_hero":
+      P.append(h("b", {}, "Choose your hero"));
+      for (const id of r.options) {
+        const hd = hero(id);
+        P.append(h("div", { class: "hero" },
+          h("div", { class: "row" }, h("b", {}, hd.name), `${hd.kingdom} · ${hd.max_hp} HP · ${hd.gender}`,
+            h("button", { class: "primary", onclick: () => answer(id) }, "Pick")),
+          hd.skills.map((s) => h("div", { class: "small" }, h("b", {}, s.title), s.tags.map((t) => h("span", { class: "tag" }, t)), " ", s.text))));
+      }
+      break;
+    case "play": {
+      P.append(h("b", {}, "Your play phase"), " ",
+        h("span", { class: "muted small" }, "click a highlighted card, or use a skill"));
+      const skills = [...r.conversions.map((c) => ({ ...c, label: `${skillTitle(c.skill)} → ${title(c.as_name)}` })),
+                      ...r.skills.map((s) => ({ ...s, label: skillTitle(s.skill) }))];
+      if (skills.length) P.append(h("div", {}, skills.map((s) => h("button", {
+        class: sel.mode && sel.mode.skill === s.skill ? "primary" : "",
+        onclick: () => { sel = { cards: [], targets: [], mode: { skill: s.skill } }; render(); } }, s.label))));
+      const o = currentChoice();
+      if (o) {
+        const minT = o.min_targets ?? o.target_count, maxT = o.target_count;
+        const nCards = sel.mode.skill ? (o.count ?? o.min_cards) : 0;
+        const maxCards = sel.mode.skill ? (o.count ?? o.max_cards) : 0;
+        const cardsOk = !sel.mode.skill || (sel.cards.length >= nCards && sel.cards.length <= maxCards);
+        const tOk = sel.targets.length >= minT && sel.targets.length <= maxT;
+        P.append(h("div", { class: "small" },
+          sel.mode.skill ? `cards: ${sel.cards.length}/${nCards === maxCards ? nCards : nCards + "-" + maxCards}  ` : "",
+          maxT ? `targets: ${sel.targets.length}/${minT === maxT ? maxT : minT + "-" + maxT} (click players)` : ""));
+        P.append(h("button", { class: "primary", disabled: !(cardsOk && tOk), onclick: () => answer(
+          sel.mode.skill ? { skill: sel.mode.skill, cards: sel.cards, targets: sel.targets }
+                         : { card_id: sel.mode.card_id, targets: sel.targets }) }, "Use"),
+          h("button", { onclick: () => { sel = { cards: [], targets: [], mode: null }; render(); } }, "Cancel"));
+      }
+      P.append(h("div", {}, h("button", { onclick: () => answer(null) }, "End play phase")));
+      break;
+    }
+    case "respond": {
+      const ctx = r.context && r.context.card ? ` against ${cardText(r.context.card)} on ${pname(r.context.target)}` : "";
+      P.append(h("b", {}, `Play a ${title(r.card_name)}?`), " ", h("span", { class: "muted" }, reasonText(r) + ctx));
+      P.append(h("div", { class: "small muted" }, "click a highlighted card in your hand"));
+      for (const c of r.conversions) {
+        if (sel.mode && sel.mode.skill === c.skill) {
+          P.append(h("button", { class: "primary", disabled: sel.cards.length !== c.count,
+            onclick: () => answer({ skill: c.skill, cards: sel.cards }) }, `Use ${sel.cards.length}/${c.count} cards via ${skillTitle(c.skill)}`));
+        } else {
+          P.append(h("button", { onclick: () => { sel = { cards: [], targets: [], mode: { skill: c.skill } }; render(); } }, `Use ${skillTitle(c.skill)}`));
+        }
+      }
+      P.append(h("button", { onclick: () => answer(null) }, "Don't play"));
+      break;
+    }
+    case "discard":
+      P.append(h("b", {}, `Discard ${r.count} card(s)`), " ", h("span", { class: "muted" }, reasonText(r)));
+      P.append(h("div", {}, h("button", { class: "primary", disabled: sel.cards.length !== r.count, onclick: () => answer(sel.cards) },
+        `Discard (${sel.cards.length}/${r.count})`)));
+      break;
+    case "choose_card":
+      P.append(h("b", {}, "Choose a card"), " ", h("span", { class: "muted" }, reasonText(r)));
+      P.append(h("div", {}, r.options.map((id) => cardEl(findCard(id) || { name: "card #" + id }, { usable: true, onclick: () => answer(id) }))));
+      if (r.hidden_count) P.append(h("button", { onclick: () => answer("hand") }, `A random hand card (${r.hidden_count})`));
+      if (r.optional) P.append(h("button", { onclick: () => answer(null) }, "None"));
+      break;
+    case "confirm":
+      P.append(h("b", {}, `Use ${skillTitle(r.reason)}?`), " ", h("span", { class: "muted" }, r.about != null ? pname(r.about) : ""));
+      if (r.context && r.context.card) P.append(h("div", { class: "small" }, `judgment: ${cardText(r.context.card)} (${r.context.would_hit ? "would hit" : "would miss"})`));
+      P.append(h("div", {}, h("button", { class: "primary", onclick: () => answer(true) }, "Yes"), h("button", { onclick: () => answer(false) }, "No")));
+      break;
+    case "choose_player":
+      P.append(h("b", {}, "Choose a player"), " ", h("span", { class: "muted" }, reasonText(r)));
+      P.append(h("div", {}, r.options.map((s) => h("button", { onclick: () => answer(s) }, pname(s)))));
+      break;
+    case "choose_option":
+      P.append(h("b", {}, skillTitle(r.reason)), " ", h("span", { class: "muted" }, r.about != null ? `from ${pname(r.about)}` : ""));
+      P.append(h("div", {}, r.choices.map((c) => h("button", { onclick: () => answer(c) }, skillTitle(c)))));
+      break;
+    default:
+      P.append(h("pre", {}, JSON.stringify(r, null, 1)));
+  }
+}
+setInterval(() => { if (request) renderPrompt(); }, 1000);
+
+// ---------- log text
+function describe(e) {
+  const P = (s) => (s == null ? "?" : pname(s));
+  switch (e.type) {
+    case "heroes_revealed": return "Heroes: " + e.heroes.map((id, i) => `${P(i)}=${(hero(id) || {}).name || id}`).join(", ");
+    case "game_start": return `Game start. ${P(e.lord)} is the Lord.`;
+    case "turn_start": return `── Turn ${e.turn}: ${P(e.seat)} ──`;
+    case "draw": return `${P(e.seat)} draws ${e.count}` + (e.cards ? ": " + e.cards.map(cardText).join(", ") : "");
+    case "use": return `${P(e.seat)} uses ${cardText(e.card)}` + (e.targets.length ? " → " + e.targets.map(P).join(", ") : "");
+    case "respond": return `${P(e.seat)} plays ${cardText(e.card)}` + (e.via ? ` (${skillTitle(e.via)})` : "");
+    case "skill": return `${P(e.seat)} [${skillTitle(e.skill)}]` + (e.targets && e.targets.length ? " → " + e.targets.map(P).join(", ") : "");
+    case "equip": return `${P(e.seat)} equips ${cardText(e.card)}`;
+    case "damage": return `${P(e.target)} takes ${e.amount}${e.nature !== "normal" ? " " + e.nature : ""} damage` + (e.source != null ? ` from ${P(e.source)}` : "") + ` (HP ${e.hp})`;
+    case "recover": return `${P(e.seat)} recovers ${e.amount} (HP ${e.hp})`;
+    case "dying": return `${P(e.seat)} is dying!`;
+    case "death": return `${P(e.seat)} dies — was ${e.role.toUpperCase()}`;
+    case "discard": return `${P(e.seat)} discards ${e.cards.map(cardText).join(", ")}`;
+    case "judge_result": return `  judgment for ${P(e.seat)}: ${cardText(e.card)} → ${e.hit ? "HIT" : "miss"}`;
+    case "nullify": return `  nullified → ${e.cancelled ? "cancelled" : "back on"}`;
+    case "take": return `${P(e.seat)} takes ${e.card ? cardText(e.card) : e.cards ? e.cards.map(cardText).join(", ") : "a card"}` + (e.target != null ? ` from ${P(e.target)}` : "");
+    case "give": return `${P(e.seat)} gives ${e.card ? cardText(e.card) : "a card"} to ${P(e.target)}`;
+    case "phase_skipped": return `${P(e.seat)} skips their ${e.phase} phase`;
+    case "game_over": return `GAME OVER — ${e.side.toUpperCase()} wins`;
+    case "reveal": return "Revealed: " + e.cards.map(cardText).join(", ");
+    case "rejudge": return `  ${P(e.seat)} rejudges → ${cardText(e.card)}`;
+    default: return null;
+  }
+}
+
+// ---------- boot
+(async () => {
+  try { content = await (await fetch("/api/content")).json(); } catch {}
+  const params = new URLSearchParams(location.search);
+  if (params.get("room")) $("code").value = params.get("room");
+  const s = loadSession();
+  if (s && (!params.get("room") || params.get("room").toUpperCase() === s.code)) { session = s; connect(); }
+  else showHome();
+})();
+</script>
+</body>
+</html>
