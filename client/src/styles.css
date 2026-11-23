@@ -108,7 +108,12 @@ input {
 .home-actions { display: flex; flex-direction: column; gap: 10px; }
 .join-row { display: flex; gap: 8px; }
 .code-input { width: 110px; text-transform: uppercase; letter-spacing: 0.2em; text-align: center; }
-.lobby-head { display: flex; align-items: center; gap: 10px; }
+.card-head { display: flex; align-items: center; gap: 10px; }
+.card-head h1 { flex: 1; }
+.lang-toggle { font-size: 12px; padding: 3px 10px; border-radius: 999px; }
+:lang(zh-CN) body, :root:lang(zh-CN) {
+  font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+}
 .invite { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .invite code { background: var(--panel-2); padding: 4px 8px; border-radius: 6px; font-size: 12px; overflow-wrap: anywhere; }
 .members { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }

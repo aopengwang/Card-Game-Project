@@ -1,25 +1,19 @@
 import { useState } from "react";
-import { titleCase } from "../content";
+import { skillTitle, useContent } from "../content";
 import { recentPlays } from "../describe";
+import { joinList, memberName, t, tMaybe, useLang } from "../i18n";
 import { opponentOrder, seatPositions } from "../layout";
 import { leave, type NetState } from "../net";
 import { EMPTY, cardClickable, clickCard, clickSeat, seatClickable, type Selection } from "../selection";
 import { ActionBar } from "./ActionBar";
 import { CardView } from "./CardView";
+import { LangToggle } from "./LangToggle";
 import { GameOver, HeroPick, LogPanel } from "./Overlays";
 import { Seat } from "./Seat";
 
-const WAIT_LABEL: Record<string, string> = {
-  play: "to play",
-  discard: "to discard",
-  choose_hero: "to choose a hero",
-  choose_card: "to choose a card",
-  choose_player: "to choose a player",
-  choose_option: "to decide",
-  confirm: "to decide",
-};
-
 export function Table({ net }: { net: NetState }) {
+  useLang();
+  useContent();
   const { room, view, request, waiting, log } = net;
   const [selState, setSelState] = useState<{ id: number | null; sel: Selection }>({ id: null, sel: EMPTY });
   const [showLog, setShowLog] = useState(false);
@@ -29,9 +23,8 @@ export function Table({ net }: { net: NetState }) {
   const req = request?.req ?? null;
   const sel = request && selState.id === request.id ? selState.sel : EMPTY;
   const setSel = (s: Selection) => setSelState({ id: request?.id ?? null, sel: s });
-  const name = (seat: number | null | undefined) =>
-    seat == null ? "?" : seat === view.you ? "You" : room.members[seat]?.name ?? `Player ${seat + 1}`;
-  const nameOf = (seat: number) => room.members[seat]?.name ?? `Player ${seat + 1}`;
+  const nameOf = (seat: number) => memberName(room.members[seat], seat);
+  const name = (seat: number | null | undefined) => (seat == null ? "?" : seat === view.you ? t("name.you") : nameOf(seat));
 
   const n = view.players.length;
   const opponents = opponentOrder(view.you, n);
@@ -49,10 +42,10 @@ export function Table({ net }: { net: NetState }) {
   });
 
   const waitingText = view.result
-    ? "The game is over."
+    ? t("table.over")
     : waiting?.seat != null
-      ? `Waiting for ${name(waiting.seat)} ${WAIT_LABEL[waiting.kind] ?? ""}…`
-      : "Waiting for other players…";
+      ? t("table.waitingFor", { name: name(waiting.seat), what: tMaybe(`wait.${waiting.kind}`) ?? "" })
+      : t("table.waitingOthers");
 
   const plays = recentPlays(log);
   const resultKey = view.result ? log.length : null;
@@ -60,20 +53,19 @@ export function Table({ net }: { net: NetState }) {
   return (
     <div className="table-screen">
       <header className="topbar">
-        <span className="brand">Three Kingdoms Table</span>
-        <span className="pill">Room {room.code}</span>
-        <span className="pill">Turn {view.turn}</span>
+        <span className="brand">{t("app.title")}</span>
+        <span className="pill">{t("table.room", { code: room.code })}</span>
+        <span className="pill">{t("table.turn", { n: view.turn })}</span>
         {view.phase && (
-          <span className="pill">
-            {name(view.current)}: {view.phase} phase
-          </span>
+          <span className="pill">{t("table.phase", { name: name(view.current), phase: tMaybe(`phase.${view.phase}`) ?? view.phase })}</span>
         )}
-        {net.conn !== "open" && <span className="pill warn">reconnecting…</span>}
+        {net.conn !== "open" && <span className="pill warn">{t("conn.reconnecting")}</span>}
         <span className="spacer" />
+        <LangToggle />
         <button className="log-toggle" onClick={() => setShowLog(!showLog)}>
-          {showLog ? "Hide log" : "Log"}
+          {showLog ? t("table.hideLog") : t("table.log")}
         </button>
-        <button onClick={() => window.confirm("Leave this game? A bot will play your seat.") && leave()}>Leave</button>
+        <button onClick={() => window.confirm(t("table.leaveConfirm")) && leave()}>{t("table.leave")}</button>
       </header>
 
       <div className="table-main">
@@ -86,16 +78,18 @@ export function Table({ net }: { net: NetState }) {
           ))}
           <div className="center">
             <div className="piles">
-              <span className="pile" title="Draw pile">
-                Deck {view.draw_pile}
+              <span className="pile" title={t("table.drawPile")}>
+                {t("table.deck", { n: view.draw_pile })}
               </span>
-              <span className="pile" title="Discard pile">
-                Discard {view.discard_pile}
+              <span className="pile" title={t("table.discardPile")}>
+                {t("table.discard", { n: view.discard_pile })}
               </span>
             </div>
             <div className="plays">
               {plays.length === 0 && (
-                <span className="muted small">{view.current === view.you ? "Your turn" : `${name(view.current)}'s turn`}</span>
+                <span className="muted small">
+                  {view.current === view.you ? t("table.yourTurn") : t("table.theirTurn", { name: name(view.current) })}
+                </span>
               )}
               {plays.map((p) => (
                 <div key={p.key} className="play-slot">
@@ -108,7 +102,8 @@ export function Table({ net }: { net: NetState }) {
         </div>
 
         <aside className={`log-panel ${showLog ? "open" : ""}`}>
-          <LogPanel log={log} name={name} />
+          {/* Log lines are third-person sentences ("X draws 2"), so use real names there. */}
+          <LogPanel log={log} name={(seat) => (seat == null ? "?" : nameOf(seat))} />
         </aside>
       </div>
 
@@ -116,8 +111,8 @@ export function Table({ net }: { net: NetState }) {
         <Seat player={me} name={nameOf(view.you)} isYou {...seatProps(view.you)} offline={false} />
         <div className="dock-main">
           <ActionBar request={request} view={view} sel={sel} setSel={setSel} name={name} waitingText={waitingText} />
-          <div className="hand" aria-label="Your hand">
-            {view.hand.length === 0 && <span className="muted small">No cards in hand.</span>}
+          <div className="hand" aria-label={t("table.hand")}>
+            {view.hand.length === 0 && <span className="muted small">{t("table.noCards")}</span>}
             {view.hand.map((c) => {
               const clickable = cardClickable(req, sel, c.id);
               const selected = sel.cards.includes(c.id) || (sel.mode?.type === "card" && sel.mode.cardId === c.id);
@@ -134,8 +129,8 @@ export function Table({ net }: { net: NetState }) {
             })}
           </div>
           <div className="muted small">
-            Attack range {view.attack_range}
-            {me.skills.length > 0 && ` · Skills: ${me.skills.map((s) => titleCase(s.id)).join(", ")}`}
+            {t("table.range", { n: view.attack_range })}
+            {me.skills.length > 0 && ` · ${t("table.skills", { list: joinList(me.skills.map((s) => skillTitle(s.id))) })}`}
           </div>
         </div>
       </footer>
@@ -152,9 +147,9 @@ export function Table({ net }: { net: NetState }) {
 export function Toasts({ toasts }: { toasts: { id: number; text: string }[] }) {
   return (
     <div className="toasts" role="status">
-      {toasts.map((t) => (
-        <div key={t.id} className="toast">
-          {t.text}
+      {toasts.map((toast) => (
+        <div key={toast.id} className="toast">
+          {toast.text}
         </div>
       ))}
     </div>

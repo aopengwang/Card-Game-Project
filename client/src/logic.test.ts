@@ -1,5 +1,6 @@
-import { describe as group, expect, it } from "vitest";
+import { beforeEach, describe as group, expect, it } from "vitest";
 import { setContent } from "./content";
+import { _setLangForTests } from "./i18n";
 import { describe, recentPlays } from "./describe";
 import { opponentOrder, seatPositions } from "./layout";
 import { _reset, getState, onMessage } from "./net";
@@ -14,6 +15,8 @@ import {
   seatClickable,
 } from "./selection";
 import type { DiscardReq, PlayReq, RespondReq } from "./types";
+
+beforeEach(() => _setLangForTests("en")); // these tests check the English wording
 
 const play: PlayReq = {
   kind: "play",
@@ -120,7 +123,7 @@ group("layout", () => {
 });
 
 group("log text", () => {
-  setContent({ cards: { strike: { title: "Strike", type: "basic", text: "" } }, heroes: [] });
+  setContent({ cards: { strike: { title: "Strike", type: "basic", text: "" } }, heroes: [], skills: {} });
   const name = (s: number | null | undefined) => `P${s}`;
   const strike = { id: 1, name: "strike", suit: "spade" as const, rank: 7 };
 

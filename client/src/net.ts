@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { serverText, t } from "./i18n";
 import type { ActiveRequest, GameView, LogEntry, RoomInfo, Waiting } from "./types";
 
 export interface Session {
@@ -91,7 +92,7 @@ async function post(path: string, body: unknown): Promise<Session> {
     body: JSON.stringify(body),
   });
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data.detail || `request failed (${r.status})`);
+  if (!r.ok) throw new Error(data.detail ? serverText(data.detail) : t("err.requestFailed", { status: r.status }));
   return { code: data.code, token: data.token };
 }
 
@@ -190,15 +191,15 @@ export function onMessage(m: any): void {
     case "timeout":
       if (state.request?.id === m.id) {
         set({ request: null });
-        toast("Time's up: the default choice was made for you.");
+        toast(t("toast.timeout"));
       }
       break;
     case "error":
-      if (m.fatal) leave(m.message);
-      else toast(m.message);
+      if (m.fatal) leave(serverText(m.message));
+      else toast(serverText(m.message));
       break;
     case "kicked":
-      leave("You were removed from the room.");
+      leave(t("toast.kicked"));
       break;
   }
 }

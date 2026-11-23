@@ -532,3 +532,6 @@ HEROES: list[Hero] = [
 ]
 
 HERO_MAP: dict[str, Hero] = {h.id: h for h in HEROES}
+
+# Skills a hero can gain during play (not on any starting kit), listed for clients.
+GAINED_SKILLS = [SEIZE_POWER]

@@ -1,5 +1,6 @@
 // Pure selection logic for answering requests: what's clickable, what's selected,
 // when an answer is complete, and the JSON answer to send. No React here (unit-tested).
+import { t } from "./i18n";
 import type { GameRequest, PlayReq, RespondReq } from "./types";
 
 export type Mode = { type: "card"; cardId: number } | { type: "skill"; skill: string } | null;
@@ -161,16 +162,16 @@ export function buildAnswer(r: GameRequest, sel: Selection): unknown {
 /** Short instruction line for the action bar. */
 export function hint(r: GameRequest, sel: Selection): string {
   const s = spec(r, sel);
-  if (r.kind === "play" && !sel.mode) return "Pick a card or a skill, or end your play phase.";
+  if (r.kind === "play" && !sel.mode) return t("act.hintPlay");
   if (!s) return "";
   const parts: string[] = [];
   if (s.maxCards > 0) {
     const need = s.minCards === s.maxCards ? `${s.minCards}` : `${s.minCards}-${s.maxCards}`;
-    parts.push(`cards ${sel.cards.length}/${need}`);
+    parts.push(t("act.cards", { have: sel.cards.length, need }));
   }
   if (s.maxTargets > 0) {
     const need = s.minTargets === s.maxTargets ? `${s.maxTargets}` : `${s.minTargets}-${s.maxTargets}`;
-    parts.push(`targets ${sel.targets.length}/${need}`);
+    parts.push(t("act.targets", { have: sel.targets.length, need }));
   }
   return parts.join(" · ");
 }

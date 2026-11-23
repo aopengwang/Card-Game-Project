@@ -19,6 +19,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from content.i18n import LANGS
 from content.names import content_info
 from content.standard import STANDARD
 
@@ -48,15 +49,15 @@ def create_app(settings: Settings | None = None, client_dist: Path = CLIENT_DIST
     app = FastAPI(title="Cardgame server")
     manager = RoomManager(settings or settings_from_env())
     app.state.rooms = manager
-    content = content_info(STANDARD)
+    content = {lang: content_info(STANDARD, lang) for lang in LANGS}
 
     @app.get("/debug")
     async def debug_client() -> FileResponse:
         return FileResponse(STATIC / "index.html")
 
     @app.get("/api/content")
-    async def get_content() -> dict:
-        return content
+    async def get_content(lang: str = "en") -> dict:
+        return content.get(lang, content["en"])
 
     @app.post("/api/rooms")
     async def create_room(body: NameBody) -> dict:

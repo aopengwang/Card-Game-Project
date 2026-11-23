@@ -1,0 +1,546 @@
+// UI strings in English and Chinese. `zh` is typed against `en`, so adding an English
+// string without its Chinese version is a compile error (npm run build / typecheck).
+// Card / hero / skill names come from the server (/api/content?lang=..).
+import { useSyncExternalStore } from "react";
+
+export type Lang = "en" | "zh";
+export const LANGS: Lang[] = ["en", "zh"];
+export const LANG_LABEL: Record<Lang, string> = { en: "English", zh: "中文" };
+
+const en = {
+  // app / home
+  "app.title": "Three Kingdoms Table",
+  "app.connecting": "Connecting…",
+  "home.tagline": "A hidden-role card game for 4–8 players. Lord, Loyalists, Rebels and a Spy.",
+  "home.name": "Your name",
+  "home.namePlaceholder": "e.g. Jason",
+  "home.create": "Create a room",
+  "home.codePlaceholder": "CODE",
+  "home.codeLabel": "Room code",
+  "home.join": "Join",
+  // lobby
+  "lobby.room": "Room {code}",
+  "lobby.copy": "Copy invite link",
+  "lobby.copied": "Copied!",
+  "lobby.remove": "Remove",
+  "lobby.addBot": "Add bot",
+  "lobby.botOption": "{level} bot",
+  "lobby.botLevel": "Bot difficulty",
+  "lobby.start": "Start game",
+  "lobby.rematch": "Rematch",
+  "lobby.players": "{n}/{max} players",
+  "lobby.needMore": " (need at least {min})",
+  "lobby.waitHost": "Waiting for the host to start the game…",
+  "lobby.leave": "Leave room",
+  "level.easy": "Easy",
+  "level.hard": "Hard",
+  "levelHelp.easy": "Easy: plays legal moves, barely reads the table.",
+  "levelHelp.hard": "Hard: tracks who attacks and saves whom, plays its role, values its cards.",
+  "badge.bot": "bot",
+  "badge.levelBot": "{level} bot",
+  "badge.host": "host",
+  "badge.you": "you",
+  "badge.offline": "offline",
+  "conn.reconnecting": "reconnecting…",
+  // table
+  "table.room": "Room {code}",
+  "table.turn": "Turn {n}",
+  "table.phase": "{name}: {phase} phase",
+  "table.log": "Log",
+  "table.hideLog": "Hide log",
+  "table.leave": "Leave",
+  "table.leaveConfirm": "Leave this game? A bot will play your seat.",
+  "table.deck": "Deck {n}",
+  "table.discard": "Discard {n}",
+  "table.drawPile": "Draw pile",
+  "table.discardPile": "Discard pile",
+  "table.yourTurn": "Your turn",
+  "table.theirTurn": "{name}'s turn",
+  "table.over": "The game is over.",
+  "table.waitingFor": "Waiting for {name} {what}…",
+  "table.waitingOthers": "Waiting for other players…",
+  "table.noCards": "No cards in hand.",
+  "table.range": "Attack range {n}",
+  "table.skills": "Skills: {list}",
+  "table.hand": "Your hand",
+  "name.you": "You",
+  "name.player": "Player {n}",
+  "name.bot": "Bot {n}",
+  "wait.play": "to play",
+  "wait.discard": "to discard",
+  "wait.choose_hero": "to choose a hero",
+  "wait.choose_card": "to choose a card",
+  "wait.choose_player": "to choose a player",
+  "wait.choose_option": "to decide",
+  "wait.confirm": "to decide",
+  "phase.start": "start",
+  "phase.judge": "judgment",
+  "phase.draw": "draw",
+  "phase.play": "play",
+  "phase.discard": "discard",
+  "phase.end": "end",
+  // seats
+  "seat.choosing": "Choosing…",
+  "seat.hiddenRole": "Hidden role",
+  "seat.hp": "{hp} of {max} HP",
+  "seat.handCount": "Cards in hand",
+  "seat.distance": "Your distance to this player",
+  "seat.fallen": "Fallen",
+  "role.lord": "Lord",
+  "role.loyalist": "Loyalist",
+  "role.rebel": "Rebel",
+  "role.spy": "Spy",
+  "kingdom.wei": "Wei",
+  "kingdom.shu": "Shu",
+  "kingdom.wu": "Wu",
+  "kingdom.qun": "Qun",
+  "tag.locked": "locked",
+  "tag.lord": "lord",
+  "tag.limited": "limited",
+  "tag.awakening": "awakening",
+  "gender.male": "male",
+  "gender.female": "female",
+  "card.range": "range {n}",
+  // action bar
+  "act.playPhase": "Your turn: play phase",
+  "act.hintPlay": "Pick a card or a skill, or end your play phase.",
+  "act.hintRespond": "Pick the card in your hand, then Play.",
+  "act.cards": "cards {have}/{need}",
+  "act.targets": "targets {have}/{need}",
+  "act.use": "Use",
+  "act.cancel": "Cancel",
+  "act.endPhase": "End play phase",
+  "act.useSkill": "Use {skill}",
+  "act.convert": "{skill} → {card}",
+  "act.play": "Play",
+  "act.dontPlay": "Don't play",
+  "act.confirm": "Confirm",
+  "act.yes": "Yes",
+  "act.no": "No",
+  "act.randomHand": "A random hand card ({n})",
+  "act.none": "None",
+  "act.secondsLeft": "{n} seconds left",
+  "act.discardPhase": "Discard {n} card(s) down to your hand limit.",
+  "act.discardFor": "{reason}: discard {n} card(s).",
+  "act.chooseTheirCard": "{reason}: choose one of {name}'s cards.",
+  "act.chooseCard": "{reason}: choose a card.",
+  "act.choosePlayer": "{reason}: choose a player. Click them on the table.",
+  "act.choosePlayerFor": "{reason}: choose a player (for {name}). Click them on the table.",
+  "act.chooseOption": "{reason}: choose one.",
+  "act.chooseOptionFrom": "{reason} from {name}: choose one.",
+  "act.chooseHero": "Choose your hero.",
+  "act.useConfirm": "Use {reason}?",
+  "act.omen": "Judgment ({reason}) for {name}: {card} would {result}. Re-judge it?",
+  "act.hit": "hit",
+  "act.miss": "miss",
+  "opt.let_draw": "Let them draw 1 card",
+  "opt.discard": "Discard a hand card",
+  "opt.give_card": "Give them a hand card",
+  "opt.take_damage": "Take 1 damage",
+  "confirm.eight_trigrams": "Use Eight Trigrams? Judge: a red card counts as a Dodge.",
+  "confirm.twin_swords": "Use Twin Swords? They discard a card or you draw 1.",
+  "confirm.frost_blade": "Use Frost Blade? Prevent the damage and discard 2 of their cards instead.",
+  "confirm.stone_axe": "Use Stone Axe? Discard 2 cards to make the Strike hit anyway.",
+  "confirm.shield_wall": "Use Shield Wall? Ask your Wei allies to play a Dodge for you.",
+  "resp.dodgeStrike": "{name} attacks you with a Strike. Play a Dodge?",
+  "resp.dodgeArrows": "Arrow Barrage from {name}. Play a Dodge or take 1 damage.",
+  "resp.dodgeShieldWall": "Your Lord {name} needs a Dodge (Shield Wall). Play one for them?",
+  "resp.strikeDuel": "Duel with {name}: play a Strike, or take 1 damage.",
+  "resp.strikeBarbarians": "Barbarian Invasion from {name}. Play a Strike or take 1 damage.",
+  "resp.strikeBorrowed": "Borrowed Sword: use a Strike on {name}, or hand your weapon to {source}.",
+  "resp.strikeAllure": "Allure: use a Strike on {name}, or {source} takes one of your cards.",
+  "resp.strikeGlaive": "Dragon Glaive: Strike {name} again?",
+  "resp.peachSelf": "You are dying! Play a Peach to survive.",
+  "resp.peachOther": "{name} is dying. Save them with a Peach?",
+  "resp.nullify": "Nullify {card} on {name}?",
+  "resp.unNullify": "{card} on {name} is cancelled. Nullify the Nullify to put it back on?",
+  "resp.generic": "Play a {card}? ({reason})",
+  "reason.discard_phase": "Discard phase",
+  "reason.save": "Save",
+  // overlays
+  "hero.choose": "Choose your hero",
+  "hero.lordNote": "You are the Lord: everyone will see your pick.",
+  "hero.otherNote": "Your pick stays hidden until everyone has chosen.",
+  "hero.stats": "{kingdom} · {hp} HP · {gender}",
+  "over.victory": "Victory!",
+  "over.defeat": "Defeat",
+  "over.wins": "The {side} side wins.",
+  "over.alive": "alive",
+  "over.fallen": "fallen",
+  "over.waitRematch": "Waiting for the host to start a rematch…",
+  "over.look": "Look at the table",
+  "side.lord": "Lord's",
+  "side.rebel": "Rebel",
+  "side.spy": "Spy",
+  "side.draw": "nobody's",
+  // log
+  "log.heroes": "Heroes: {list}",
+  "log.heroAs": "{name} as {hero}",
+  "log.gameStart": "The game begins. {name} is the Lord.",
+  "log.turn": "Turn {n}: {name}",
+  "log.draw": "{name} draws {n}",
+  "log.drawCards": "{name} draws {n}: {cards}",
+  "log.use": "{name} uses {card}",
+  "log.useFrom": "{name} uses {card} (from {cards})",
+  "log.to": " → {targets}",
+  "log.respond": "{name} plays {card}",
+  "log.respondVia": "{name} plays {card} via {via}",
+  "log.skill": "{name} uses {skill}",
+  "log.skillGained": "{name} gains {skill}",
+  "log.equip": "{name} equips {card}",
+  "log.damage": "{name} takes {n} damage (HP {hp})",
+  "log.damageFrom": "{name} takes {n} damage from {source} (HP {hp})",
+  "log.damageNature": "{name} takes {n} {nature} damage (HP {hp})",
+  "log.damageNatureFrom": "{name} takes {n} {nature} damage from {source} (HP {hp})",
+  "nature.fire": "fire",
+  "nature.thunder": "thunder",
+  "log.recover": "{name} recovers {n} (HP {hp})",
+  "log.maxHp": "{name}'s max HP {delta} (now {max})",
+  "log.dying": "{name} is dying!",
+  "log.death": "{name} dies, revealed as {role}",
+  "log.discard": "{name} discards {cards}",
+  "log.judge": "  Judgment for {name}: {card} → {result}",
+  "log.nullifyCancelled": "  …nullified (cancelled)",
+  "log.nullifyRestored": "  …nullified (back on)",
+  "log.take": "{name} takes {what}",
+  "log.takeFrom": "{name} takes {what} from {target}",
+  "log.aCard": "a card",
+  "log.give": "{name} gives {what} to {target}",
+  "log.skip": "{name} skips their {phase} phase",
+  "log.reveal": "Revealed: {cards}",
+  "log.pick": "{name} picks {card}",
+  "log.lightning": "  Lightning moves to {name}",
+  "log.rejudge": "  {name} rejudges → {card}",
+  "log.blocked": "  {reason} blocks {card}",
+  "log.prevented": "  {reason} prevents the damage",
+  "log.borrowed": "  {wielder} must strike {victim} or hand over their weapon",
+  "log.allure": "  {target} must strike {victim}",
+  "log.reshuffle": "The discard pile is shuffled into a new draw pile.",
+  "log.gameOver": "Game over: the {side} side wins!",
+  // notices / errors
+  "toast.timeout": "Time's up: the default choice was made for you.",
+  "toast.kicked": "You were removed from the room.",
+  "err.requestFailed": "Request failed ({status}).",
+  "err.roomFull": "The room is full.",
+  "err.started": "The game has already started.",
+  "err.noRoom": "That room doesn't exist.",
+  "err.needPlayers": "Need {min}-{max} players.",
+  "err.hostOnly": "Only the host can do that.",
+  "err.stale": "That decision is no longer active.",
+  "err.badToken": "Unknown room or seat. Please join again.",
+  "err.invalid": "That choice isn't allowed: {detail}",
+} as const;
+
+type Key = keyof typeof en;
+
+const zh: Record<Key, string> = {
+  "app.title": "三国牌局",
+  "app.connecting": "连接中…",
+  "home.tagline": "4–8人身份牌局：主公、忠臣、反贼与内奸。",
+  "home.name": "你的名字",
+  "home.namePlaceholder": "例如：小明",
+  "home.create": "创建房间",
+  "home.codePlaceholder": "房间码",
+  "home.codeLabel": "房间码",
+  "home.join": "加入",
+  "lobby.room": "房间 {code}",
+  "lobby.copy": "复制邀请链接",
+  "lobby.copied": "已复制！",
+  "lobby.remove": "移除",
+  "lobby.addBot": "添加电脑",
+  "lobby.botOption": "{level}电脑",
+  "lobby.botLevel": "电脑难度",
+  "lobby.start": "开始游戏",
+  "lobby.rematch": "再来一局",
+  "lobby.players": "{n}/{max} 名玩家",
+  "lobby.needMore": "（至少需要{min}人）",
+  "lobby.waitHost": "等待房主开始游戏…",
+  "lobby.leave": "离开房间",
+  "level.easy": "简单",
+  "level.hard": "困难",
+  "levelHelp.easy": "简单：只会出合法的牌，基本不判断局势。",
+  "levelHelp.hard": "困难：记住谁攻击、救援了谁，按身份行动，懂得取舍手牌。",
+  "badge.bot": "电脑",
+  "badge.levelBot": "{level}电脑",
+  "badge.host": "房主",
+  "badge.you": "你",
+  "badge.offline": "离线",
+  "conn.reconnecting": "重新连接中…",
+  "table.room": "房间 {code}",
+  "table.turn": "第{n}回合",
+  "table.phase": "{name}：{phase}阶段",
+  "table.log": "记录",
+  "table.hideLog": "隐藏记录",
+  "table.leave": "离开",
+  "table.leaveConfirm": "确定离开本局吗？将由电脑代替你继续。",
+  "table.deck": "牌堆 {n}",
+  "table.discard": "弃牌堆 {n}",
+  "table.drawPile": "牌堆",
+  "table.discardPile": "弃牌堆",
+  "table.yourTurn": "你的回合",
+  "table.theirTurn": "{name}的回合",
+  "table.over": "游戏结束。",
+  "table.waitingFor": "等待{name}{what}…",
+  "table.waitingOthers": "等待其他玩家…",
+  "table.noCards": "没有手牌。",
+  "table.range": "攻击范围 {n}",
+  "table.skills": "技能：{list}",
+  "table.hand": "你的手牌",
+  "name.you": "你",
+  "name.player": "玩家{n}",
+  "name.bot": "电脑{n}",
+  "wait.play": "出牌",
+  "wait.discard": "弃牌",
+  "wait.choose_hero": "选择武将",
+  "wait.choose_card": "选择一张牌",
+  "wait.choose_player": "选择角色",
+  "wait.choose_option": "做出选择",
+  "wait.confirm": "做出选择",
+  "phase.start": "准备",
+  "phase.judge": "判定",
+  "phase.draw": "摸牌",
+  "phase.play": "出牌",
+  "phase.discard": "弃牌",
+  "phase.end": "结束",
+  "seat.choosing": "选将中…",
+  "seat.hiddenRole": "身份未知",
+  "seat.hp": "体力 {hp}/{max}",
+  "seat.handCount": "手牌数",
+  "seat.distance": "你与其的距离",
+  "seat.fallen": "阵亡",
+  "role.lord": "主公",
+  "role.loyalist": "忠臣",
+  "role.rebel": "反贼",
+  "role.spy": "内奸",
+  "kingdom.wei": "魏",
+  "kingdom.shu": "蜀",
+  "kingdom.wu": "吴",
+  "kingdom.qun": "群",
+  "tag.locked": "锁定技",
+  "tag.lord": "主公技",
+  "tag.limited": "限定技",
+  "tag.awakening": "觉醒技",
+  "gender.male": "男",
+  "gender.female": "女",
+  "card.range": "攻击范围{n}",
+  "act.playPhase": "你的回合：出牌阶段",
+  "act.hintPlay": "选择一张牌或一个技能，或结束出牌阶段。",
+  "act.hintRespond": "选中手牌中的牌，然后点击“打出”。",
+  "act.cards": "牌 {have}/{need}",
+  "act.targets": "目标 {have}/{need}",
+  "act.use": "使用",
+  "act.cancel": "取消",
+  "act.endPhase": "结束出牌",
+  "act.useSkill": "发动{skill}",
+  "act.convert": "{skill} → {card}",
+  "act.play": "打出",
+  "act.dontPlay": "不出",
+  "act.confirm": "确定",
+  "act.yes": "是",
+  "act.no": "否",
+  "act.randomHand": "随机一张手牌（{n}）",
+  "act.none": "不选",
+  "act.secondsLeft": "剩余{n}秒",
+  "act.discardPhase": "请弃置{n}张牌至手牌上限。",
+  "act.discardFor": "{reason}：弃置{n}张牌。",
+  "act.chooseTheirCard": "{reason}：选择{name}的一张牌。",
+  "act.chooseCard": "{reason}：选择一张牌。",
+  "act.choosePlayer": "{reason}：选择一名角色（在牌桌上点击）。",
+  "act.choosePlayerFor": "{reason}：为{name}选择一名角色（在牌桌上点击）。",
+  "act.chooseOption": "{reason}：请选择一项。",
+  "act.chooseOptionFrom": "{reason}（来自{name}）：请选择一项。",
+  "act.chooseHero": "请选择武将。",
+  "act.useConfirm": "是否发动{reason}？",
+  "act.omen": "{name}的判定（{reason}）：{card}将{result}。是否改判？",
+  "act.hit": "生效",
+  "act.miss": "失效",
+  "opt.let_draw": "令其摸一张牌",
+  "opt.discard": "弃置一张手牌",
+  "opt.give_card": "交给其一张手牌",
+  "opt.take_damage": "受到1点伤害",
+  "confirm.eight_trigrams": "是否发动八卦阵？判定为红色则视为打出一张闪。",
+  "confirm.twin_swords": "是否发动双股剑？其弃置一张牌或你摸一张牌。",
+  "confirm.frost_blade": "是否发动寒霜刃？防止此伤害，改为弃置其两张牌。",
+  "confirm.stone_axe": "是否发动开山斧？弃置两张牌令此击依然命中。",
+  "confirm.shield_wall": "是否发动盾阵？令魏势力角色替你打出闪。",
+  "resp.dodgeStrike": "{name}对你使用了击，是否打出闪？",
+  "resp.dodgeArrows": "{name}使用了万箭齐发：打出闪，否则受到1点伤害。",
+  "resp.dodgeShieldWall": "你的主公{name}需要一张闪（盾阵），是否替其打出？",
+  "resp.strikeDuel": "与{name}决斗：打出击，否则受到1点伤害。",
+  "resp.strikeBarbarians": "{name}使用了南蛮入侵：打出击，否则受到1点伤害。",
+  "resp.strikeBorrowed": "借刀杀人：对{name}使用一张击，否则将武器交给{source}。",
+  "resp.strikeAllure": "魅惑：对{name}使用一张击，否则{source}获得你的一张牌。",
+  "resp.strikeGlaive": "龙吟刀：是否再对{name}使用一张击？",
+  "resp.peachSelf": "你濒临死亡！打出桃以求生。",
+  "resp.peachOther": "{name}濒临死亡，是否打出桃救援？",
+  "resp.nullify": "是否对{name}的{card}使用无懈可击？",
+  "resp.unNullify": "{name}的{card}已被抵消，是否用无懈可击使其恢复生效？",
+  "resp.generic": "是否打出{card}？（{reason}）",
+  "reason.discard_phase": "弃牌阶段",
+  "reason.save": "救援",
+  "hero.choose": "选择你的武将",
+  "hero.lordNote": "你是主公：所有人都会看到你的选择。",
+  "hero.otherNote": "在所有人选完之前，你的选择对他人保密。",
+  "hero.stats": "{kingdom} · 体力{hp} · {gender}",
+  "over.victory": "胜利！",
+  "over.defeat": "失败",
+  "over.wins": "{side}获胜。",
+  "over.alive": "存活",
+  "over.fallen": "阵亡",
+  "over.waitRematch": "等待房主开始下一局…",
+  "over.look": "查看牌桌",
+  "side.lord": "主公方",
+  "side.rebel": "反贼方",
+  "side.spy": "内奸",
+  "side.draw": "无人",
+  "log.heroes": "武将：{list}",
+  "log.heroAs": "{name}选择了{hero}",
+  "log.gameStart": "游戏开始，{name}是主公。",
+  "log.turn": "第{n}回合：{name}",
+  "log.draw": "{name}摸了{n}张牌",
+  "log.drawCards": "{name}摸了{n}张牌：{cards}",
+  "log.use": "{name}使用了{card}",
+  "log.useFrom": "{name}使用了{card}（由{cards}转化）",
+  "log.to": " → {targets}",
+  "log.respond": "{name}打出了{card}",
+  "log.respondVia": "{name}通过{via}打出了{card}",
+  "log.skill": "{name}发动了{skill}",
+  "log.skillGained": "{name}获得了技能{skill}",
+  "log.equip": "{name}装备了{card}",
+  "log.damage": "{name}受到{n}点伤害（体力{hp}）",
+  "log.damageFrom": "{name}受到{source}造成的{n}点伤害（体力{hp}）",
+  "log.damageNature": "{name}受到{n}点{nature}伤害（体力{hp}）",
+  "log.damageNatureFrom": "{name}受到{source}造成的{n}点{nature}伤害（体力{hp}）",
+  "nature.fire": "火焰",
+  "nature.thunder": "雷电",
+  "log.recover": "{name}回复了{n}点体力（体力{hp}）",
+  "log.maxHp": "{name}的体力上限{delta}（现为{max}）",
+  "log.dying": "{name}濒临死亡！",
+  "log.death": "{name}阵亡，身份是{role}",
+  "log.discard": "{name}弃置了{cards}",
+  "log.judge": "  {name}的判定：{card} → {result}",
+  "log.nullifyCancelled": "  …被无懈可击抵消",
+  "log.nullifyRestored": "  …无懈可击被抵消，恢复生效",
+  "log.take": "{name}获得了{what}",
+  "log.takeFrom": "{name}获得了{target}的{what}",
+  "log.aCard": "一张牌",
+  "log.give": "{name}将{what}交给了{target}",
+  "log.skip": "{name}跳过了{phase}阶段",
+  "log.reveal": "亮出：{cards}",
+  "log.pick": "{name}选择了{card}",
+  "log.lightning": "  闪电移至{name}",
+  "log.rejudge": "  {name}改判 → {card}",
+  "log.blocked": "  {reason}抵挡了{card}",
+  "log.prevented": "  {reason}防止了此伤害",
+  "log.borrowed": "  {wielder}须对{victim}使用击，否则交出武器",
+  "log.allure": "  {target}须对{victim}使用击",
+  "log.reshuffle": "弃牌堆洗混成为新的牌堆。",
+  "log.gameOver": "游戏结束：{side}获胜！",
+  "toast.timeout": "时间到：已为你做出默认选择。",
+  "toast.kicked": "你已被移出房间。",
+  "err.requestFailed": "请求失败（{status}）。",
+  "err.roomFull": "房间已满。",
+  "err.started": "游戏已经开始。",
+  "err.noRoom": "房间不存在。",
+  "err.needPlayers": "需要{min}-{max}名玩家。",
+  "err.hostOnly": "只有房主可以这样做。",
+  "err.stale": "该请求已失效。",
+  "err.badToken": "房间或座位无效，请重新加入。",
+  "err.invalid": "不允许这样选择：{detail}",
+};
+
+const DICTS: Record<Lang, Record<Key, string>> = { en, zh };
+export const _DICTS_FOR_TESTS = DICTS;
+
+// ---------------------------------------------------------------- current language
+
+const STORAGE_KEY = "cardgame_lang";
+const listeners = new Set<() => void>();
+
+function initialLang(): Lang {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved === "en" || saved === "zh") return saved;
+  } catch {
+    /* storage blocked */
+  }
+  const nav = typeof navigator !== "undefined" ? navigator.language || "" : "";
+  return nav.toLowerCase().startsWith("zh") ? "zh" : "en";
+}
+
+let lang: Lang = initialLang();
+
+export const getLang = (): Lang => lang;
+
+export function setLang(next: Lang): void {
+  if (next === lang) return;
+  lang = next;
+  try {
+    localStorage.setItem(STORAGE_KEY, next);
+  } catch {
+    /* ignore */
+  }
+  if (typeof document !== "undefined") document.documentElement.lang = next === "zh" ? "zh-CN" : "en";
+  listeners.forEach((l) => l());
+}
+
+export function useLang(): Lang {
+  return useSyncExternalStore(
+    (l) => {
+      listeners.add(l);
+      return () => listeners.delete(l);
+    },
+    () => lang,
+  );
+}
+
+export function onLangChange(l: () => void): () => void {
+  listeners.add(l);
+  return () => listeners.delete(l);
+}
+
+/** Translate `key`, filling `{param}` placeholders. */
+export function t(key: Key, params: Record<string, string | number> = {}): string {
+  const template = DICTS[lang][key] ?? en[key];
+  return template.replace(/\{(\w+)\}/g, (m, p) => (p in params ? String(params[p]) : m));
+}
+
+/** Has a translation for a dynamic key like `role.${x}`? */
+export function tMaybe(key: string, params: Record<string, string | number> = {}): string | null {
+  return key in en ? t(key as Key, params) : null;
+}
+
+/** A room member's name as shown: the server names bots "Bot N", shown in the current language. */
+export function memberName(m: { name: string; bot: boolean } | undefined, seat: number): string {
+  if (!m) return t("name.player", { n: seat + 1 });
+  const bot = m.bot ? m.name.match(/^Bot (\d+)$/) : null;
+  return bot ? t("name.bot", { n: bot[1] }) : m.name;
+}
+
+/** Joins names with the right separator for the language. */
+export const joinList = (items: string[]): string => items.join(lang === "zh" ? "、" : ", ");
+
+// ---------------------------------------------------------------- server messages
+
+const SERVER_ERRORS: [RegExp, (m: RegExpMatchArray) => string][] = [
+  [/^the room is full$/, () => t("err.roomFull")],
+  [/^the game has already started$|^the game is already running$/, () => t("err.started")],
+  [/^no such room$/, () => t("err.noRoom")],
+  [/^need (\d+)-(\d+) players$/, (m) => t("err.needPlayers", { min: m[1], max: m[2] })],
+  [/^only the host /, () => t("err.hostOnly")],
+  [/^that request is no longer active$/, () => t("err.stale")],
+  [/^unknown room or token$/, () => t("err.badToken")],
+];
+
+/** Server messages are English; show a translation when we know the message. */
+export function serverText(msg: string): string {
+  for (const [re, fn] of SERVER_ERRORS) {
+    const m = msg.match(re);
+    if (m) return fn(m);
+  }
+  return lang === "en" ? msg : t("err.invalid", { detail: msg });
+}
+
+export function _setLangForTests(l: Lang): void {
+  lang = l;
+}

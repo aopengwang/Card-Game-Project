@@ -205,6 +205,8 @@ export interface HeroInfo {
 }
 
 export interface Content {
+  lang?: string;
   cards: Record<string, CardInfo>;
   heroes: HeroInfo[];
+  skills: Record<string, SkillInfo>;
 }

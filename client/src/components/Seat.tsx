@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { KINGDOM_NAME, heroInfo, titleCase, useContent } from "../content";
+import { heroInfo, kingdomName, roleName, skillText, skillTitle, useContent } from "../content";
+import { t, tMaybe } from "../i18n";
 import type { PlayerView } from "../types";
 import { Art } from "./Art";
 import { CardChip } from "./CardView";
@@ -24,8 +25,8 @@ function useHpFlash(hp: number): string {
     if (hp === prev.current) return;
     setFlash(hp < prev.current ? "hit" : "heal");
     prev.current = hp;
-    const t = setTimeout(() => setFlash(""), 700);
-    return () => clearTimeout(t);
+    const id = setTimeout(() => setFlash(""), 700);
+    return () => clearTimeout(id);
   }, [hp]);
   return flash;
 }
@@ -46,6 +47,12 @@ export function Seat({ player: p, name, isYou, isCurrent, isWaitedOn, offline, c
     flash,
   ].join(" ");
 
+  const skillTip = (s: PlayerView["skills"][number]) => {
+    const tags = s.tags.map((tag) => tMaybe(`tag.${tag}`) ?? tag);
+    const text = skillText(s.id) ?? s.text; // the game view carries English; prefer the current language
+    return `${skillTitle(s.id)}${tags.length ? ` (${tags.join(", ")})` : ""}: ${text}`;
+  };
+
   const inner = (
     <>
       <div className="seat-top">
@@ -58,29 +65,29 @@ export function Seat({ player: p, name, isYou, isCurrent, isWaitedOn, offline, c
         <div className="seat-id">
           <div className="seat-name">
             {name}
-            {isYou && <span className="badge">you</span>}
-            {offline && <span className="badge warn">offline</span>}
+            {isYou && <span className="badge">{t("badge.you")}</span>}
+            {offline && <span className="badge warn">{t("badge.offline")}</span>}
           </div>
           <div className="seat-hero">
-            {hero ? `${hero.name}` : "Choosing…"}
-            {p.kingdom && <span className={`kingdom-tag k-${p.kingdom}`}>{KINGDOM_NAME[p.kingdom] ?? p.kingdom}</span>}
+            {hero ? hero.name : t("seat.choosing")}
+            {p.kingdom && <span className={`kingdom-tag k-${p.kingdom}`}>{kingdomName(p.kingdom)}</span>}
           </div>
         </div>
-        <div className={`role ${p.role ? `role-${p.role}` : "role-hidden"}`} title={p.role ? titleCase(p.role) : "Hidden role"}>
-          {p.role ? titleCase(p.role) : "?"}
+        <div className={`role ${p.role ? `role-${p.role}` : "role-hidden"}`} title={p.role ? roleName(p.role) : t("seat.hiddenRole")}>
+          {p.role ? roleName(p.role) : "?"}
         </div>
       </div>
       <div className="seat-stats">
-        <span className="hp" aria-label={`${p.hp} of ${p.max_hp} HP`}>
+        <span className="hp" aria-label={t("seat.hp", { hp: p.hp, max: p.max_hp })}>
           {Array.from({ length: Math.max(p.max_hp, 0) }, (_, i) => (
             <span key={i} className={i < p.hp ? "pip on" : "pip"} />
           ))}
         </span>
-        <span className="hand-count" title="Cards in hand">
+        <span className="hand-count" title={t("seat.handCount")}>
           🂠 {p.hand_count}
         </span>
         {p.distance != null && (
-          <span className="distance" title="Your distance to this player">
+          <span className="distance" title={t("seat.distance")}>
             ↔ {p.distance}
           </span>
         )}
@@ -102,13 +109,13 @@ export function Seat({ player: p, name, isYou, isCurrent, isWaitedOn, offline, c
       {p.skills.length > 0 && (
         <div className="seat-row skills">
           {p.skills.map((s) => (
-            <span key={s.id} className={`skill-tag ${p.spent.includes(s.id) ? "spent" : ""}`} title={`${titleCase(s.id)}${s.tags.length ? ` (${s.tags.join(", ")})` : ""}: ${s.text}`}>
-              {titleCase(s.id)}
+            <span key={s.id} className={`skill-tag ${p.spent.includes(s.id) ? "spent" : ""}`} title={skillTip(s)}>
+              {skillTitle(s.id)}
             </span>
           ))}
         </div>
       )}
-      {!p.alive && <div className="dead-mark">Fallen</div>}
+      {!p.alive && <div className="dead-mark">{t("seat.fallen")}</div>}
     </>
   );
 

@@ -1,4 +1,5 @@
 import { SUIT_SYMBOL, cardTitle, isRed, rankText, useContent } from "../content";
+import { t } from "../i18n";
 import type { Card } from "../types";
 import { Art } from "./Art";
 
@@ -36,7 +37,7 @@ export function CardView({ card, size = "md", clickable, selected, dim, onClick,
       {note && <span className="card-note">{note}</span>}
     </>
   );
-  const tip = info ? `${info.title}${info.range ? ` (range ${info.range})` : ""}: ${info.text}` : card.name;
+  const tip = info ? `${info.title}${info.range ? ` (${t("card.range", { n: info.range })})` : ""}: ${info.text}` : card.name;
   if (onClick && clickable) {
     return (
       <button type="button" className={cls} title={tip} aria-pressed={selected} onClick={onClick}>

@@ -76,6 +76,20 @@ Tuning (env vars, seconds): `SGS_PLAY_TIMEOUT` (90), `SGS_RESPONSE_TIMEOUT` (20)
 - `engine.view.view_for(game, seat)` / `log_for(...)` are the only things a client
   should ever see (hidden hands/roles are filtered out).
 
+## Languages (English / 中文)
+The game is fully playable in English and Simplified Chinese. Players switch with the
+English/中文 button on any screen. The default follows the browser language and the
+choice is remembered.
+- **UI text, prompts, log lines** live in `client/src/i18n.ts`. The `zh` dictionary is
+  typed against `en`, so an untranslated new string fails the build, and
+  `i18n.test.ts` checks every Chinese string keeps the same `{placeholders}`.
+- **Cards, heroes, skills**: English is in the content itself (docstrings, names); Chinese
+  is in `server/content/i18n.py`. `tests/test_i18n.py` fails if any card, hero or skill
+  lacks a Chinese entry. The client fetches `/api/content?lang=en|zh`.
+- Server error messages are English; the client translates the known ones (`serverText`).
+- **Adding content or UI? Add both languages.** Skill names in Chinese are our own designs.
+- The `/debug` test client and `sim.py` are English-only developer tools.
+
 ## Bots
 Two levels; the host picks one per bot in the lobby (humans who disconnect are covered by "hard").
 - **easy** (`bots/simple.py`): legal moves, only knows who the Lord is.

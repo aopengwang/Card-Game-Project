@@ -1,9 +1,17 @@
-"""Display names + rules text for clients (content ids stay English snake_case)."""
+"""Display names + rules text for clients, in English or Chinese.
+
+Content ids stay English snake_case everywhere; only what players read is localized.
+English comes from CARD_NAMES / class docstrings / Hero.name; Chinese from content/i18n.py.
+"""
 from __future__ import annotations
 
 from typing import Any
 
 from engine import EquipDef, Ruleset
+from engine.hero import skill_info
+
+from .heroes import GAINED_SKILLS
+from .i18n import LANGS, ZH_CARDS, ZH_HEROES, ZH_SKILLS
 
 CARD_NAMES: dict[str, str] = {
     "strike": "Strike", "dodge": "Dodge", "peach": "Peach",
@@ -23,25 +31,43 @@ def skill_title(skill_id: str) -> str:
     return skill_id.replace("_", " ").title()
 
 
-def content_info(ruleset: Ruleset) -> dict[str, Any]:
-    """Everything a client needs to render cards and heroes."""
+def _clean(text: str) -> str:
+    return " ".join(text.split())
+
+
+def content_info(ruleset: Ruleset, lang: str = "en") -> dict[str, Any]:
+    """Everything a client needs to render cards and heroes, in `lang` ("en" or "zh")."""
+    if lang not in LANGS:
+        lang = "en"
+    zh = lang == "zh"
     cards = {}
     for name, d in ruleset.card_defs.items():
-        info: dict[str, Any] = {
-            "title": CARD_NAMES.get(name, name),
-            "type": str(d.type),
-            "text": " ".join((type(d).__doc__ or "").split()),
-        }
+        title, text = CARD_NAMES.get(name, name), _clean(type(d).__doc__ or "")
+        if zh and name in ZH_CARDS:
+            title, text = ZH_CARDS[name]
+        info: dict[str, Any] = {"title": title, "type": str(d.type), "text": text}
         if isinstance(d, EquipDef):
             info["slot"] = str(d.slot)
             if d.attack_range is not None:
                 info["range"] = d.attack_range
         cards[name] = info
     heroes = []
+    skills: dict[str, dict[str, Any]] = {}
     for h in ruleset.heroes.values():
         hd = h.to_dict()
+        if zh and h.id in ZH_HEROES:
+            hd["name"] = ZH_HEROES[h.id]
         for s in hd["skills"]:
-            s["title"] = skill_title(s["id"])
-            s["text"] = " ".join(s["text"].split())
+            s["title"], s["text"] = skill_title(s["id"]), _clean(s["text"])
+            if zh and s["id"] in ZH_SKILLS:
+                s["title"], s["text"] = ZH_SKILLS[s["id"]]
+            skills[s["id"]] = s
         heroes.append(hd)
-    return {"cards": cards, "heroes": heroes}
+    # Skills gained mid-game (e.g. Seize Power) aren't on any hero's starting list.
+    for skill in GAINED_SKILLS:
+        s = skill_info(skill)
+        s["title"], s["text"] = skill_title(s["id"]), _clean(s["text"])
+        if zh and s["id"] in ZH_SKILLS:
+            s["title"], s["text"] = ZH_SKILLS[s["id"]]
+        skills.setdefault(s["id"], s)
+    return {"lang": lang, "cards": cards, "heroes": heroes, "skills": skills}
