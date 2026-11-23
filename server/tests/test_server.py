@@ -131,7 +131,26 @@ def test_lobby_rules():
         await g.connect()
         with pytest.raises(RoomError, match="only the host"):
             await room.handle(guest, g.conn, {"type": "start"})
-        assert g.of("room")[-1]["members"][1] == {"name": "P1", "bot": False, "connected": True}
+        assert g.of("room")[-1]["members"][1] == {"name": "P1", "bot": False, "level": None, "connected": True}
+
+    run(main())
+
+
+def test_bot_levels():
+    async def main():
+        room, (host,) = await room_with(1, 0)
+        c = await FakeClient(room, host).connect()
+        await room.handle(host, c.conn, {"type": "add_bot", "level": "easy"})
+        await room.handle(host, c.conn, {"type": "add_bot"})  # default: hard
+        with pytest.raises(RoomError, match="unknown bot level"):
+            await room.handle(host, c.conn, {"type": "add_bot", "level": "godlike"})
+        info = c.of("room")[-1]
+        assert [m["level"] for m in info["members"]] == [None, "easy", "hard"]
+        assert info["bot_levels"] == ["easy", "hard"]
+        room.add_bot("hard")
+        await room.start(seed=1)
+        assert [type(b).__name__ for b in room.bots] == ["SmartBot", "SimpleBot", "SmartBot", "SmartBot"]
+        await room.close()
 
     run(main())
 

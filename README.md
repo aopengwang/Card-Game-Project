@@ -8,7 +8,7 @@ playable with friends from a browser link.
 server/            Python 3.11+
   engine/          pure rules engine: no I/O, seeded RNG, generator-based prompts
   content/         card definitions + deck (standard ruleset)
-  bots/            simple rule-based bot (tests, empty seats)
+  bots/            bots: simple.py ("easy"), smart.py ("hard"), arena.py (head-to-head stats)
   tests/           pytest suite (unit rules + hundreds of bot games)
   net/             FastAPI app: rooms, websocket protocol, static test client
   sim.py           watch a bot game in the terminal
@@ -76,6 +76,19 @@ Tuning (env vars, seconds): `SGS_PLAY_TIMEOUT` (90), `SGS_RESPONSE_TIMEOUT` (20)
 - `engine.view.view_for(game, seat)` / `log_for(...)` are the only things a client
   should ever see (hidden hands/roles are filtered out).
 
+## Bots
+Two levels; the host picks one per bot in the lobby (humans who disconnect are covered by "hard").
+- **easy** (`bots/simple.py`): legal moves, only knows who the Lord is.
+- **hard** (`bots/smart.py`): infers allegiances from public actions (attacks, saves,
+  Nullifies, Shield Wall), plays its role (Rebels focus the Lord; the Spy keeps the sides
+  balanced, then turns on everyone, Lord last), values cards, picks targets by HP/armor,
+  only uses area attacks when they favour its side. It only sees what a human in its seat
+  could; `tests/test_smart_bot.py` re-deals the hidden cards mid-game and checks its
+  decisions don't change.
+
+Compare levels: `python -m bots.arena --games 300 --players 5`. Watch one:
+`python sim.py --level hard --seed 3`.
+
 ## Milestones
 1. [x] Engine core: zones, deck, phases, Strike/Dodge/Peach, roles, dying/death, win checks
 2. [x] Tricks (incl. Nullify chains), judgments, delayed tricks (Borrowed Sword waits for weapons)
@@ -84,4 +97,4 @@ Tuning (env vars, seconds): `SGS_PLAY_TIMEOUT` (90), `SGS_RESPONSE_TIMEOUT` (20)
 5. [x] FastAPI WebSocket server: rooms, invite codes, timeouts, reconnect, AFK bot takeover
    (+ a plain-HTML test client at `/debug`)
 6. [x] React client: table layout, hero draft, targeting, timers, animations, art slots, mobile
-7. [ ] Better bots, expansions, replays
+7. [ ] Better bots (hard level done), expansions, replays

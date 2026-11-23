@@ -7,7 +7,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from bots import SimpleBot
+from bots import BOT_LEVELS, make_bot
 from content.heroes import HERO_MAP
 from content.names import CARD_NAMES
 from content.standard import new_game
@@ -76,8 +76,14 @@ def describe(e: dict) -> str | None:
             state = "cancelled" if e["cancelled"] else "back on"
             return f"  -> {NAMES.get(e['card']['name'])} on P{e['target']} is {state}"
         case "take":
-            what = card(e["private"]["data"]["card"]) if "private" in e else card(e["card"])
-            return f"P{e['seat']} takes {what} from P{e['target']}"
+            if "private" in e:
+                what = card(e["private"]["data"]["card"])
+            elif "cards" in e:
+                what = ", ".join(card(c) for c in e["cards"])
+            else:
+                what = card(e["card"])
+            source = f" from P{e['target']}" if e.get("target") is not None else ""
+            return f"P{e['seat']} takes {what}{source}"
         case "reveal":
             return "Revealed: " + ", ".join(card(c) for c in e["cards"])
         case "pick":
@@ -116,10 +122,11 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--players", type=int, default=5)
     ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--level", choices=sorted(BOT_LEVELS), default="hard")
     args = ap.parse_args()
 
     game = new_game(args.players, args.seed, draft=True)
-    play_game(game, [SimpleBot(args.seed * 100 + i) for i in range(args.players)])
+    play_game(game, [make_bot(args.level, args.seed * 100 + i) for i in range(args.players)])
     for e in game.log:
         line = describe(e)
         if line:

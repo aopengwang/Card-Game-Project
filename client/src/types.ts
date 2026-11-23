@@ -58,6 +58,7 @@ export interface Waiting {
 export interface RoomMember {
   name: string;
   bot: boolean;
+  level: string | null; // bot difficulty ("easy" | "hard"), null for humans
   connected: boolean;
 }
 
@@ -69,6 +70,7 @@ export interface RoomInfo {
   members: RoomMember[];
   min_players: number;
   max_players: number;
+  bot_levels?: string[];
 }
 
 // ---- requests (the `kind` field discriminates)

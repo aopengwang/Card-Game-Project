@@ -61,9 +61,16 @@ export function Home({ error, initialCode }: { error: string | null; initialCode
   );
 }
 
+const LEVEL_HELP: Record<string, string> = {
+  easy: "Easy: plays legal moves, barely reads the table.",
+  hard: "Hard: tracks who attacks and saves whom, plays its role, values its cards.",
+};
+
 export function Lobby({ net }: { net: NetState }) {
   const room = net.room!;
   const [copied, setCopied] = useState(false);
+  const levels = room.bot_levels ?? ["easy", "hard"];
+  const [level, setLevel] = useState(levels.includes("hard") ? "hard" : levels[0]);
   const isHost = room.you === room.host;
   const n = room.members.length;
   const link = `${location.origin}/?room=${room.code}`;
@@ -91,7 +98,7 @@ export function Lobby({ net }: { net: NetState }) {
           {room.members.map((m, i) => (
             <li key={i} className={m.connected ? "" : "offline"}>
               <span className="member-name">{m.name}</span>
-              {m.bot && <span className="badge">bot</span>}
+              {m.bot && <span className={`badge level-${m.level ?? "easy"}`}>{m.level ? `${m.level} bot` : "bot"}</span>}
               {i === room.host && <span className="badge">host</span>}
               {i === room.you && <span className="badge">you</span>}
               {!m.connected && <span className="badge warn">offline</span>}
@@ -104,8 +111,16 @@ export function Lobby({ net }: { net: NetState }) {
           ))}
         </ol>
         {isHost ? (
+          <>
           <div className="row">
-            <button disabled={n >= room.max_players} onClick={() => send({ type: "add_bot" })}>
+            <select value={level} onChange={(e) => setLevel(e.target.value)} aria-label="Bot difficulty" title={LEVEL_HELP[level]}>
+              {levels.map((l) => (
+                <option key={l} value={l}>
+                  {l[0].toUpperCase() + l.slice(1)} bot
+                </option>
+              ))}
+            </select>
+            <button disabled={n >= room.max_players} onClick={() => send({ type: "add_bot", level })}>
               Add bot
             </button>
             <button className="primary" disabled={n < room.min_players} onClick={() => send({ type: "start" })}>
@@ -115,6 +130,8 @@ export function Lobby({ net }: { net: NetState }) {
               {n}/{room.max_players} players{n < room.min_players ? ` (need at least ${room.min_players})` : ""}
             </span>
           </div>
+          {LEVEL_HELP[level] && <p className="muted small level-help">{LEVEL_HELP[level]}</p>}
+          </>
         ) : (
           <p className="muted">Waiting for the host to start the game…</p>
         )}

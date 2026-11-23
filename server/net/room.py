@@ -19,7 +19,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from bots import SimpleBot
+from bots import BOT_LEVELS, make_bot
 from content.standard import new_game
 from engine import Game, Request
 from engine.view import log_for, view_for
@@ -76,6 +76,7 @@ class Member:
     name: str
     token: str
     is_bot: bool = False
+    bot_level: str = "hard"  # for bot seats; humans who go AFK are covered by a hard bot
     conns: set[Conn] = field(default_factory=set)
 
     @property
@@ -105,7 +106,7 @@ class Room:
         self.game: Game | None = None
         self.task: asyncio.Task | None = None
         self.pending: Pending | None = None
-        self.bots: list[SimpleBot] = []
+        self.bots: list[Any] = []  # one bot per seat: plays bot seats and covers AFK humans
         self._req_seq = 0
         self._last_req: Request | None = None
         self._last_deadline = 0.0
@@ -128,11 +129,13 @@ class Room:
             self.host_token = m.token
         return m
 
-    def add_bot(self) -> Member:
+    def add_bot(self, level: str = "hard") -> Member:
+        if level not in BOT_LEVELS:
+            raise RoomError(f"unknown bot level {level!r} (choose from {', '.join(BOT_LEVELS)})")
         if len(self.members) >= MAX_PLAYERS:
             raise RoomError("the room is full")
         n = sum(1 for m in self.members if m.is_bot) + 1
-        m = Member(name=f"Bot {n}", token=self._new_token(), is_bot=True)
+        m = Member(name=f"Bot {n}", token=self._new_token(), is_bot=True, bot_level=level)
         self.members.append(m)
         return m
 
@@ -164,7 +167,11 @@ class Room:
             "status": self.status,
             "you": self.seat_of(viewer) if viewer in self.members else None,
             "host": next((i for i, m in enumerate(self.members) if m.token == self.host_token), None),
-            "members": [{"name": m.name, "bot": m.is_bot, "connected": m.connected} for m in self.members],
+            "members": [
+                {"name": m.name, "bot": m.is_bot, "level": m.bot_level if m.is_bot else None, "connected": m.connected}
+                for m in self.members
+            ],
+            "bot_levels": list(BOT_LEVELS),
             "min_players": MIN_PLAYERS,
             "max_players": MAX_PLAYERS,
         }
@@ -210,7 +217,8 @@ class Room:
             await self._on_answer(m, conn, msg)
         elif t == "add_bot":
             self._need(host and self.status != "playing", "only the host can add bots before the game")
-            self.add_bot()
+            level = msg.get("level", "hard")
+            self.add_bot(level if isinstance(level, str) else "")
             await self.broadcast_room()
         elif t == "remove":
             self._need(host, "only the host can remove players")
@@ -254,7 +262,7 @@ class Room:
         seed = secrets.randbits(32) if seed is None else seed
         n = len(self.members)
         self.game = new_game(n, seed, draft=True)
-        self.bots = [SimpleBot(seed + i) for i in range(n)]
+        self.bots = [make_bot(m.bot_level, seed + i) for i, m in enumerate(self.members)]
         for m in self.members:
             for c in m.conns:
                 c.log_cursor = 0

@@ -114,6 +114,16 @@ input {
 .members { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }
 .members li.offline .member-name { opacity: 0.6; }
 .small-btn { padding: 1px 8px; font-size: 12px; margin-left: 8px; }
+select {
+  font: inherit;
+  color: inherit;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+.badge.level-hard { color: var(--accent); border-color: var(--accent); }
+.level-help { margin: -6px 0 0; }
 .link-btn { align-self: flex-start; border: none; background: none; color: var(--muted); text-decoration: underline; padding: 0; }
 
 /* ---------------------------------------------------------------- table screen */
