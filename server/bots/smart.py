@@ -209,13 +209,17 @@ class SmartBot:
                 return -1.0
             if known == Role.SPY:
                 return -1.0 if self._rebels_left(game, me) == 0 else 0.0
-            return guess
+            if self._hidden_allies(game, me) == 0:
+                return -0.8  # every Loyalist is accounted for: whoever is left is against us
+            return guess - self._pressure(game)
         if my_role == Role.REBEL:
             if known in (Role.LORD, Role.LOYALIST):
                 return -1.0
             if known == Role.REBEL:
                 return 1.0
-            return -guess
+            if self._hidden_allies(game, me) == 0:
+                return -0.8  # no other rebels left: everyone else is in the way
+            return -guess - self._pressure(game)
         # Spy: keep the two sides balanced while rebels remain (the Spy needs the Lord alive
         # until the end, but can't let the Lord's side get too strong either); afterwards
         # everyone is in the way, the Lord last of all.
@@ -235,6 +239,21 @@ class SmartBot:
         if known == Role.REBEL:
             return -1.0
         return 0.6 * guess
+
+    def _hidden_allies(self, game: Game, me: int) -> int:
+        """Allies of `me` that could still be hiding among the unrevealed players, from the
+        public role table: Loyalists for the Lord's side, other Rebels for a Rebel."""
+        my_role = game.players[me].role
+        ally = Role.REBEL if my_role == Role.REBEL else Role.LOYALIST
+        total = ROLE_TABLE[len(game.players)].count(ally)
+        dead = sum(1 for p in game.players if not p.alive and self._known_role(game, me, p.seat) == ally)
+        return total - dead - (1 if my_role == ally else 0)
+
+    @staticmethod
+    def _pressure(game: Game) -> float:
+        """Long games: players who never showed their colours become gradually suspect, so a
+        player who just sits quietly can't stall the game forever."""
+        return min(0.6, max(0, game.turn_number - 20) * 0.03)
 
     def _spy_mode(self, game: Game, me: int) -> str:
         if self._rebels_left(game, me) == 0:

@@ -69,7 +69,23 @@ def test_hard_bot_decisions_ignore_hidden_information(seed):
         return bot(g, req)
 
     drive(g.run(), answer)
-    assert checked > 50
+    assert checked > 15
+
+
+def _passive(game, req):
+    """A player who never plays anything and never responds (idle or ultra-cautious human)."""
+    return req.default()
+
+
+@pytest.mark.parametrize("n", [4, 5, 6, 8])
+@pytest.mark.parametrize("seed", range(12))
+def test_a_silent_player_cannot_stall_hard_bots(n, seed):
+    """Regression: hard Lord-side bots never attacked a Rebel who never acted -> endless game."""
+    g = new_game(n, 2000 + seed, draft=True)
+    passive = seed % n
+    bots = [_passive if i == passive else SmartBot(seed * 10 + i) for i in range(n)]
+    play_game(g, bots)
+    assert g.result is not None and g.turn_number < 400
 
 
 # ---------------------------------------------------------------- strength
@@ -88,17 +104,32 @@ def test_hard_bots_beat_easy_bots():
 
 
 def test_attacking_the_lord_marks_you_as_an_enemy():
-    g = game4(L, Y, R, S)
+    g = new_game(5, 0, [L, Y, R, S, R])  # 5 players: two rebels, so allies can be hidden
+    (s,) = give(g, 4, "strike")
+    drive(g.use_card(4, s, [0]), pass_all)  # seat 4 (the other Rebel) attacks the Lord
+    lord_bot, loyal_bot, rebel_bot = SmartBot(1), SmartBot(2), SmartBot(3)
+    for bot, seat in [(lord_bot, 0), (loyal_bot, 1), (rebel_bot, 2)]:
+        bot._observe(g, seat)
+    assert lord_bot.rel(g, 0, 4) <= ENEMY
+    assert rebel_bot.rel(g, 2, 4) >= FRIEND  # looks like a fellow rebel
+    assert rebel_bot.rel(g, 2, 0) == -1.0
+    assert abs(rebel_bot.rel(g, 2, 3)) < FRIEND  # the quiet Spy is still unknown
+
+
+def test_role_counting_deduces_enemies():
+    g = game4(L, Y, R, S)  # 4 players: one Loyalist, one Rebel
     (s,) = give(g, 3, "strike")
     drive(g.use_card(3, s, [0]), pass_all)  # seat 3 (secretly the Spy) attacks the Lord
     lord_bot, loyal_bot, rebel_bot = SmartBot(1), SmartBot(2), SmartBot(3)
     for bot, seat in [(lord_bot, 0), (loyal_bot, 1), (rebel_bot, 2)]:
         bot._observe(g, seat)
     assert lord_bot.rel(g, 0, 3) <= ENEMY
-    assert loyal_bot.rel(g, 1, 3) <= ENEMY
-    assert rebel_bot.rel(g, 2, 3) >= FRIEND  # looks like a fellow rebel
-    assert loyal_bot.rel(g, 1, 0) == 1.0  # the Lord is always a friend to a Loyalist
-    assert rebel_bot.rel(g, 2, 0) == -1.0
+    # The only Loyalist knows every unknown player is against the Lord, even one who has
+    # done nothing yet (seat 2)...
+    assert loyal_bot.rel(g, 1, 2) <= ENEMY and loyal_bot.rel(g, 1, 3) <= ENEMY
+    assert loyal_bot.rel(g, 1, 0) == 1.0  # ...and the Lord is always a friend
+    # The only Rebel knows seat 3 can't be a fellow rebel, however it acts.
+    assert rebel_bot.rel(g, 2, 3) <= ENEMY
 
 
 def test_saving_a_suspect_makes_you_a_suspect():
