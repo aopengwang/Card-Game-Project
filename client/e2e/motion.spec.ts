@@ -24,7 +24,7 @@ test("effects play as the game happens, and keys drive your turn", async ({ brow
   // Our play phase: the banner announced it, and the keys work.
   const endPhase = page.getByRole("button", { name: EN.endPhase, exact: true });
   await expect(async () => {
-    if (!(await endPhase.isVisible())) await step(page, { ...EN, endPhase: "\u0000never" }); // answer anything else
+    await step(page, EN, { holdPlay: true }); // answer anything but our play phase
     await expect(endPhase).toBeVisible({ timeout: 200 });
   }).toPass({ timeout: 90_000, intervals: [100] });
   await expect(endPhase.locator("kbd")).toHaveText("E");
@@ -95,6 +95,34 @@ test("Enter confirms while the card you clicked still has focus", async ({ page 
   await page.keyboard.press("Enter");
   expect(await page.evaluate(() => (window as unknown as { __main: number }).__main)).toBe(1);
   await expect(strike).toHaveClass(/selected/); // the card wasn't "pressed" again
+});
+
+test("sounds play as the game happens, and the speaker button mutes them", async ({ browser }) => {
+  const errors: string[] = [];
+  const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: "en-US" })).newPage();
+  collectErrors(page, errors);
+  const heard = () => page.evaluate(() => [...((window as unknown as { __sgsSounds?: string[] }).__sgsSounds ?? [])]);
+  await startBotGame(page, "Alice", 4); // the clicks also unlock audio (browser rule)
+
+  // Muted: a stretch of the game makes no sound.
+  await page.getByRole("button", { name: "Mute sounds" }).click();
+  for (let i = 0; i < 40; i++) {
+    await step(page, EN);
+    await page.waitForTimeout(100);
+  }
+  expect(await heard()).toEqual([]);
+
+  // Unmuted: the rest of the game is heard, ending with the result.
+  await page.getByRole("button", { name: "Turn sounds on" }).click();
+  await expect(async () => {
+    await step(page, EN);
+    await expect(page.locator(".game-over")).toBeVisible({ timeout: 200 });
+  }).toPass({ timeout: 150_000, intervals: [100] });
+  const sounds = await heard();
+  expect(sounds).toContain("card");
+  expect(sounds).toContain("damage");
+  expect(sounds.some((s) => s === "victory" || s === "defeat"), `result sound in ${sounds.join(",")}`).toBe(true);
+  expect(errors).toEqual([]);
 });
 
 test("reduced motion: no effects at all", async ({ browser }) => {

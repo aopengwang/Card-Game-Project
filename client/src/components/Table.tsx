@@ -10,7 +10,8 @@ import { Card, CardBack } from "../ui/Card";
 import { Plaque } from "../ui/Plaque";
 import { useSize, useWindowSize } from "../useSize";
 import { useUiScale } from "../uiScale";
-import { SettingsButton } from "./Settings";
+import { play } from "../sound";
+import { MuteButton, SettingsButton } from "./Settings";
 import { ActionBar } from "./ActionBar";
 import { Effects } from "./Effects";
 import { useShortcuts } from "./shortcuts";
@@ -115,6 +116,7 @@ export function Table({ net }: { net: NetState }) {
         )}
         {net.conn !== "open" && <span className="pill warn">{t("conn.reconnecting")}</span>}
         <span className="spacer" />
+        <MuteButton />
         <SettingsButton />
         <LangToggle />
         <Button shape="pill" className="log-toggle" onClick={toggleLog} aria-expanded={showLog}>
@@ -195,7 +197,11 @@ export function Table({ net }: { net: NetState }) {
                     clickable={clickable}
                     selected={selected}
                     dim={!!req && !clickable && req.kind !== "choose_hero"}
-                    onClick={() => req && setSel(clickCard(req, sel, c.id))}
+                    onClick={() => {
+                      if (!req) return;
+                      play("select");
+                      setSel(clickCard(req, sel, c.id));
+                    }}
                   />
                 </span>
               );

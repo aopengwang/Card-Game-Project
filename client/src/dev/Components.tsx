@@ -7,6 +7,8 @@ import { Beads, RoleSeal, TimerRing } from "../ui/Bits";
 import { Button, SealButton } from "../ui/Button";
 import { Card, CardBack } from "../ui/Card";
 import { Plaque } from "../ui/Plaque";
+import { useArtManifest } from "../art";
+import { useContent } from "../content";
 import { FIXTURES, fixtureNet } from "./fixtures";
 import s from "./Gallery.module.css";
 
@@ -25,6 +27,36 @@ const CARDS: [string, CardData][] = [
 function samplePlayer(over: Partial<PlayerView>): PlayerView {
   const base = FIXTURES.find((f) => f.id === "eight_players")!.view.players.find((p) => p.alive && p.equips.length > 0)!;
   return { ...base, ...over };
+}
+
+/**
+ * Every card's art, with where it comes from: your image (client/public/art/cards) or the
+ * built-in ink scene. The checklist for anyone adding painted art (docs/art-prompts.md).
+ */
+function ArtShowcase() {
+  const content = useContent();
+  const art = useArtManifest();
+  const names = Object.keys(content.cards);
+  const custom = names.filter((n) => art.cards[n]).length;
+  return (
+    <section className={s.section} aria-labelledby="art">
+      <span id="art" className={s.label}>
+        Card art · {custom}/{names.length} with your own image
+      </span>
+      <div className={s.row}>
+        {names.map((name, i) => (
+          <figure key={name} className={s.figure}>
+            <Card card={card(100 + i, name, i % 2 ? "heart" : "spade", (i % 13) + 1)} size="lg" />
+            <figcaption className={`${s.caption} art-source`}>
+              {name}
+              <br />
+              {art.cards[name] ? "your image" : "built-in"}
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 export function ComponentsShowcase() {
@@ -55,6 +87,8 @@ export function ComponentsShowcase() {
           <figure className={s.figure}><Card card={CARDS[4][1]} size="lg" /><figcaption className={s.caption}>Large</figcaption></figure>
         </div>
       </section>
+
+      <ArtShowcase />
 
       <section className={s.section} aria-labelledby="plaques">
         <span id="plaques" className={s.label}>Seat plaques</span>

@@ -94,7 +94,7 @@ test("host sets the game's timers; everyone sees them; the game uses them", asyn
   const endPhase = host.getByRole("button", { name: EN.endPhase, exact: true });
   await expect(async () => {
     // keep both players answering (heroes, responses, discards) until the host's play phase
-    if (!(await endPhase.isVisible().catch(() => false))) await step(host, { ...EN, endPhase: "\u0000never" });
+    await step(host, EN, { holdPlay: true });
     await step(guest, EN);
     await expect(endPhase).toBeVisible({ timeout: 200 });
   }).toPass({ timeout: 90_000, intervals: [100] });

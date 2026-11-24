@@ -385,10 +385,28 @@ def test_http_and_websocket_end_to_end():
             assert result is not None
 
 
+def test_art_manifest_lists_dropped_in_images(tmp_path):
+    art = tmp_path / "art"
+    (art / "cards").mkdir(parents=True)
+    (art / "heroes").mkdir()
+    (art / "cards" / "strike.webp").write_bytes(b"RIFF....WEBP")
+    (art / "cards" / "notes.txt").write_text("not an image")
+    (art / "heroes" / "wei_lie.png").write_bytes(b"\x89PNG")
+    app = create_app(Settings(**FAST), client_dist=tmp_path / "nodist", art_dir=art)
+    with TestClient(app) as client:
+        m = client.get("/api/art").json()
+        assert set(m["cards"]) == {"strike"} and set(m["heroes"]) == {"wei_lie"}
+        assert m["cards"]["strike"].startswith("/art/cards/strike.webp?v=")
+        assert client.get(m["cards"]["strike"]).content == b"RIFF....WEBP"  # served, no rebuild
+        # a new file shows up on the next request (no restart)
+        (art / "cards" / "peach.jpg").write_bytes(b"\xff\xd8")
+        assert "peach" in client.get("/api/art").json()["cards"]
+
+
 def test_serves_built_client_when_present(tmp_path):
     (tmp_path / "index.html").write_text("<html>built client</html>")
     (tmp_path / "art").mkdir()
-    app = create_app(Settings(**FAST), client_dist=tmp_path)
+    app = create_app(Settings(**FAST), client_dist=tmp_path, art_dir=tmp_path / "art")
     with TestClient(app) as client:
         assert "built client" in client.get("/").text
         assert "built client" in client.get("/?room=ABCDE").text

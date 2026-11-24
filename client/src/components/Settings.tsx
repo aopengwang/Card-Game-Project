@@ -2,6 +2,7 @@ import { useState } from "react";
 import { t, useLang } from "../i18n";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
+import { play, setMuted, setVolume, useSoundPrefs } from "../sound";
 import { SCALE, autoScale, setScaleChoice, useScaleChoice, useUiScale } from "../uiScale";
 import { LangToggle } from "./LangToggle";
 import { KEY } from "./shortcuts";
@@ -9,6 +10,64 @@ import s from "./Settings.module.css";
 
 const pct = (scale: number) => `${Math.round(scale * 100)}%`;
 const PRESETS = [1, 1.25, 1.5];
+
+const SpeakerIcon = ({ muted }: { muted: boolean }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M4 9h4l5-4v14l-5-4H4Z" />
+    {muted ? <path d="m17 9 5 6M22 9l-5 6" /> : <path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" />}
+  </svg>
+);
+
+/** Top-bar speaker: mute / unmute in one click. */
+export function MuteButton() {
+  useLang();
+  const { muted, volume } = useSoundPrefs();
+  const off = muted || volume === 0;
+  return (
+    <Button
+      shape="pill"
+      className="mute-toggle"
+      aria-pressed={off}
+      aria-label={off ? t("settings.unmute") : t("settings.mute")}
+      title={off ? t("settings.unmute") : t("settings.mute")}
+      onClick={() => (off ? (setMuted(false), volume === 0 && setVolume(0.6)) : setMuted(true))}
+    >
+      <SpeakerIcon muted={off} />
+    </Button>
+  );
+}
+
+function SoundSettings() {
+  const { muted, volume } = useSoundPrefs();
+  return (
+    <section className={s.section}>
+      <h3 className={s.label}>
+        {t("settings.sound")} <span className={s.value}>{muted ? "—" : `${Math.round(volume * 100)}%`}</span>
+      </h3>
+      <div className={s.sliderRow}>
+        <Button shape="small" aria-pressed={muted} className={muted ? s.on : ""} onClick={() => setMuted(!muted)} aria-label={muted ? t("settings.unmute") : t("settings.mute")}>
+          <SpeakerIcon muted={muted} />
+        </Button>
+        <input
+          type="range"
+          className={`${s.slider} volume`}
+          min={0}
+          max={1}
+          step={0.05}
+          value={muted ? 0 : volume}
+          aria-label={t("settings.volume")}
+          aria-valuetext={`${Math.round((muted ? 0 : volume) * 100)}%`}
+          onChange={(e) => setVolume(Number(e.target.value))}
+          onPointerUp={() => play("card")}
+        />
+        <Button shape="small" onClick={() => play("turn")}>
+          {t("settings.test")}
+        </Button>
+      </div>
+      <p className={s.hint}>{t("settings.soundHint")}</p>
+    </section>
+  );
+}
 
 /** Gear button (top bar, home, lobby) that opens the Settings dialog. */
 export function SettingsButton() {
@@ -76,6 +135,8 @@ function SettingsDialog({ onClose }: { onClose: () => void }) {
         </div>
         <p className={s.hint}>{t("settings.autoHint")}</p>
       </section>
+
+      <SoundSettings />
 
       <section className={s.section}>
         <h3 className={s.label}>{t("settings.language")}</h3>

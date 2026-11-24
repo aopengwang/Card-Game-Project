@@ -2,6 +2,7 @@ import { SUIT_SYMBOL, cardInfo, cardTitle, rankText, useContent } from "../conte
 import { t, tMaybe } from "../i18n";
 import type { Card as CardData } from "../types";
 import { Art } from "../components/Art";
+import { CardArt, hasScene } from "./CardArt";
 import { CardGlyph } from "./CardGlyph";
 import { Tip, TipBody } from "./Tip";
 import s from "./Card.module.css";
@@ -63,7 +64,13 @@ export function Card({ card, size = "md", clickable, selected, dim, onClick, not
         <span>{suit}</span>
       </span>
       <span className={s.art}>
-        <Art kind="cards" id={card.name} fallback={<CardGlyph name={card.name} type={type} size={glyphSize} />} />
+        {/* your image if there is one; else the ink scene (the simple glyph on small cards,
+            where a whole scene would be too busy to read) */}
+        <Art
+          kind="cards"
+          id={card.name}
+          fallback={size !== "sm" && hasScene(card.name) ? <CardArt name={card.name} /> : <CardGlyph name={card.name} type={type} size={glyphSize} />}
+        />
       </span>
       <span className={s.title}>{cardTitle(card.name)}</span>
       <span className={s.band} />

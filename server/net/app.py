@@ -27,6 +27,24 @@ from .room import RoomError, RoomManager, Settings
 
 STATIC = Path(__file__).parent / "static"
 CLIENT_DIST = Path(__file__).resolve().parents[2] / "client" / "dist"
+# Card / hero images, served straight from the source folder: drop a file in and refresh,
+# no rebuild. Anything missing falls back to the built-in ink illustrations.
+ART_DIR = Path(__file__).resolve().parents[2] / "client" / "public" / "art"
+ART_EXTS = (".png", ".webp", ".jpg", ".jpeg")
+
+
+def art_manifest(art_dir: Path) -> dict[str, dict[str, str]]:
+    """{"cards": {id: url}, "heroes": {id: url}} for every image present. The url carries
+    the file's modification time, so a replaced image isn't served stale from cache."""
+    out: dict[str, dict[str, str]] = {"cards": {}, "heroes": {}}
+    for kind in out:
+        folder = art_dir / kind
+        if not folder.is_dir():
+            continue
+        for f in sorted(folder.iterdir()):
+            if f.suffix.lower() in ART_EXTS and f.stem not in out[kind]:
+                out[kind][f.stem] = f"/art/{kind}/{f.name}?v={int(f.stat().st_mtime)}"
+    return out
 
 
 def settings_from_env() -> Settings:
@@ -45,7 +63,7 @@ class NameBody(BaseModel):
     name: str = ""
 
 
-def create_app(settings: Settings | None = None, client_dist: Path = CLIENT_DIST) -> FastAPI:
+def create_app(settings: Settings | None = None, client_dist: Path = CLIENT_DIST, art_dir: Path = ART_DIR) -> FastAPI:
     app = FastAPI(title="Cardgame server")
     manager = RoomManager(settings or settings_from_env())
     app.state.rooms = manager
@@ -58,6 +76,10 @@ def create_app(settings: Settings | None = None, client_dist: Path = CLIENT_DIST
     @app.get("/api/content")
     async def get_content(lang: str = "en") -> dict:
         return content.get(lang, content["en"])
+
+    @app.get("/api/art")
+    async def get_art() -> dict:
+        return art_manifest(art_dir)
 
     @app.post("/api/rooms")
     async def create_room(body: NameBody) -> dict:
@@ -108,6 +130,9 @@ def create_app(settings: Settings | None = None, client_dist: Path = CLIENT_DIST
             pass
         finally:
             await room.disconnect(member, conn)
+
+    if art_dir.is_dir():
+        app.mount("/art", StaticFiles(directory=art_dir), name="art")
 
     # The real client (client/dist from `npm run build`) at "/"; without a build, the
     # plain test client stands in. Mounted last so /api and /ws routes win.

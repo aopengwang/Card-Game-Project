@@ -91,6 +91,15 @@
   object-fit: cover;
 }
 
+/* the built-in illustration (or glyph) fills the window, centred */
+.art :global(.art-fallback) {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Up to two lines, so long English names ("Eight Trigrams") aren't cut off. */
 .title {
   font: 700 13px / 1.05 var(--ik-font-display);

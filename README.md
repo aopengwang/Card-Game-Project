@@ -93,6 +93,15 @@ Defaults (env vars, seconds): `SGS_PLAY_TIMEOUT` (90), `SGS_RESPONSE_TIMEOUT` (2
 time, response time, hero-pick/discard time and bot speed in the lobby (within
 `OPTION_LIMITS` in `net/room.py`). Rooms live in memory; restarting the server ends all games.
 
+**Card art**: every card has a built-in ink illustration (`client/src/ui/CardArt.tsx`).
+Drop `client/public/art/cards/<id>.png|webp|jpg` to replace one, then refresh; no rebuild
+needed. `docs/art-prompts.md` has a matching style and subject per card for an image
+generator or artist; the gallery's "Card art" section shows which cards have images.
+
+**Sound** (`client/src/sound.ts`): synthesized in the browser, no audio files. Card plays,
+equipment, damage, healing, your-turn bell, last-seconds ticks, deaths, victory/defeat.
+Volume and mute are in Settings, and there's a speaker button in the table's top bar.
+
 **Settings** (gear button, any screen): interface size scales the whole app. "Auto"
 (the default) grows it on big monitors; or pick 80–160%. Remembered per browser
 (`client/src/uiScale.ts`).

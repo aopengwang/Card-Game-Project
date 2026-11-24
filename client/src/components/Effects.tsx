@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { getLang, t } from "../i18n";
+import { playAll, type SoundName } from "../sound";
 import type { LogEntry } from "../types";
 import { Card } from "../ui/Card";
 import s from "./Effects.module.css";
@@ -31,6 +32,21 @@ const LIFE = { flight: 520, line: 1100, number: 1200, banner: 1500 } as const;
 const MAX_LIVE = 16; // fast bot games: drop effects rather than pile them up
 
 const reducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+
+/** The sounds for a batch of new log entries (exported for unit tests). */
+export function soundsFor(entries: LogEntry[], you: number): SoundName[] {
+  const out: SoundName[] = [];
+  for (const e of entries) {
+    if (e.type === "use" || e.type === "respond") out.push("card");
+    else if (e.type === "equip") out.push("equip");
+    else if (e.type === "damage") out.push("damage");
+    else if (e.type === "recover") out.push("heal");
+    else if (e.type === "death") out.push("death");
+    else if (e.type === "turn_start" && e.seat === you) out.push("turn");
+    else if (e.type === "game_over" && Array.isArray(e.winners)) out.push((e.winners as number[]).includes(you) ? "victory" : "defeat");
+  }
+  return out;
+}
 
 /** Centre of an element, relative to the effects layer. */
 function centreIn(layer: HTMLElement, el: Element | null): Pt | null {
@@ -84,8 +100,11 @@ export function Effects({ log, you, aim, playSize = "sm" }: { log: LogEntry[]; y
   useLayoutEffect(() => {
     const start = seen.current;
     seen.current = log.length;
+    if (log.length <= start) return;
+    // Sounds play even with reduced motion (that setting is about movement, not audio).
+    playAll(soundsFor(log.slice(start), you));
     const el = layer.current;
-    if (log.length <= start || reducedMotion() || !el) return;
+    if (reducedMotion() || !el) return;
     const centre = (target: Element | null) => centreIn(el, target);
     const seat = (n: number | null | undefined) => (n == null ? null : centre(document.querySelector(`[data-seat="${n}"]`)));
 

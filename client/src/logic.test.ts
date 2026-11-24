@@ -3,6 +3,7 @@ import { setContent } from "./content";
 import { _setLangForTests } from "./i18n";
 import { describe, recentPlays } from "./describe";
 import { handFan, opponentOrder, overlaps, sizeTier, tableLayout } from "./layout";
+import { soundsFor } from "./components/Effects";
 import { _reset, getState, onMessage } from "./net";
 import {
   EMPTY,
@@ -177,6 +178,18 @@ group("layout", () => {
       expect(tilt(0) + tilt(n - 1)).toBe(0);
     }
     expect(handFan(4, 1000).step).toBe(96); // room to spare: no overlap
+  });
+});
+
+group("sounds", () => {
+  it("each kind of event has its sound; your turn and the result are yours alone", () => {
+    const e = (type: string, more: Record<string, unknown> = {}) => ({ type, ...more });
+    expect(
+      soundsFor([e("use"), e("respond"), e("equip"), e("damage"), e("recover"), e("death"), e("draw"), e("turn_start", { seat: 2 })], 2),
+    ).toEqual(["card", "card", "equip", "damage", "heal", "death", "turn"]);
+    expect(soundsFor([e("turn_start", { seat: 1 })], 2)).toEqual([]); // someone else's turn: no bell
+    expect(soundsFor([e("game_over", { winners: [0, 2] })], 2)).toEqual(["victory"]);
+    expect(soundsFor([e("game_over", { winners: [0, 1] })], 2)).toEqual(["defeat"]);
   });
 });
 

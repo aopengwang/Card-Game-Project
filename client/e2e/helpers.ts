@@ -5,8 +5,12 @@ export type Labels = { endPhase: string; pass: string[]; confirm: string; use: s
 export const EN: Labels = { endPhase: "End play phase", pass: ["Don't play", "No", "None"], confirm: "Confirm", use: "Use" };
 export const ZH: Labels = { endPhase: "结束出牌", pass: ["不出", "否", "不选"], confirm: "确定", use: "使用" };
 
-/** Answer whatever the game asks, the way a cautious-but-legal player would. */
-export async function step(page: Page, labels: Labels) {
+/**
+ * Answer whatever the game asks, the way a cautious-but-legal player would.
+ * `holdPlay`: answer everything except your own play phase, which is left waiting (for
+ * tests that want to act in it themselves).
+ */
+export async function step(page: Page, labels: Labels, { holdPlay = false } = {}) {
   const bar = page.locator(".action-bar.active");
   if (await page.locator(".hero-card").first().isVisible().catch(() => false)) {
     await page.locator(".hero-card").first().click();
@@ -14,6 +18,7 @@ export async function step(page: Page, labels: Labels) {
   }
   if (!(await bar.isVisible().catch(() => false))) return;
   const endPhase = page.getByRole("button", { name: labels.endPhase, exact: true });
+  if (holdPlay && (await page.locator(".action-bar.active .end-phase").count())) return;
   if (await endPhase.isVisible().catch(() => false)) {
     // Our turn: try the first playable card on the first legal target, else end the phase.
     const card = page.locator(".hand .card.clickable").first();
@@ -46,6 +51,9 @@ export async function step(page: Page, labels: Labels) {
     if (await confirm.isEnabled()) await confirm.click();
     return;
   }
+  // Last resort: the first option on offer, but never the play phase's own buttons (the
+  // play phase can begin between the checks above and this click).
+  if (await page.locator(".action-bar.active .end-phase").count()) return;
   const any = page.locator(".action-buttons button, .choice-cards .card").first();
   if (await any.isVisible().catch(() => false)) await any.click();
 }

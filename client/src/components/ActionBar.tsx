@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { cardInfo, cardText, cardTitle, reasonTitle, sealChar, skillTitle } from "../content";
+import { play } from "../sound";
 import { serverText, t, tMaybe } from "../i18n";
 import { answer } from "../net";
 import { EMPTY, buildAnswer, chooseSkill, complete, hint, type Selection } from "../selection";
@@ -84,8 +86,23 @@ interface Props {
   waitingText: string;
 }
 
+/** Woodblock ticks for the last five seconds of your decision. */
+function useCountdownTicks(deadline: number | null) {
+  useEffect(() => {
+    if (deadline == null) return;
+    let last = -1;
+    const id = window.setInterval(() => {
+      const secs = Math.ceil((deadline - Date.now()) / 1000);
+      if (secs !== last && secs >= 1 && secs <= 5) play(secs === 1 ? "tickLast" : "tick");
+      last = secs;
+    }, 200);
+    return () => window.clearInterval(id);
+  }, [deadline]);
+}
+
 /** The prompt banner: what the game is asking you, a timer ring, and your options. */
 export function ActionBar({ request, view, sel, setSel, name, waitingText }: Props) {
+  useCountdownTicks(request?.deadline ?? null);
   if (!request) {
     return (
       <div className={`${s.bar} ${s.idle} action-bar idle`} role="status">
