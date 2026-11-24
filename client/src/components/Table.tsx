@@ -1,24 +1,61 @@
-import { useState } from "react";
-import { skillTitle, useContent } from "../content";
+import { useState, type CSSProperties } from "react";
+import { useContent } from "../content";
 import { recentPlays } from "../describe";
-import { joinList, memberName, t, tMaybe, useLang } from "../i18n";
-import { opponentOrder, seatPositions, seatTop } from "../layout";
+import { memberName, t, tMaybe, useLang } from "../i18n";
+import { handFan, opponentOrder, tableLayout } from "../layout";
 import { leave, type NetState } from "../net";
 import { EMPTY, cardClickable, clickCard, clickSeat, seatClickable, type Selection } from "../selection";
 import { Button } from "../ui/Button";
 import { Card, CardBack } from "../ui/Card";
 import { Plaque } from "../ui/Plaque";
+import { useSize } from "../useSize";
 import { ActionBar } from "./ActionBar";
 import { LangToggle } from "./LangToggle";
 import { GameOver, HeroPick, LogPanel } from "./Overlays";
+
+const LOG_KEY = "sgs.logOpen";
+
+/** Log open/closed, remembered per browser. Default: open where there's room for it. */
+function useLogOpen() {
+  const [open, setOpen] = useState(() => {
+    try {
+      const saved = localStorage.getItem(LOG_KEY);
+      if (saved != null) return saved === "1";
+    } catch {
+      // storage unavailable (private mode): fall through to the default
+    }
+    return window.innerWidth >= 1280;
+  });
+  const toggle = () => {
+    setOpen(!open);
+    try {
+      localStorage.setItem(LOG_KEY, open ? "0" : "1");
+    } catch {
+      // not remembered, that's fine
+    }
+  };
+  return [open, toggle] as const;
+}
+
+/** Pixel box as CSS custom properties (the stylesheet decides whether to use them). */
+function boxVars(prefix: string, b: { left: number; top: number; width: number; height: number }): CSSProperties {
+  return {
+    [`--${prefix}-l`]: `${b.left}px`,
+    [`--${prefix}-t`]: `${b.top}px`,
+    [`--${prefix}-w`]: `${b.width}px`,
+    [`--${prefix}-h`]: `${b.height}px`,
+  } as CSSProperties;
+}
 
 export function Table({ net }: { net: NetState }) {
   useLang();
   useContent();
   const { room, view, request, waiting, log } = net;
   const [selState, setSelState] = useState<{ id: number | null; sel: Selection }>({ id: null, sel: EMPTY });
-  const [showLog, setShowLog] = useState(false);
+  const [showLog, toggleLog] = useLogOpen();
   const [hideResultFor, setHideResultFor] = useState<number | null>(null);
+  const [arenaRef, arena] = useSize<HTMLDivElement>();
+  const [handRef, hand] = useSize<HTMLDivElement>();
   if (!room || !view) return null;
 
   const req = request?.req ?? null;
@@ -29,7 +66,10 @@ export function Table({ net }: { net: NetState }) {
 
   const n = view.players.length;
   const opponents = opponentOrder(view.you, n);
-  const positions = seatPositions(opponents.length);
+  // Null until measured, and when the table is too small for the seats-in-a-row layout:
+  // then the stylesheet stacks the seats (as on phones) and the table scrolls inside.
+  const layout = arena.width > 0 ? tableLayout(opponents.length, arena.width, arena.height) : null;
+  const fan = handFan(view.hand.length, hand.width);
   const me = view.players[view.you];
   const lordSeat = view.players.find((p) => p.role === "lord")?.seat;
 
@@ -48,7 +88,9 @@ export function Table({ net }: { net: NetState }) {
       ? t("table.waitingFor", { name: name(waiting.seat), what: tMaybe(`wait.${waiting.kind}`) ?? "" })
       : t("table.waitingOthers");
 
-  const plays = recentPlays(log);
+  // As many of the latest plays as fit beside the piles (one row; older ones are in the log).
+  const playRoom = layout ? Math.max(1, Math.floor((layout.center.width - 210) / 72)) : 4;
+  const plays = recentPlays(log).slice(-playRoom);
   const resultKey = view.result ? log.length : null;
 
   return (
@@ -63,7 +105,7 @@ export function Table({ net }: { net: NetState }) {
         {net.conn !== "open" && <span className="pill warn">{t("conn.reconnecting")}</span>}
         <span className="spacer" />
         <LangToggle />
-        <Button shape="pill" className="log-toggle" onClick={() => setShowLog(!showLog)} aria-expanded={showLog}>
+        <Button shape="pill" className="log-toggle" onClick={toggleLog} aria-expanded={showLog}>
           {showLog ? t("table.hideLog") : t("table.log")}
         </Button>
         <Button shape="pill" variant="ghost" onClick={() => window.confirm(t("table.leaveConfirm")) && leave()}>
@@ -71,15 +113,19 @@ export function Table({ net }: { net: NetState }) {
         </Button>
       </header>
 
-      <div className="table-main">
-        <div className="arena">
+      <div className={`table-main ${showLog ? "log-open" : ""}`}>
+        <div
+          ref={arenaRef}
+          className={`arena ${layout ? "placed" : "stacked"}`}
+          style={layout ? ({ "--plaque-h": `${layout.plaqueHeight}px` } as CSSProperties) : undefined}
+        >
           {opponents.map((seat, i) => (
             // The slot does the positioning, so the seat's own transforms (press, shake) can't move it.
-            <div key={seat} className="seat-slot" style={{ left: `${positions[i].x}%`, top: seatTop(positions[i].y) }}>
+            <div key={seat} className="seat-slot" style={layout ? boxVars("seat", layout.seats[i]) : undefined}>
               <Plaque player={view.players[seat]} name={nameOf(seat)} {...seatProps(seat)} />
             </div>
           ))}
-          <div className="center">
+          <div className="center" style={layout ? boxVars("center", layout.center) : undefined}>
             <div className="piles">
               <span className="pile">
                 <CardBack size="sm" label={t("table.drawPile")} />
@@ -114,30 +160,33 @@ export function Table({ net }: { net: NetState }) {
 
       <footer className="dock">
         <div className="dock-self">
-          <Plaque player={me} name={nameOf(view.you)} variant="self" isYou {...seatProps(view.you)} offline={false} />
+          <Plaque player={me} name={nameOf(view.you)} variant="self" isYou {...seatProps(view.you)} offline={false} range={view.attack_range} />
         </div>
         <div className="dock-main">
           <ActionBar request={request} view={view} sel={sel} setSel={setSel} name={name} waitingText={waitingText} />
-          <div className="hand" aria-label={t("table.hand")}>
+          <div ref={handRef} className="hand" aria-label={t("table.hand")}>
             {view.hand.length === 0 && <span className="turn-note">{t("table.noCards")}</span>}
-            {view.hand.map((c) => {
+            {view.hand.map((c, i) => {
               const clickable = cardClickable(req, sel, c.id);
               const selected = sel.cards.includes(c.id) || (sel.mode?.type === "card" && sel.mode.cardId === c.id);
+              const tilt = fan.tilt(i);
               return (
-                <Card
+                // The slot fans the card (overlap + tilt); the card's own lift stays separate.
+                <span
                   key={c.id}
-                  card={c}
-                  clickable={clickable}
-                  selected={selected}
-                  dim={!!req && !clickable && req.kind !== "choose_hero"}
-                  onClick={() => req && setSel(clickCard(req, sel, c.id))}
-                />
+                  className={`hand-slot ${selected ? "is-selected" : ""}`}
+                  style={{ marginLeft: i === 0 ? 0 : fan.step - 88, transform: `translateY(${Math.abs(tilt) * 0.6}px) rotate(${tilt}deg)` }}
+                >
+                  <Card
+                    card={c}
+                    clickable={clickable}
+                    selected={selected}
+                    dim={!!req && !clickable && req.kind !== "choose_hero"}
+                    onClick={() => req && setSel(clickCard(req, sel, c.id))}
+                  />
+                </span>
               );
             })}
-          </div>
-          <div className="dock-meta">
-            {t("table.range", { n: view.attack_range })}
-            {me.skills.length > 0 && ` · ${t("table.skills", { list: joinList(me.skills.map((s) => skillTitle(s.id))) })}`}
           </div>
         </div>
       </footer>

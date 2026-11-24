@@ -36,6 +36,12 @@ Without a build, "/" falls back to the plain test client, which is always at `/d
 - **Components** (`client/src/ui/`): Card, Plaque (seat), RoleSeal, Beads (HP), TimerRing,
   Portrait, Button / SealButton, Modal (Radix Dialog), Tip (Radix Tooltip). Build new UI
   from these; the gallery shows each one in every state.
+- **Table layout** (`client/src/layout.ts`): a fixed frame (top bar, table, dock). Seats and
+  the battlefield are placed in pixels from the table's size only (`tableLayout`), plaques
+  have a fixed height, and the hand fans instead of growing, so nothing moves while you
+  play. Unit tests check no seat overlaps another or the battlefield at any size;
+  `e2e/stability.spec.ts` plays real games at four window sizes and fails if any part of
+  the frame moves by a pixel.
 - **Gallery**: open `/?gallery` (add `&lang=zh` for Chinese). It shows the palette and
   type, plus real game moments rendered by the live UI: hero pick, Nullify chain,
   dying, 8 players, game over, and more. Regenerate the moments from seeded hard-bot

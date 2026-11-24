@@ -63,7 +63,7 @@ for (const id of FIXTURES) {
           window: window.innerHeight,
           bar: Math.round(document.querySelector(".action-bar")!.getBoundingClientRect().height),
         }));
-        expect(fit).toEqual({ table: view.size.height, page: view.size.height, window: view.size.height, bar: 118 });
+        expect(fit).toEqual({ table: view.size.height, page: view.size.height, window: view.size.height, bar: 108 });
         // ...and every opponent's plaque fits on the table (none cut off by the top bar or dock).
         const clipped = await page.evaluate(() => {
           const table = document.querySelector(".table-main")!.getBoundingClientRect();

@@ -19,6 +19,8 @@ interface Props {
   clickable?: boolean;
   selected?: boolean;
   onClick?: () => void;
+  /** Your attack range (shown on your own plaque). */
+  range?: number;
 }
 
 /** True for a moment after HP drops (drives the shake). */
@@ -95,7 +97,12 @@ function JudgeCards({ cards }: { cards: CardData[] }) {
 }
 
 /** A player's seat: portrait, role seal, name/hero, HP beads, equipment, skills. */
-export function Plaque({ player: p, name, variant = "seat", isYou, isCurrent, isWaitedOn, offline, clickable, selected, onClick }: Props) {
+/**
+ * Fixed height (the --plaque-h custom property, set by the table): nothing a player gains
+ * (skills, equipment, judgment cards) makes a plaque grow, so seats never shift. The
+ * portrait takes whatever height the info rows leave.
+ */
+export function Plaque({ player: p, name, variant = "seat", isYou, isCurrent, isWaitedOn, offline, clickable, selected, onClick, range }: Props) {
   useContent();
   const hero = heroInfo(p.hero);
   const hit = useHit(p.hp);
@@ -123,7 +130,7 @@ export function Plaque({ player: p, name, variant = "seat", isYou, isCurrent, is
   const inner = (
     <>
       <div className={s.top}>
-        <Portrait hero={p.hero} width="100%" height={self ? 118 : 88} />
+        <Portrait hero={p.hero} width="100%" height="100%" charSize={self ? 64 : 40} />
         <span className={s.seal}>
           <RoleSeal role={p.role} />
         </span>
@@ -152,22 +159,29 @@ export function Plaque({ player: p, name, variant = "seat", isYou, isCurrent, is
               ↔ {p.distance}
             </span>
           )}
+          {range != null && (
+            <span className={s.stat} title={t("table.range", { n: range })} aria-label={t("table.range", { n: range })}>
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+                {SLOT_ICON.weapon}
+              </svg>
+              {range}
+            </span>
+          )}
         </div>
         <EquipSlots equips={p.equips} />
-        {p.skills.length > 0 && (
-          <div className={s.skills}>
-            {p.skills.map((sk) => {
-              const tags = sk.tags.map((tag) => tMaybe(`tag.${tag}`) ?? tag);
-              return (
-                <Tip key={sk.id} content={<TipBody title={skillTitle(sk.id)} tags={tags} text={skillText(sk.id) ?? sk.text} />}>
-                  <span className={`${s.skill} ${p.spent.includes(sk.id) ? s.skillSpent : ""}`} tabIndex={clickable ? undefined : 0}>
-                    {skillTitle(sk.id)}
-                  </span>
-                </Tip>
-              );
-            })}
-          </div>
-        )}
+        {/* Always rendered (even empty) so every plaque has the same rows. */}
+        <div className={s.skills}>
+          {p.skills.map((sk) => {
+            const tags = sk.tags.map((tag) => tMaybe(`tag.${tag}`) ?? tag);
+            return (
+              <Tip key={sk.id} content={<TipBody title={skillTitle(sk.id)} tags={tags} text={skillText(sk.id) ?? sk.text} />}>
+                <span className={`${s.skill} ${p.spent.includes(sk.id) ? s.skillSpent : ""}`} tabIndex={clickable ? undefined : 0}>
+                  {skillTitle(sk.id)}
+                </span>
+              </Tip>
+            );
+          })}
+        </div>
       </div>
       {!p.alive && (
         <span className={s.stamp} lang={getLang() === "zh" ? "zh-CN" : undefined}>

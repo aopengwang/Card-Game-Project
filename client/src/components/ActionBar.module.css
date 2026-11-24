@@ -6,9 +6,9 @@
   gap: var(--ik-space-3) var(--ik-space-4);
   /* Fixed height whether idle, prompting, or showing choice cards, so the table never
      shifts. Room for title + error + hint, or a row of small cards; rarer extras scroll. */
-  height: 118px;
+  height: 108px;
   overflow-y: auto;
-  padding: 10px 14px;
+  padding: 8px 14px; /* 8 + a row of small cards (90) + 8 fits without scrolling */
   border-radius: 14px;
   border: 1px solid var(--ik-gold-line);
   background: linear-gradient(180deg, rgba(40, 21, 16, 0.96), rgba(28, 14, 11, 0.96));
@@ -72,6 +72,7 @@
 
 @media (max-width: 760px) {
   .bar {
+    height: 136px;
     padding: 10px;
   }
   .title {

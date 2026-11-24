@@ -3,6 +3,8 @@
   position: relative;
   box-sizing: border-box;
   width: 100%;
+  /* Fixed height, set by the table layout: content never resizes a plaque. */
+  height: var(--plaque-h, 184px);
   display: flex;
   flex-direction: column;
   border-radius: var(--ik-radius-lg);
@@ -24,7 +26,10 @@
 .wu { --kingdom: var(--ik-wu); }
 .qun { --kingdom: var(--ik-qun); }
 
+/* The portrait band takes whatever height the info rows leave. */
 .top {
+  flex: 1 1 0;
+  min-height: 0;
   position: relative;
   border-radius: calc(var(--ik-radius-lg) - 3px) calc(var(--ik-radius-lg) - 3px) 0 0;
   overflow: hidden;
@@ -60,10 +65,11 @@
 }
 
 .info {
+  flex: none;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 8px 9px 9px;
+  gap: 4px;
+  padding: 7px 8px 8px;
   min-width: 0;
 }
 
@@ -126,6 +132,9 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  height: 14px;
+  white-space: nowrap;
+  overflow: hidden;
   font: 500 var(--ik-text-xs) var(--ik-font-body);
   color: var(--ik-text-muted);
 }
@@ -161,19 +170,28 @@
   color: var(--ik-text-strong);
 }
 
+/* One row on a seat: chips shrink (with "…") rather than wrap; hover shows the full rule. */
 .skills {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 4px;
+  height: 18px;
+  overflow: hidden;
 }
 
 .skill {
-  font: 600 10.5px / 1.5 var(--ik-font-body);
+  flex: 0 1 auto;
+  min-width: 26px;
+  box-sizing: border-box;
+  height: 18px;
+  font: 600 10.5px / 16px var(--ik-font-body);
   color: var(--ik-danger-text);
   border: 1px solid rgba(217, 85, 63, 0.5);
   border-radius: var(--ik-radius-sm);
-  padding: 0 6px;
+  padding: 0 5px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .skillSpent {
@@ -284,12 +302,23 @@
 }
 
 /* larger variant for your own seat */
+.self {
+  height: var(--plaque-h, 258px);
+}
+
 .self .name {
   font-size: var(--ik-text-lg);
 }
 
 .self .heroRow {
   font-size: 18px;
+}
+
+/* Your own plaque has room for two rows of skills. */
+.self .skills {
+  flex-wrap: wrap;
+  align-content: flex-start;
+  height: 40px;
 }
 
 @media (prefers-reduced-motion: reduce) {

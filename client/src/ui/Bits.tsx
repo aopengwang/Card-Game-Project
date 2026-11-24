@@ -106,7 +106,17 @@ export function TimerRing({ deadline, total, size = 42 }: { deadline: number; to
 // ---------------------------------------------------------------- portraits
 
 /** Hero portrait: /art/heroes/<id>.png if present, else a brush character on ink-wash paper. */
-export function Portrait({ hero, width, height, charSize }: { hero: string; width: number | string; height: number; charSize?: number }) {
+export function Portrait({
+  hero,
+  width,
+  height,
+  charSize,
+}: {
+  hero: string;
+  width: number | string;
+  height: number | string;
+  charSize?: number;
+}) {
   useContent();
   const known = !!heroInfo(hero);
   const char = known ? sealChar("hero", hero) : "?";
@@ -116,7 +126,7 @@ export function Portrait({ hero, width, height, charSize }: { hero: string; widt
         <path d="M0 80C22 64 36 58 52 70c14 10 26-16 46-22 20-6 32 14 52 8v48H0Z" fill="rgba(28,23,20,0.15)" />
         <path d="M0 92c30-12 52-4 74-10 26-6 46 4 76-2v24H0Z" fill="rgba(28,23,20,0.25)" />
       </svg>
-      <span className={s.brushChar} style={{ fontSize: charSize ?? Math.round(height * 0.6) }} lang="zh-CN">
+      <span className={s.brushChar} style={{ fontSize: charSize ?? (typeof height === "number" ? Math.round(height * 0.6) : 48) }} lang="zh-CN">
         {char}
       </span>
       {known && <Art kind="heroes" id={hero} fallback={null} />}

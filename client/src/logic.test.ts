@@ -2,7 +2,7 @@ import { beforeEach, describe as group, expect, it } from "vitest";
 import { setContent } from "./content";
 import { _setLangForTests } from "./i18n";
 import { describe, recentPlays } from "./describe";
-import { opponentOrder, seatPositions } from "./layout";
+import { handFan, opponentOrder, overlaps, tableLayout } from "./layout";
 import { _reset, getState, onMessage } from "./net";
 import {
   EMPTY,
@@ -115,13 +115,53 @@ group("selection: responses and discards", () => {
 group("layout", () => {
   it("next player sits on your right, previous on your left", () => {
     expect(opponentOrder(2, 5)).toEqual([3, 4, 0, 1]);
-    const pos = seatPositions(4);
-    expect(pos[0].x).toBeGreaterThan(50);
-    expect(pos[3].x).toBeLessThan(50);
-    // y is a 0-100 position within the seat band: middle seats higher than the end ones
-    for (const p of pos) expect(p.y).toBeGreaterThanOrEqual(0);
-    for (const p of pos) expect(p.y).toBeLessThanOrEqual(100);
-    expect(pos[1].y).toBeLessThan(pos[0].y);
+    const { seats } = tableLayout(4, 1200, 500)!;
+    expect(seats[0].left).toBeGreaterThan(600);
+    expect(seats[3].left + seats[3].width).toBeLessThan(600);
+    expect(seats[1].top).toBeLessThan(seats[0].top); // outer seats curve down the sides
+  });
+
+  // Desktop table sizes: laptop to big monitor, log open or not.
+  const SIZES: [number, number][] = [];
+  for (const w of [700, 880, 1000, 1150, 1300, 1600, 1900]) for (const h of [322, 360, 420, 520, 700]) SIZES.push([w, h]);
+
+  it("seats and the battlefield never overlap and stay on the table", () => {
+    for (let count = 1; count <= 7; count++) {
+      for (const [w, h] of SIZES) {
+        const layout = tableLayout(count, w, h);
+        const where = `${count} opponents at ${w}x${h}`;
+        // Only very narrow tables with many players fall back to the stacked layout.
+        if (w >= 1000 || count <= 5) expect(layout, where).not.toBeNull();
+        if (!layout) continue;
+        const { seats, center } = layout;
+        const boxes = [...seats, center];
+        for (const b of boxes) {
+          expect(b.left, where).toBeGreaterThanOrEqual(0);
+          expect(b.top, where).toBeGreaterThanOrEqual(0);
+          expect(b.left + b.width, where).toBeLessThanOrEqual(w);
+          expect(b.top + b.height, where).toBeLessThanOrEqual(h);
+        }
+        for (let i = 0; i < boxes.length; i++)
+          for (let j = i + 1; j < boxes.length; j++) expect(overlaps(boxes[i], boxes[j]), `${where}: ${i} vs ${j}`).toBe(false);
+      }
+    }
+  });
+
+  it("depends only on the table size, never on what's on the plaques", () => {
+    expect(tableLayout(5, 1200, 500)).toEqual(tableLayout(5, 1200, 500));
+    expect(new Set(tableLayout(7, 1200, 500)!.seats.map((s) => s.height)).size).toBe(1);
+    expect(tableLayout(7, 600, 500)).toBeNull();
+  });
+
+  it("fanned hand keeps at least half of every card visible", () => {
+    for (const n of [1, 4, 8, 15, 30]) {
+      const { step, tilt } = handFan(n, 700);
+      expect(step).toBeGreaterThanOrEqual(44);
+      expect(step).toBeLessThanOrEqual(96);
+      expect(Math.abs(tilt(0))).toBeLessThanOrEqual(8);
+      expect(tilt(0) + tilt(n - 1)).toBe(0);
+    }
+    expect(handFan(4, 1000).step).toBe(96); // room to spare: no overlap
   });
 });
 

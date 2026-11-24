@@ -132,26 +132,29 @@ select:focus-visible {
 .level-help { margin: -6px 0 0; }
 .leave-room { align-self: flex-start; }
 
+
 /* ---------------------------------------------------------------- table screen */
-/* The table is exactly one window tall and never resizes with its content: prompts, the
-   log and the hand change inside fixed boxes, so nothing on screen jumps up and down. */
+/* A fixed frame: the screen is exactly one window tall, the top bar and dock have fixed
+   heights, and the table between them is laid out in pixels from its size alone
+   (layout.ts). Prompts, plaques, plays and the log change inside fixed boxes, so
+   nothing on screen ever moves while you play. Containers use overflow: clip (not
+   hidden) so the browser can't scroll them when something takes focus. */
 .table-screen {
   height: 100vh;
   height: 100dvh;
-  min-height: 640px;
-  overflow: hidden;
+  min-height: 600px;
+  overflow: clip;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: 48px minmax(0, 1fr) 280px;
   background: var(--ik-table-bg);
 }
 .topbar {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: var(--ik-space-2);
-  min-height: 52px;
-  padding: 6px var(--ik-space-4);
+  padding: 0 var(--ik-space-4);
   white-space: nowrap;
+  overflow: clip;
   background: var(--ik-scrim);
   border-bottom: 1px solid var(--ik-gold-line);
 }
@@ -162,38 +165,62 @@ select:focus-visible {
 }
 .brand:lang(zh-CN) { font: 26px var(--ik-font-brush); }
 .spacer { flex: 1; }
-.table-main { display: grid; grid-template-columns: 1fr 300px; min-height: 0; overflow: hidden; }
-.arena {
-  position: relative;
-  min-height: 0;
-  margin: var(--ik-space-3);
+
+.table-main { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); min-height: 0; overflow: clip; }
+@media (min-width: 1100px) {
+  .table-main.log-open { grid-template-columns: minmax(0, 1fr) 300px; }
+}
+
+.arena { position: relative; min-height: 0; min-width: 0; overflow: clip; }
+/* the felt: a faint table edge behind the seats */
+.arena.placed::before {
+  content: "";
+  position: absolute;
+  inset: 40px 12px 12px;
   border-radius: 50% / 40%;
   border: 1px solid rgba(201, 163, 90, 0.12);
-  background: radial-gradient(ellipse at 50% 45%, rgba(239, 230, 210, 0.05), transparent 70%);
+  background: radial-gradient(ellipse at 50% 55%, rgba(239, 230, 210, 0.05), transparent 70%);
+  pointer-events: none;
 }
-.seat-slot { position: absolute; transform: translate(-50%, -50%); width: 160px; }
-.center {
+.arena.placed .seat-slot { position: absolute; left: var(--seat-l); top: var(--seat-t); width: var(--seat-w); }
+.arena.placed .center {
   position: absolute;
-  left: 50%;
-  top: calc(50% + 105px); /* below the top row of seats */
-  transform: translate(-50%, -50%);
-  width: min(460px, 56%);
+  left: var(--center-l);
+  top: var(--center-t);
+  width: var(--center-w);
+  height: var(--center-h);
+}
+/* Too small for seats in a row (narrow window, many players): stack them and scroll. */
+.arena.stacked {
+  overflow-y: auto;
+  padding: var(--ik-space-2);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  align-content: start;
+  gap: var(--ik-space-2);
+}
+.arena.stacked .center { grid-column: 1 / -1; height: 126px; }
+
+.center {
+  box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: var(--ik-space-5);
-  padding: var(--ik-space-4) var(--ik-space-5);
+  gap: var(--ik-space-4);
+  padding: 8px var(--ik-space-4);
+  overflow: clip;
   border-radius: var(--ik-radius-xl);
   border: 1px solid var(--ik-gold-line);
   background: rgba(239, 230, 210, 0.04);
 }
-.piles { display: flex; gap: var(--ik-space-4); }
+.piles { flex: none; display: flex; gap: var(--ik-space-3); }
 .pile {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   font-size: var(--ik-text-sm);
   color: var(--ik-text-muted);
+  white-space: nowrap;
 }
 .pile-empty {
   width: 64px;
@@ -201,29 +228,46 @@ select:focus-visible {
   border-radius: var(--ik-radius-md);
   border: 1px dashed var(--ik-gold-line-strong);
 }
+/* the latest plays: one row, newest on the right */
 .plays {
   flex: 1;
+  min-width: 0;
+  align-self: stretch;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: var(--ik-space-2);
   justify-content: center;
-  align-items: flex-start;
-  min-height: 112px;
+  align-items: center;
+  overflow: clip;
   padding-left: var(--ik-space-4);
   border-left: 1px solid var(--ik-gold-line);
 }
-.play-slot { display: flex; flex-direction: column; align-items: center; gap: 4px; animation: slide-in var(--ik-dur-card) var(--ik-ease-out); }
-.play-by { font-size: var(--ik-text-xs); color: var(--ik-text-muted); }
+.play-slot { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; animation: slide-in var(--ik-dur-card) var(--ik-ease-out); }
+.play-by { max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--ik-text-xs); color: var(--ik-text-muted); }
 .turn-note { align-self: center; color: var(--ik-text-muted); font-size: var(--ik-text-sm); }
 @keyframes slide-in {
   from { opacity: 0; transform: translateY(18px) scale(0.92); }
 }
 
+/* Log: a column beside the table on wide screens, a drawer over it on narrower ones. */
 .log-panel {
+  display: none;
   min-height: 0;
-  display: flex;
   border-left: 1px solid var(--ik-gold-line);
   background: rgba(12, 6, 5, 0.45);
+}
+.log-open .log-panel { display: flex; }
+@media (max-width: 1099px) {
+  .log-open .log-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(320px, 90%);
+    z-index: 20;
+    background: rgba(20, 10, 8, 0.97);
+    box-shadow: var(--ik-shadow-modal);
+  }
 }
 .log {
   flex: 1;
@@ -240,29 +284,40 @@ select:focus-visible {
 .log-line.tone-death { color: var(--ik-vermilion-bright); font-weight: 700; }
 .log-line.tone-skill { color: #e8c98e; }
 .log-line.tone-end { font-weight: 700; color: var(--ik-gold); }
-.log-toggle { display: none !important; }
 
+/* Dock: your plaque, the prompt bar (fixed height) and your fanned hand (fixed height). */
 .dock {
+  box-sizing: border-box;
   display: grid;
-  grid-template-columns: 232px 1fr;
+  grid-template-columns: 236px minmax(0, 1fr);
   gap: var(--ik-space-4);
-  align-items: start;
-  padding: var(--ik-space-3) var(--ik-space-4) var(--ik-space-4);
+  padding: 10px var(--ik-space-4);
+  overflow: clip;
   border-top: 1px solid var(--ik-gold-line);
   background: rgba(12, 6, 5, 0.5);
 }
-.dock-main { display: flex; flex-direction: column; gap: var(--ik-space-3); min-width: 0; }
+.dock-self { --plaque-h: 258px; }
+.dock-main { display: grid; grid-template-rows: 108px 144px; gap: 8px; min-width: 0; }
 .hand {
+  box-sizing: border-box;
+  height: 144px;
   display: flex;
-  gap: 8px;
+  align-items: flex-start;
+  padding: 16px 8px 0;
   overflow-x: auto;
   overflow-y: hidden;
-  height: 152px;
-  box-sizing: border-box;
-  padding: 22px 6px 6px;
-  align-items: flex-end;
 }
-.dock-meta { color: var(--ik-text-faint); font-size: var(--ik-text-sm); }
+.hand-slot {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  transform-origin: 50% 100%;
+  transition: transform var(--ik-dur-fast) var(--ik-ease-out), margin var(--ik-dur-fast) var(--ik-ease-out);
+}
+/* the card you point at or picked comes to the front of the fan */
+.hand-slot:hover,
+.hand-slot:focus-within,
+.hand-slot.is-selected { z-index: 2; }
 
 .toasts {
   position: fixed;
@@ -284,12 +339,31 @@ select:focus-visible {
   animation: slide-in var(--ik-dur-card) var(--ik-ease-out);
 }
 
-/* ---------------------------------------------------------------- narrow screens */
-@media (max-width: 900px) {
-  .table-main { grid-template-columns: 1fr; }
-  .log-toggle { display: inline-flex !important; }
-  .log-panel {
-    display: none;
+/* ---------------------------------------------------------------- phones */
+/* The page scrolls (the seats stack); the prompt bar, plaques and hand keep fixed sizes. */
+@media (max-width: 760px) {
+  .table-screen { height: auto; min-height: 100%; overflow: visible; grid-template-rows: auto auto auto; }
+  .topbar { flex-wrap: wrap; white-space: normal; min-height: 48px; padding: 6px var(--ik-space-3); }
+  .table-main, .arena, .dock { overflow: visible; }
+  .arena.placed, .arena.stacked {
+    padding: var(--ik-space-2);
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: var(--ik-space-2);
+  }
+  .arena.placed::before { display: none; }
+  .arena .seat-slot { position: static; width: auto; --plaque-h: 184px; }
+  .arena.placed .center, .arena.stacked .center {
+    position: static;
+    width: auto;
+    height: auto;
+    grid-column: 1 / -1;
+    flex-direction: column;
+    gap: var(--ik-space-3);
+    padding: var(--ik-space-3);
+  }
+  .plays { border-left: 0; padding-left: 0; border-top: 1px solid var(--ik-gold-line); padding-top: var(--ik-space-3); width: 100%; min-height: 112px; }
+  .log-open .log-panel {
     position: fixed;
     inset: 56px 8px auto 8px;
     height: 60vh;
@@ -299,35 +373,9 @@ select:focus-visible {
     background: rgba(20, 10, 8, 0.97);
     box-shadow: var(--ik-shadow-modal);
   }
-  .log-panel.open { display: flex; }
-  .log { max-height: none; }
-}
-@media (max-width: 760px) {
-  /* Phones scroll the page instead (the seats stack); the prompt bar keeps a fixed size. */
-  .table-screen { height: auto; min-height: 100%; overflow: visible; grid-template-rows: auto auto auto; }
-  .topbar { white-space: normal; }
-  .arena {
-    min-height: 0;
-    margin: var(--ik-space-2);
-    padding: var(--ik-space-2);
-    border-radius: var(--ik-radius-lg);
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: var(--ik-space-2);
-  }
-  .seat-slot { position: static; transform: none; width: auto; }
-  .center {
-    position: static;
-    transform: none;
-    width: auto;
-    grid-column: 1 / -1;
-    flex-direction: column;
-    gap: var(--ik-space-3);
-    padding: var(--ik-space-3);
-  }
-  .plays { border-left: 0; padding-left: 0; border-top: 1px solid var(--ik-gold-line); padding-top: var(--ik-space-3); width: 100%; }
   .dock { grid-template-columns: 1fr; padding: var(--ik-space-2); }
-  .dock-self { max-width: 360px; }
+  .dock-self { max-width: 360px; --plaque-h: 236px; }
+  .dock-main { grid-template-rows: auto 144px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
