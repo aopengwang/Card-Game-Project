@@ -64,12 +64,11 @@ export function Card({ card, size = "md", clickable, selected, dim, onClick, not
         <span>{suit}</span>
       </span>
       <span className={s.art}>
-        {/* your image if there is one; else the ink scene (the simple glyph on small cards,
-            where a whole scene would be too busy to read) */}
+        {/* your image if there is one; else the built-in ink scene, at every size */}
         <Art
           kind="cards"
           id={card.name}
-          fallback={size !== "sm" && hasScene(card.name) ? <CardArt name={card.name} /> : <CardGlyph name={card.name} type={type} size={glyphSize} />}
+          fallback={hasScene(card.name) ? <CardArt name={card.name} /> : <CardGlyph name={card.name} type={type} size={glyphSize} />}
         />
       </span>
       <span className={s.title}>{cardTitle(card.name)}</span>
