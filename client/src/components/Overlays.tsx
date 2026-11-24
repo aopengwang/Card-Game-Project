@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { heroInfo, heroName, kingdomName, useContent } from "../content";
 import { describe, type LogLine } from "../describe";
-import { serverText, t, tMaybe, useLang } from "../i18n";
+import { getLang, serverText, t, tMaybe, useLang } from "../i18n";
 import { answer, send } from "../net";
 import type { ChooseHeroReq, GameView, LogEntry, RoomInfo } from "../types";
 import { Beads, Portrait, RoleSeal } from "../ui/Bits";
@@ -57,24 +57,49 @@ export function GameOver({ view, room, name, onClose }: { view: GameView; room: 
   const result = view.result!;
   const isHost = room.you === room.host;
   const won = result.winners.includes(view.you);
+  const zh = getLang() === "zh";
+  const groups = [
+    { key: "winners", label: t("over.winners"), players: view.players.filter((p) => result.winners.includes(p.seat)) },
+    { key: "losers", label: t("over.losers"), players: view.players.filter((p) => !result.winners.includes(p.seat)) },
+  ].filter((g) => g.players.length);
   return (
     <Modal
       open
       title={won ? t("over.victory") : t("over.defeat")}
-      description={t("over.wins", { side: tMaybe(`side.${result.side}`) ?? result.side })}
+      description={`${t("over.wins", { side: tMaybe(`side.${result.side}`) ?? result.side })} ${t("over.turns", { n: view.turn })}`}
       onClose={onClose}
-      className={`${s.over} game-over`}
+      className={`${s.over} ${won ? s.won : s.lost} game-over`}
     >
-      <ul className={s.results}>
-        {view.players.map((p) => (
-          <li key={p.seat} className={`${s.result} ${result.winners.includes(p.seat) ? s.winner : ""}`}>
-            <RoleSeal role={p.role} />
-            <span className={s.resultName}>{name(p.seat)}</span>
-            <span className={s.resultHero}>{heroName(p.hero)}</span>
-            <span className={s.resultState}>{p.alive ? t("over.alive") : t("over.fallen")}</span>
-          </li>
-        ))}
-      </ul>
+      {/* the verdict, pressed like a seal: 胜 / 败 */}
+      <span className={s.verdict} lang="zh-CN" aria-hidden="true">
+        {won ? "胜" : "败"}
+      </span>
+      {groups.map((g) => (
+        <section key={g.key} className={s.group}>
+          <h3 className={s.groupLabel}>{g.label}</h3>
+          <ul className={s.results}>
+            {g.players.map((p) => {
+              const kingdom = heroInfo(p.hero)?.kingdom ?? "";
+              return (
+                <li
+                  key={p.seat}
+                  className={`${s.result} ${g.key === "winners" ? s.winner : ""} ${p.seat === view.you ? s.mine : ""} ${s[kingdom] ?? ""}`}
+                >
+                  <RoleSeal role={p.role} />
+                  <span className={s.resultName}>
+                    {name(p.seat)}
+                    {p.seat === view.you && <span className={s.youBadge}>{t("badge.you")}</span>}
+                  </span>
+                  <span className={s.resultHero} lang={zh ? "zh-CN" : undefined}>
+                    {heroName(p.hero)}
+                  </span>
+                  <span className={`${s.resultState} ${p.alive ? "" : s.fallen}`}>{p.alive ? t("over.alive") : t("over.fallen")}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
       <div className={s.actions}>
         {isHost ? (
           <Button variant="primary" onClick={() => send({ type: "start" })}>

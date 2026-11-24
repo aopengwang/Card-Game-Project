@@ -1,0 +1,449 @@
+/* Home and lobby: two panels on the lacquer table, stacking on phones. */
+.screen {
+  position: relative;
+  min-height: 100%;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  padding: 64px var(--ik-space-5) var(--ik-space-5);
+  background: var(--ik-table-bg);
+}
+
+.corner {
+  position: absolute;
+  top: var(--ik-space-4);
+  right: var(--ik-space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--ik-space-2);
+}
+
+.panel {
+  box-sizing: border-box;
+  padding: var(--ik-space-5);
+  border-radius: var(--ik-radius-xl);
+  border: 1px solid var(--ik-gold-line-strong);
+  background: linear-gradient(180deg, rgba(46, 24, 19, 0.96), rgba(36, 19, 15, 0.96));
+  box-shadow: var(--ik-shadow-modal);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ik-space-4);
+}
+
+.subhead {
+  margin: 0;
+  font: 700 var(--ik-text-lg) / 1.2 var(--ik-font-display);
+  color: var(--ik-gold);
+}
+
+.note {
+  margin: 0;
+  font-size: var(--ik-text-sm);
+  color: var(--ik-text-muted);
+}
+
+.wide {
+  width: 100%;
+}
+
+/* ---------------------------------------------------------------- home */
+.homeGrid {
+  width: min(1040px, 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 1fr);
+  grid-template-areas: "head form" "intro form";
+  gap: var(--ik-space-4) 40px;
+  align-items: center;
+}
+
+.head {
+  grid-area: head;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ik-space-3);
+}
+
+.form {
+  grid-area: form;
+}
+
+.intro {
+  grid-area: intro;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ik-space-4);
+}
+
+.brand {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--ik-space-3);
+  font: 700 44px / 1.05 var(--ik-font-display);
+  color: var(--ik-gold);
+}
+
+.brand:lang(zh-CN) {
+  font: 56px / 1.05 var(--ik-font-brush);
+  letter-spacing: 0.04em;
+}
+
+/* a vermilion name seal beside the title */
+.brandSeal {
+  flex: none;
+  width: 58px;
+  height: 58px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  background: var(--ik-vermilion);
+  color: var(--ik-on-vermilion);
+  font: 26px / 1 var(--ik-font-brush);
+  writing-mode: vertical-rl;
+  letter-spacing: 0.05em;
+  box-shadow: inset 0 0 0 3px rgba(255, 240, 220, 0.25);
+  transform: rotate(-4deg);
+}
+
+.tagline {
+  margin: 0;
+  max-width: 520px;
+  font-size: var(--ik-text-lg);
+  color: var(--ik-text);
+}
+
+.fan {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  padding: var(--ik-space-3) 0 var(--ik-space-2);
+}
+
+.fanCard {
+  margin: 0 -14px;
+  transform-origin: 50% 110%;
+}
+
+.roles {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--ik-space-3) var(--ik-space-4);
+}
+
+.roleRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ik-space-2);
+  font-size: var(--ik-text-sm);
+  color: var(--ik-text);
+  line-height: 1.45;
+}
+
+.roleName {
+  color: var(--ik-text-strong);
+}
+
+.form.panel {
+  gap: var(--ik-space-3);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--ik-text-strong);
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--ik-space-3);
+  margin: var(--ik-space-2) 0 0;
+  font-size: var(--ik-text-sm);
+  color: var(--ik-text-muted);
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--ik-gold-line);
+}
+
+.joinRow {
+  display: flex;
+  gap: var(--ik-space-2);
+}
+
+.codeInput {
+  flex: 1;
+  min-width: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  text-align: center;
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- lobby */
+.lobbyGrid {
+  width: min(1040px, 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--ik-space-5);
+  align-items: start;
+}
+
+.roomTitle {
+  margin: 0;
+  font: 700 var(--ik-text-2xl) / 1.1 var(--ik-font-display);
+  color: var(--ik-gold);
+}
+
+.invite {
+  display: flex;
+  gap: var(--ik-space-4);
+  align-items: center;
+  padding: var(--ik-space-3);
+  border-radius: var(--ik-radius-lg);
+  background: rgba(12, 6, 5, 0.45);
+  border: 1px solid var(--ik-gold-line);
+}
+
+/* the room code as a carved seal: one letter per cell */
+.codeSeal {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(5, 34px);
+  gap: 3px;
+  padding: 6px;
+  border-radius: 6px;
+  background: var(--ik-vermilion);
+  box-shadow: inset 0 0 0 2px rgba(255, 240, 220, 0.3);
+  transform: rotate(-2deg);
+}
+
+.codeSeal span {
+  display: grid;
+  place-items: center;
+  height: 42px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.12);
+  color: var(--ik-on-vermilion);
+  font: 700 24px / 1 var(--ik-font-display);
+}
+
+.inviteText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--ik-text-strong);
+}
+
+.linkRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ik-space-2);
+  margin-top: 4px;
+}
+
+.linkRow code {
+  min-width: 0;
+  padding: 4px 8px;
+  border-radius: var(--ik-radius-sm);
+  background: rgba(12, 6, 5, 0.55);
+  color: var(--ik-text-muted);
+  font-size: var(--ik-text-sm);
+  overflow-wrap: anywhere;
+}
+
+.count {
+  margin-left: var(--ik-space-2);
+  font: 500 var(--ik-text-sm) var(--ik-font-body);
+  color: var(--ik-text-muted);
+}
+
+/* members and open seats share one grid */
+.seats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: var(--ik-space-2);
+}
+
+.members {
+  display: contents;
+}
+
+.member,
+.open {
+  display: flex;
+  align-items: center;
+  gap: var(--ik-space-3);
+  min-height: 56px;
+  box-sizing: border-box;
+  padding: 6px 8px 6px 10px;
+  border-radius: var(--ik-radius-md);
+}
+
+.member {
+  background: var(--ik-panel);
+  border: 1px solid var(--ik-gold-line);
+  border-left: 3px solid var(--ik-gold-muted);
+}
+
+.offline .memberName {
+  opacity: 0.55;
+}
+
+.open {
+  border: 1px dashed var(--ik-gold-line-strong);
+  color: var(--ik-text-faint);
+  font-size: var(--ik-text-sm);
+}
+
+.seatNo {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--ik-gold-line-strong);
+  color: var(--ik-text-muted);
+  font: 600 var(--ik-text-xs) var(--ik-font-body);
+}
+
+.memberBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.memberName {
+  font-weight: 600;
+  color: var(--ik-text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.side {
+  gap: var(--ik-space-4);
+}
+
+.rolePreview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: var(--ik-space-2);
+  min-height: 28px;
+}
+
+.segmented {
+  display: flex;
+  margin-top: var(--ik-space-2);
+  padding: 3px;
+  border-radius: var(--ik-radius-md);
+  border: 1px solid var(--ik-gold-line-strong);
+  background: rgba(12, 6, 5, 0.45);
+}
+
+.segmented button {
+  flex: 1;
+  min-height: 34px;
+  border: 0;
+  border-radius: calc(var(--ik-radius-md) - 2px);
+  background: transparent;
+  color: var(--ik-text-muted);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.segmented button:focus-visible {
+  outline: 2px solid var(--ik-gold);
+}
+
+.segmented .segOn {
+  background: rgba(217, 179, 108, 0.18);
+  color: var(--ik-text-strong);
+  box-shadow: inset 0 0 0 1px var(--ik-gold);
+}
+
+.segmented + .note {
+  margin-top: var(--ik-space-2);
+}
+
+.start {
+  min-height: 48px;
+  font-size: var(--ik-text-lg);
+}
+
+.waiting {
+  margin: 0;
+  color: var(--ik-text-muted);
+}
+
+.leave {
+  align-self: flex-start;
+}
+
+/* ---------------------------------------------------------------- phones */
+@media (max-width: 760px) {
+  .screen {
+    padding: 60px var(--ik-space-3) var(--ik-space-4);
+    place-items: start center;
+  }
+  .homeGrid,
+  .lobbyGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--ik-space-4);
+  }
+  /* title, then the form (what you came to do), then how the game works */
+  .homeGrid {
+    grid-template-areas: "head" "form" "intro";
+  }
+  .brand {
+    font-size: 32px;
+  }
+  .brand:lang(zh-CN) {
+    font-size: 40px;
+  }
+  .brandSeal {
+    width: 46px;
+    height: 46px;
+    font-size: 20px;
+  }
+  .roles {
+    grid-template-columns: 1fr;
+  }
+  .fan {
+    display: none;
+  }
+  .panel {
+    padding: var(--ik-space-4);
+  }
+  .invite {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .codeSeal {
+    grid-template-columns: repeat(5, 30px);
+  }
+  /* keep Start in reach: the seat count says how many are open */
+  .open {
+    display: none;
+  }
+}

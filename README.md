@@ -58,7 +58,9 @@ Without a build, "/" falls back to the plain test client, which is always at `/d
   For every gallery moment (desktop English and phone Chinese) it checks that nothing
   covers a clickable card/seat/button, that phones never scroll sideways, and compares a
   screenshot. It also plays two full games through the UI (English, and Chinese with a
-  live switch to English). After an intended visual change, refresh the baselines with
+  live switch to English), checks the home and lobby screens (`screens.spec.ts`), table
+  motion and keyboard play (`motion.spec.ts`) and that the table never moves
+  (`stability.spec.ts`). After an intended visual change, refresh the baselines with
   `npm run e2e -- --update-snapshots` and look at the new images before committing.
 
 ## Dev

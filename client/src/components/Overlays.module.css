@@ -114,42 +114,121 @@
 
 /* ---------------------------------------------------------------- game over */
 .over {
-  width: min(520px, 100%);
+  position: relative;
+  width: min(560px, 100%);
+}
+
+/* the verdict seal in the corner: gold 胜 for a win, vermilion 败 for a loss */
+.verdict {
+  position: absolute;
+  top: 18px;
+  right: 22px;
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font: 44px / 1 var(--ik-font-brush);
+  transform: rotate(8deg);
+  animation: verdictIn 520ms var(--ik-ease-out) both;
+}
+
+.won .verdict {
+  background: var(--ik-gold);
+  color: #2a1608;
+  box-shadow: 0 0 30px rgba(217, 179, 108, 0.45), inset 0 0 0 3px rgba(42, 22, 8, 0.25);
+}
+
+.lost .verdict {
+  background: var(--ik-vermilion);
+  color: var(--ik-on-vermilion);
+  box-shadow: inset 0 0 0 3px rgba(255, 240, 220, 0.25);
+}
+
+@keyframes verdictIn {
+  from {
+    opacity: 0;
+    transform: rotate(8deg) scale(2);
+  }
+  60% {
+    opacity: 1;
+    transform: rotate(8deg) scale(0.94);
+  }
+}
+
+.group + .group {
+  margin-top: var(--ik-space-3);
+}
+
+.groupLabel {
+  margin: 0 0 6px;
+  font: 600 var(--ik-text-xs) var(--ik-font-body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ik-text-muted);
 }
 
 .results {
   list-style: none;
-  margin: 0 0 var(--ik-space-4);
+  margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
+/* --kingdom comes from .wei/.shu/.wu/.qun above (declared earlier, so not reset here) */
 .result {
   display: grid;
-  grid-template-columns: auto 1fr 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--ik-space-3);
   padding: 8px 10px;
   border-radius: var(--ik-radius-md);
   background: rgba(239, 230, 210, 0.04);
   border: 1px solid transparent;
+  border-left: 3px solid var(--kingdom, var(--ik-gold-muted));
 }
 
 .winner {
   border-color: rgba(217, 179, 108, 0.45);
+  border-left-color: var(--kingdom);
   background: rgba(217, 179, 108, 0.1);
 }
 
+/* your own row */
+.mine {
+  box-shadow: 0 0 0 2px var(--ik-gold);
+}
+
 .resultName {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
   font-weight: 600;
   color: var(--ik-text-strong);
+}
+
+.youBadge {
+  font: 600 10px / 1.6 var(--ik-font-body);
+  text-transform: uppercase;
+  color: var(--ik-text-muted);
+  border: 1px solid var(--ik-gold-line-strong);
+  border-radius: var(--ik-radius-sm);
+  padding: 0 5px;
 }
 
 .resultHero {
   font: 600 var(--ik-text-lg) var(--ik-font-display);
   color: #d9c9a8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resultHero:lang(zh-CN) {
+  font: 22px / 1.1 var(--ik-font-brush);
 }
 
 .resultState {
@@ -157,7 +236,12 @@
   color: var(--ik-text-muted);
 }
 
+.fallen {
+  color: var(--ik-danger-text);
+}
+
 .actions {
+  margin-top: var(--ik-space-4);
   display: flex;
   flex-wrap: wrap;
   align-items: center;

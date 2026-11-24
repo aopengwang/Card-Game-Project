@@ -94,6 +94,16 @@ for (const lang of ["en", "zh"] as const) {
     await page.goto(`/?gallery&lang=${lang}`);
     await page.getByText("Seat plaques").waitFor();
     await page.waitForLoadState("networkidle");
+    // Web fonts arrive in slices, each fetched once its characters are on screen. Scroll
+    // the whole (tall) page first so every slice is in before the full-page capture.
+    await page.evaluate(async () => {
+      for (let y = 0; y < document.body.scrollHeight; y += window.innerHeight) {
+        window.scrollTo(0, y);
+        await new Promise((r) => requestAnimationFrame(() => r(null)));
+      }
+      window.scrollTo(0, 0);
+    });
+    await page.waitForLoadState("networkidle");
     await page.evaluate(() => document.fonts.ready);
     await expect(page).toHaveScreenshot(`showcase-${lang}.png`, { fullPage: true });
     expect(errors).toEqual([]);

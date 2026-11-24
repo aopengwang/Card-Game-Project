@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from engine import EquipDef, Ruleset
+from engine import ROLE_TABLE, EquipDef, Ruleset
 from engine.hero import skill_info
 
 from .heroes import GAINED_SKILLS
@@ -77,4 +77,6 @@ def content_info(ruleset: Ruleset, lang: str = "en") -> dict[str, Any]:
         if zh and s["id"] in ZH_SKILLS:
             s["title"], s["text"] = ZH_SKILLS[s["id"]]
         skills.setdefault(s["id"], s)
-    return {"lang": lang, "cards": cards, "heroes": heroes, "skills": skills}
+    # Which roles a game of N players deals (the lobby shows it before you start).
+    roles = {str(n): [str(r) for r in table] for n, table in ROLE_TABLE.items()}
+    return {"lang": lang, "cards": cards, "heroes": heroes, "skills": skills, "roles": roles}

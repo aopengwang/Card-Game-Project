@@ -69,6 +69,9 @@ export function sealChar(kind: "card" | "skill" | "hero", id: string, which: "fi
 
 export const cardInfo = (name: string) => content.cards[name];
 
+/** Roles a game of n players deals, or [] for an unsupported count / before content loads. */
+export const rolesFor = (n: number): string[] => content.roles?.[String(n)] ?? [];
+
 export const roleName = (role: string): string => tMaybe(`role.${role}`) ?? titleCase(role);
 export const kingdomName = (k: string): string => tMaybe(`kingdom.${k}`) ?? k;
 

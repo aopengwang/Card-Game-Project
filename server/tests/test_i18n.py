@@ -52,6 +52,9 @@ def test_content_info_in_both_languages():
     # Chinese names travel in both languages (seal / brush characters in the UI).
     assert en["cards"]["indulgence"]["zh"] == "乐不思蜀" and en["skills"]["iron_edict"]["zh"] == "铁令"
     assert {h["id"]: h for h in en["heroes"]}["cao_cao"]["zh"] == "曹操"
+    # role table for the lobby: one Lord, one Spy, the rest split
+    assert en["roles"]["5"] == ["lord", "loyalist", "rebel", "rebel", "spy"]
+    assert set(en["roles"]) == {"4", "5", "6", "7", "8"}
 
 
 def test_content_endpoint_language_param():

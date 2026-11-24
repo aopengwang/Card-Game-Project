@@ -1,8 +1,7 @@
 /*
  * Page-level styles on Ink & Lacquer tokens (src/styles/tokens.css).
  * Components style themselves with CSS modules (src/ui/*, components/*.module.css);
- * this file covers base elements, the home/lobby pages and the table layout.
- * Phase C reworks the table layout (fanned hand, battlefield, log drawer).
+ * this file covers base elements, shared bits and the table screen's fixed frame.
  */
 
 * { box-sizing: border-box; }
@@ -46,6 +45,9 @@ select:focus-visible {
 .pill.warn { color: var(--ik-danger-text); border-color: var(--ik-vermilion-bright); }
 
 /* ---------------------------------------------------------------- home / lobby */
+/* ---------------------------------------------------------------- shared bits */
+/* Home and lobby style themselves (components/Screens.module.css); .home is the
+   plain "Connecting…" screen. */
 .home {
   min-height: 100%;
   display: grid;
@@ -53,70 +55,7 @@ select:focus-visible {
   padding: var(--ik-space-4);
   background: var(--ik-table-bg);
 }
-.home-card {
-  width: min(480px, 100%);
-  padding: var(--ik-space-5);
-  border-radius: var(--ik-radius-xl);
-  border: 1px solid var(--ik-gold-line-strong);
-  background: linear-gradient(180deg, rgba(46, 24, 19, 0.96), rgba(36, 19, 15, 0.96));
-  box-shadow: var(--ik-shadow-modal);
-  display: flex;
-  flex-direction: column;
-  gap: var(--ik-space-4);
-}
-.card-head { display: flex; align-items: center; gap: var(--ik-space-3); }
-.card-head h1 {
-  flex: 1;
-  margin: 0;
-  font: 700 var(--ik-text-2xl) / 1.1 var(--ik-font-display);
-  color: var(--ik-gold);
-}
-.home-card label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-weight: 600;
-  color: var(--ik-text-strong);
-}
-.home-actions { display: flex; flex-direction: column; gap: var(--ik-space-3); }
-.join-row { display: flex; gap: var(--ik-space-2); }
-.code-input { width: 120px; text-transform: uppercase; letter-spacing: 0.2em; text-align: center; }
-.invite { display: flex; gap: var(--ik-space-2); align-items: center; flex-wrap: wrap; }
-.invite code {
-  padding: 5px 9px;
-  border-radius: var(--ik-radius-sm);
-  background: rgba(12, 6, 5, 0.55);
-  color: var(--ik-text-muted);
-  font-size: var(--ik-text-sm);
-  overflow-wrap: anywhere;
-}
-.members {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  counter-reset: seat;
-}
-.members li {
-  counter-increment: seat;
-  display: flex;
-  align-items: center;
-  gap: var(--ik-space-2);
-  min-height: 38px;
-  padding: 4px 6px 4px 10px;
-  border-radius: var(--ik-radius-md);
-  background: rgba(239, 230, 210, 0.04);
-}
-.members li::before {
-  content: counter(seat);
-  width: 18px;
-  color: var(--ik-text-faint);
-  font-size: var(--ik-text-sm);
-}
-.members li.offline .member-name { opacity: 0.55; }
-.member-name { font-weight: 600; color: var(--ik-text-strong); }
+.members { margin: 0; padding: 0; list-style: none; }
 .member-remove { margin-left: auto; }
 .badge {
   font: 600 10px / 1.6 var(--ik-font-body);

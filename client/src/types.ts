@@ -212,4 +212,6 @@ export interface Content {
   cards: Record<string, CardInfo>;
   heroes: HeroInfo[];
   skills: Record<string, SkillInfo>;
+  /** Roles dealt for each player count ("5" -> ["lord", "loyalist", "rebel", "rebel", "spy"]). */
+  roles?: Record<string, string[]>;
 }
