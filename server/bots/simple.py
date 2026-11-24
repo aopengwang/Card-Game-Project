@@ -23,16 +23,20 @@ from engine import (
     Role,
 )
 
-HARMFUL = {"dismantle", "snatch", "duel", "barbarians", "arrows", "indulgence", "lightning", "borrowed_sword"}
+HARMFUL = {
+    "dismantle", "snatch", "duel", "barbarians", "arrows", "indulgence", "lightning", "borrowed_sword",
+    "fire_attack", "supply_shortage", "iron_chain",
+}
 EQUIPMENT = [
     "crossbow", "piercing_sword", "twin_swords", "frost_blade", "dragon_glaive", "stone_axe",
-    "serpent_spear", "halberd", "kirin_bow", "eight_trigrams", "benevolent_shield",
-    "plus_horse", "minus_horse",
+    "serpent_spear", "halberd", "kirin_bow", "ancient_blade", "vermilion_fan", "eight_trigrams",
+    "benevolent_shield", "silver_lion", "rattan_armor", "plus_horse", "minus_horse",
 ]
 # Cards the bot plays first -> last. Targeted ones need an enemy among candidates.
 PLAY_ORDER = [
     "peach", *EQUIPMENT, "ex_nihilo", "harvest", "peach_garden", "snatch", "dismantle",
-    "indulgence", "borrowed_sword", "duel", "barbarians", "arrows", "strike", "lightning",
+    "indulgence", "supply_shortage", "borrowed_sword", "duel", "fire_attack", "iron_chain",
+    "barbarians", "arrows", "wine", "strike", "lightning",
 ]
 DECLINE = {"frost_blade"}  # optional effects the bot never uses (it prefers dealing damage)
 GOOD_JUDGMENTS = {"eight_trigrams", "rippling_steps", "blood_for_blood", "headlong_charge"}  # a hit is good for the judged player
@@ -143,6 +147,8 @@ class SimpleBot:
                     continue  # would hurt the lord
                 if name == "peach_garden" and not me.is_wounded:
                     continue
+                if name == "wine" and "strike" not in by_name:
+                    continue  # only worth it before a Strike
                 d = game.card_def(game.cards[opt.card_id])
                 if isinstance(d, EquipDef) and game.equip_in(me, d.slot) is not None:
                     continue  # keep what's already equipped

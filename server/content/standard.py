@@ -1,6 +1,10 @@
 """The standard ruleset: 104 standard cards + 4 "EX" cards = 108.
 
 53 basic, 31 instant tricks, 5 delayed tricks, 19 equipment.
+
+The Battle expansion (军争篇) adds 52 cards, one of each suit and rank (160 in all):
+Fire / Thunder Strikes, Wine, more Dodges, Peaches and Nullifies, Fire Attack, Iron
+Chain, Supply Shortage, and five pieces of equipment.
 """
 from __future__ import annotations
 
@@ -76,18 +80,55 @@ DECK_SPEC: list[tuple[str, Suit, list[int]]] = [
     ("minus_horse", D, [K]),
 ]
 
+# (card name, suit, ranks, damage nature): every suit has each rank exactly once.
+BATTLE_SPEC: list[tuple[str, Suit, list[int], str]] = [
+    # basic (32)
+    ("strike", H, [4, 7, 10], "fire"),
+    ("strike", D, [4, 5], "fire"),
+    ("strike", S, [4, 5, 6, 7, 8], "thunder"),
+    ("strike", C, [5, 6, 7, 8], "thunder"),
+    ("dodge", H, [8, 9, J, Q], "normal"),
+    ("dodge", D, [6, 7, 8, 10, J], "normal"),
+    ("peach", H, [5, 6], "normal"),
+    ("peach", D, [2, 3], "normal"),
+    ("wine", S, [3, 9], "normal"),
+    ("wine", C, [3, 9], "normal"),
+    ("wine", D, [9], "normal"),
+    # tricks (14)
+    ("fire_attack", H, [2, 3], "normal"),
+    ("fire_attack", D, [Q], "normal"),
+    ("iron_chain", C, [10, J, Q, K], "normal"),
+    ("iron_chain", S, [J, Q], "normal"),
+    ("supply_shortage", C, [4], "normal"),
+    ("supply_shortage", S, [10], "normal"),
+    ("nullify", H, [A, K], "normal"),
+    ("nullify", S, [K], "normal"),
+    # equipment (6)
+    ("ancient_blade", S, [A], "normal"),
+    ("vermilion_fan", D, [A], "normal"),
+    ("silver_lion", C, [A], "normal"),
+    ("rattan_armor", C, [2], "normal"),
+    ("rattan_armor", S, [2], "normal"),
+    ("plus_horse", D, [K], "normal"),
+]
+
 CARD_DEFS: dict[str, CardDef] = {d.name: d for d in (*BASIC_DEFS, *TRICK_DEFS, *EQUIPMENT_DEFS)}
 
 
-def build_deck() -> list[Card]:
+def build_deck(battle: bool = False) -> list[Card]:
     cards: list[Card] = []
     for name, suit, ranks in DECK_SPEC:
         for rank in ranks:
             cards.append(Card(id=len(cards), name=name, suit=suit, rank=rank))
+    if battle:
+        for name, suit, ranks, nature in BATTLE_SPEC:
+            for rank in ranks:
+                cards.append(Card(id=len(cards), name=name, suit=suit, rank=rank, nature=nature))
     return cards
 
 
 STANDARD = Ruleset(name="standard", card_defs=CARD_DEFS, build_deck=build_deck, heroes=HERO_MAP)
+BATTLE = Ruleset(name="battle", card_defs=CARD_DEFS, build_deck=lambda: build_deck(battle=True), heroes=HERO_MAP)
 
 
 def new_game(
@@ -97,7 +138,10 @@ def new_game(
     heroes: list[str] | None = None,
     draft: bool = False,
     hero_pool: Collection[str] | None = None,
+    battle: bool = False,
 ) -> Game:
     """`draft=True` for real games (players pick heroes, from `hero_pool` if given);
-    `heroes` fixes them by seat (tests); neither gives skill-less 4 HP heroes."""
-    return Game(STANDARD, num_players, seed, roles, heroes=heroes, draft=draft, hero_pool=hero_pool)
+    `heroes` fixes them by seat (tests); neither gives skill-less 4 HP heroes.
+    `battle=True` adds the Battle expansion's 52 cards to the deck."""
+    ruleset = BATTLE if battle else STANDARD
+    return Game(ruleset, num_players, seed, roles, heroes=heroes, draft=draft, hero_pool=hero_pool)

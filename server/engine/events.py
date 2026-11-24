@@ -121,6 +121,7 @@ class ViewAs(SkillBase):
 
     as_name: str = ""
     as_names: tuple[str, ...] = ()  # several targets (e.g. Strike <-> Dodge); else just as_name
+    as_nature: str = "normal"  # the damage nature of the card it becomes (a Fire Strike...)
     count: int = 1
     in_play: bool = True  # usable during your play phase
     in_response: bool = True  # usable when asked to play `as_name`

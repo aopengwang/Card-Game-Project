@@ -41,6 +41,10 @@ class EquipDef(CardDef):
         every card in their hand)."""
         return 0
 
+    def on_unequip(self, game: Game, owner: Player, card_id: int) -> Gen:
+        """This card just left `owner`'s equipment area (its skills no longer apply)."""
+        yield from ()
+
     def assist(self, game: Game, owner: Player, card_name: str, reason: str, about: int | None) -> Gen:
         """Offer to provide `card_name` (one of `assists`) without a real card.
         Return a (virtual) Card, or None to fall through to asking for a real one."""

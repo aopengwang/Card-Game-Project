@@ -104,6 +104,14 @@ export function describe(e: LogEntry, name: (seat: number | null | undefined) =>
       return line(t("log.prevented", { reason: reasonTitle(e.reason) }));
     case "borrowed_sword":
       return line(t("log.borrowed", { wielder: name(e.wielder), victim: name(e.victim) }));
+    case "recast":
+      return line(t("log.recast", { name: name(e.seat), card: cardText(e.card) }));
+    case "chain":
+      return line(t(e.chained ? "log.chained" : "log.unchained", { name: name(e.seat) }), "skill");
+    case "show":
+      return line(t("log.show", { name: name(e.seat), card: cardText(e.card) }));
+    case "reduced":
+      return line(t("log.reduced", { reason: reasonTitle(e.reason) }));
     case "lose_hp":
       return line(t("log.loseHp", { name: name(e.seat), n: e.amount, hp: e.hp }), "damage");
     case "redirect":

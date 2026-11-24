@@ -11,7 +11,7 @@ from engine import ROLE_TABLE, EquipDef, Ruleset
 from engine.hero import skill_info
 
 from .heroes import GAINED_SKILLS
-from .i18n import LANGS, ZH_CARDS, ZH_HEROES, ZH_SKILLS
+from .i18n import LANGS, ZH_CARD_VARIANTS, ZH_CARDS, ZH_HEROES, ZH_SKILLS
 
 CARD_NAMES: dict[str, str] = {
     "strike": "Strike", "dodge": "Dodge", "peach": "Peach",
@@ -24,6 +24,17 @@ CARD_NAMES: dict[str, str] = {
     "serpent_spear": "Serpent Spear", "halberd": "Sky Halberd", "kirin_bow": "Kirin Bow",
     "eight_trigrams": "Eight Trigrams", "benevolent_shield": "Benevolent Shield",
     "plus_horse": "+1 Horse", "minus_horse": "-1 Horse",
+    # Battle expansion
+    "wine": "Wine", "fire_attack": "Fire Attack", "iron_chain": "Iron Chain",
+    "supply_shortage": "Supply Shortage", "ancient_blade": "Ancient Blade",
+    "vermilion_fan": "Vermilion Fan", "silver_lion": "Silver Lion", "rattan_armor": "Rattan Armor",
+}
+
+# How a Strike with a damage nature shows (it's still a "strike" to the rules): face id ->
+# (title, rules text). Clients show `<nature>_strike` faces for them.
+CARD_VARIANTS: dict[str, tuple[str, str]] = {
+    "fire_strike": ("Fire Strike", "A Strike that deals fire damage."),
+    "thunder_strike": ("Thunder Strike", "A Strike that deals thunder damage."),
 }
 
 
@@ -63,6 +74,13 @@ def content_info(ruleset: Ruleset, lang: str = "en") -> dict[str, Any]:
             if d.attack_range is not None:
                 info["range"] = d.attack_range
         cards[name] = info
+        if getattr(d, "recastable", False):
+            info["recast"] = True
+    for face, (title, text) in CARD_VARIANTS.items():
+        info = {"title": title, "type": "basic", "text": text, "zh": ZH_CARD_VARIANTS[face][0]}
+        if zh:
+            info["title"], info["text"] = ZH_CARD_VARIANTS[face]
+        cards[face] = info
     heroes = []
     skills: dict[str, dict[str, Any]] = {}
     for h in ruleset.heroes.values():

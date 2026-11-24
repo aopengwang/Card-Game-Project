@@ -71,6 +71,7 @@ class Player:
     max_hp: int = 4
     hp: int = 4
     alive: bool = True
+    chained: bool = False  # Iron Chain: fire/thunder damage to one chained player reaches all
     hand: list[Card] = field(default_factory=list)
     equips: list[Card] = field(default_factory=list)
     judge: list[Card] = field(default_factory=list)
@@ -279,10 +280,15 @@ class Game:
 
     def armor_active(self, seat: int, use: CardUse | None = None) -> bool:
         """Does `seat`'s armor work against `use` (None = not caused by a card use)?"""
+        return self.armor_against(seat, use.source if use else None, use.card if use else None)
+
+    def armor_against(self, seat: int, source: int | None, card: Card | None) -> bool:
+        """Does `seat`'s armor work against `card` from `source` (a Strike from a weapon
+        that ignores armor gets through)?"""
         if self.equip_in(self.players[seat], EquipSlot.ARMOR) is None:
             return False
-        if use is not None and use.card.name == "strike":
-            w = self.weapon_def(self.players[use.source])
+        if card is not None and card.name == "strike" and source is not None:
+            w = self.weapon_def(self.players[source])
             if w is not None and w.ignores_armor:
                 return False
         return True
@@ -379,11 +385,13 @@ class Game:
         if not d.target_count:
             return 0, None, ()
         cands = tuple(s for s in d.candidates(self, p) if self.targetable(p, s, d.name))
-        if len(cands) < d.target_count:
+        if len(cands) < (d.target_count if d.min_targets is None else d.min_targets):
             return None
         extra = self.extra_targets(p, d.name, whole_hand)
         if extra:
             return min(d.target_count + extra, len(cands)), d.target_count, cands
+        if d.min_targets is not None:
+            return min(d.target_count, len(cands)), d.min_targets, cands
         return d.target_count, None, cands
 
     def play_options(self, p: Player) -> dict[int, PlayOption]:
@@ -456,8 +464,8 @@ class Game:
             return []
         return list(self._virtual_subcards.get(card.id, [])) if card.is_virtual else [card.id]
 
-    def make_virtual(self, name: str, subcard_ids: list[int]) -> Card:
-        """A virtual card named `name` built from the given physical cards."""
+    def make_virtual(self, name: str, subcard_ids: list[int], nature: str = "normal") -> Card:
+        """A virtual card named `name` (dealing `nature` damage) built from the given physical cards."""
         subs = [self.cards[i] for i in subcard_ids]
         suits = {c.suit for c in subs}
         colors = {"red" if c.is_red else "black" for c in subs}
@@ -470,6 +478,7 @@ class Game:
             suit=suits.pop() if len(suits) == 1 else Suit.NONE,
             rank=ranks.pop() if len(ranks) == 1 else 0,
             virtual_color=colors.pop() if len(colors) == 1 else "none",
+            nature=nature,
         )
 
     # ------------------------------------------------------------------ log
@@ -520,6 +529,17 @@ class Game:
         for cid in ids:
             self._raw_move(cid, to, owner)
         yield from self.trigger(Event.CARDS_MOVED, CardsMoved(ids, to, owner, reason, sources))
+        for cid, (zone, seat) in zip(ids, sources):
+            if zone == Zone.EQUIP and (to, owner) != (zone, seat):
+                d = self.card_def(self.cards[cid])
+                if isinstance(d, EquipDef):
+                    yield from d.on_unequip(self, self.players[seat], cid)  # type: ignore[index]
+
+    def recast(self, seat: int, card_id: int) -> Gen:
+        """Recast a card: put it in the discard pile and draw 1 (it isn't *used*)."""
+        self._log("recast", seat=seat, card=self.cards[card_id].to_dict())
+        yield from self.move_cards([card_id], Zone.DISCARD_PILE, reason="recast")
+        yield from self.draw(seat, 1, reason="recast")
 
     def _take_from_pile(self, n: int) -> list[int]:
         if len(self.draw_pile) < n:
@@ -727,7 +747,9 @@ class Game:
         p = self.players[seat]
         if not p.alive:
             return None
-        options = [c.id for c in p.hand if c.name == card_name]
+        # When you're dying, a Wine saves you just like a Peach.
+        fits = {card_name, "wine"} if card_name == "peach" and reason == "save" and about == seat else {card_name}
+        options = [c.id for c in p.hand if c.name in fits]
         convs = self.response_conversions(p, card_name)
         if not options and not convs:
             return None
@@ -747,8 +769,9 @@ class Game:
             return None
         if isinstance(answer, Convert):
             subs = list(answer.cards)
-            self.note_skill_used(p, self.find_skill(p, answer.skill))  # type: ignore[arg-type]
-            return self.make_virtual(card_name, subs), subs
+            skill = self.find_skill(p, answer.skill)
+            self.note_skill_used(p, skill)  # type: ignore[arg-type]
+            return self.make_virtual(card_name, subs, getattr(skill, "as_nature", "normal")), subs
         return self.cards[answer], [answer]
 
     def respond(
@@ -799,11 +822,12 @@ class Game:
         amount: int,
         card: Card | None = None,
         nature: str = "normal",
+        chained: bool = False,
     ) -> Gen:
         t = self.players[target]
         if not t.alive:
             return
-        dmg = Damage(source=source, target=target, amount=amount, card=card, nature=nature)
+        dmg = Damage(source=source, target=target, amount=amount, card=card, nature=nature, chained=chained)
         yield from self.trigger(Event.DAMAGE_CAUSED, dmg)
         if dmg.prevented or dmg.amount <= 0:
             return
@@ -812,11 +836,23 @@ class Game:
             return
         t.hp -= dmg.amount
         t.turn_usage["_damage_taken"] = t.turn_usage.get("_damage_taken", 0) + dmg.amount
-        self._log("damage", source=source, target=target, amount=dmg.amount, nature=nature, hp=t.hp)
+        extra = {"chained": True} if chained else {}
+        self._log("damage", source=source, target=target, amount=dmg.amount, nature=nature, hp=t.hp, **extra)
+        # Fire/thunder damage to a chained player breaks their chain and, once it has played
+        # out, reaches every other chained player (same source, nature and amount).
+        spread = nature != "normal" and t.chained
+        if spread:
+            t.chained = False
+            self._log("chain", seat=target, chained=False)
         if t.hp <= 0:
             yield from self.dying(target, dmg)
         if t.alive:
             yield from self.trigger(Event.DAMAGED, dmg)
+        if spread and not chained:
+            for s in self.seats_from(self.current):
+                p = self.players[s]
+                if s != target and p.alive and p.chained:
+                    yield from self.damage(source, s, dmg.amount, card=card, nature=nature, chained=True)
 
     def lose_hp(self, seat: int, amount: int, reason: str = "") -> Gen:
         """Lose HP directly: not damage, so nothing that reacts to damage fires."""
@@ -982,13 +1018,17 @@ class Game:
                 return
             cards, targets = list(answer.cards), list(answer.targets)
             if answer.skill is None:
-                yield from self.use_card(p.seat, answer.card_id, targets)  # type: ignore[arg-type]
+                cid: int = answer.card_id  # type: ignore[assignment]
+                if self.card_def(self.cards[cid]).recastable and not targets:
+                    yield from self.recast(p.seat, cid)
+                else:
+                    yield from self.use_card(p.seat, cid, targets)
                 continue
             skill = self.find_skill(p, answer.skill)
             self.note_skill_used(p, skill)  # type: ignore[arg-type]
             conv = req.conversion(answer.skill)
             if conv is not None:
-                card = self.make_virtual(conv.as_name, cards)
+                card = self.make_virtual(conv.as_name, cards, getattr(skill, "as_nature", "normal"))
                 yield from self.use_card(p.seat, card, targets, subcards=cards, data={"skill": answer.skill})
             else:
                 self._log(

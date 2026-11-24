@@ -66,6 +66,9 @@ SCENARIOS: list[Scenario] = [
              lambda g, r: r.kind == "arrange"),
     Scenario("pass_strike", "Deflect: pass the Strike on? (optional player pick)", 5,
              lambda g, r: r.kind == "choose_player" and r.reason == "deflect"),
+    Scenario("battle_chain", "Battle expansion: chained players, a Fire/Thunder Strike in hand", 6,
+             lambda g, r: r.kind == "play" and sum(p.chained for p in g.players) >= 2
+             and any(c.nature != "normal" for c in g.players[r.seat].hand)),
     Scenario("watching", "Someone else's turn (spectating your seat)", 7,
              lambda g, r: r.kind == "play" and g.turn_number >= 6, watch=True),
     Scenario("eight_players", "8 players, mid-game, someone fallen", 8,
@@ -118,7 +121,7 @@ def _fixture(sc: Scenario, game: Game, req: Request | None, seed: int) -> dict[s
 
 def capture(sc: Scenario, seeds: range = range(600)) -> dict[str, Any]:
     for seed in seeds:
-        game = new_game(sc.players, seed, draft=True)
+        game = new_game(sc.players, seed, draft=True, battle=True)  # as rooms play by default
         bots = [SmartBot(seed * 10 + i) for i in range(sc.players)]
         gen = game.run()
         reply: Any = None

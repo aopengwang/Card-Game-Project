@@ -222,6 +222,23 @@
   color: var(--ik-text-strong);
 }
 
+/* Iron Chain: a chain badge under the kingdom badge */
+.chain {
+  position: absolute;
+  left: 6px;
+  top: 30px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--ik-vermilion-bright);
+  background: rgba(20, 10, 8, 0.82);
+  color: #e8dcc4;
+  box-shadow: 0 0 8px rgba(227, 98, 75, 0.55);
+}
+
 /* your equipment, when a skill can spend it (e.g. a red weapon as a Strike) */
 button.slot {
   padding: 0;
@@ -268,8 +285,9 @@ button.slot {
 .waited .face::after {
   content: "";
   position: absolute;
+  z-index: 2; /* over the name strip */
   right: 8px;
-  bottom: 44px;
+  bottom: 8px;
   width: 8px;
   height: 8px;
   border-radius: 50%;

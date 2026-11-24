@@ -60,6 +60,12 @@ function title(r: GameRequest, name: NameFn, you: number): string {
         ? t("act.discardPhase", { n: r.count })
         : t("act.discardFor", { reason: reasonTitle(r.reason), n: r.count });
     case "choose_card":
+      if (r.reason === "fire_attack" && r.context?.step) {
+        const ctx = r.context as { step: string; source?: number; target?: number; suit?: string };
+        return ctx.step === "show"
+          ? t("fireAttack.show", { name: name(ctx.source) })
+          : t("fireAttack.discard", { name: name(ctx.target), suit: tMaybe(`opt.${ctx.suit}`) ?? String(ctx.suit) });
+      }
       return r.about != null && r.about !== you
         ? t("act.chooseTheirCard", { reason: reasonTitle(r.reason), name: name(r.about) })
         : t("act.chooseCard", { reason: reasonTitle(r.reason) });
@@ -141,9 +147,15 @@ export function ActionBar({ request, view, sel, setSel, name, waitingText }: Pro
   const submit = () => answer(buildAnswer(r, sel));
   const ready = complete(r, sel);
   const skillOn = (skill: string) => sel.mode?.type === "skill" && sel.mode.skill === skill;
+  // A recastable card (Iron Chain) picked with no targets is recast: discard it, draw 1.
+  const picked = sel.mode?.type === "card" ? view.hand.find((c) => sel.mode?.type === "card" && c.id === sel.mode.cardId) : undefined;
+  const recastable = !!picked && !!cardInfo(picked.name)?.recast;
+  const recast = recastable && sel.targets.length === 0;
   const hintText =
     r.kind === "play" || r.kind === "respond" || r.kind === "discard" || r.kind === "choose_player"
-      ? hint(r, sel) || (r.kind === "respond" ? t("act.hintRespond") : "")
+      ? [hint(r, sel) || (r.kind === "respond" ? t("act.hintRespond") : ""), recastable ? t("act.recastHint") : ""]
+          .filter(Boolean)
+          .join(" · ")
       : "";
 
   return (
@@ -180,7 +192,7 @@ export function ActionBar({ request, view, sel, setSel, name, waitingText }: Pro
             {sel.mode && (
               <>
                 <Button variant="primary" disabled={!ready} onClick={submit} shortcut={KEY.main}>
-                  {t("act.use")}
+                  {recast ? t("act.recast") : t("act.use")}
                 </Button>
                 <Button onClick={() => setSel(EMPTY)} shortcut={KEY.back}>
                   {t("act.cancel")}

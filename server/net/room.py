@@ -149,6 +149,7 @@ class Room:
         # Heroes the host has taken out of the draft (stored this way round so heroes
         # added to the game later start enabled).
         self.disabled_heroes: set[str] = set()
+        self.battle = True  # play with the Battle expansion's 52 cards (the host can turn it off)
         self.members: list[Member] = []
         self.host_token: str | None = None
         self.status = "lobby"  # lobby | playing | finished
@@ -241,6 +242,7 @@ class Room:
             "options": self.options.to_dict(),
             "option_limits": {k: list(v) for k, v in OPTION_LIMITS.items()},
             "disabled_heroes": sorted(self.disabled_heroes),
+            "battle": self.battle,
         }
 
     # ------------------------------------------------------------ connections
@@ -303,6 +305,13 @@ class Room:
             self._need(self.status != "playing", "settings can't change during a game")
             self.set_disabled_heroes(msg.get("disabled"))
             await self.broadcast_room()
+        elif t == "deck":
+            self._need(host, "only the host can choose the deck")
+            self._need(self.status != "playing", "settings can't change during a game")
+            battle = msg.get("battle")
+            self._need(isinstance(battle, bool), "battle must be true or false")
+            self.battle = battle
+            await self.broadcast_room()
         elif t == "start":
             self._need(host, "only the host can start the game")
             await self.start()
@@ -342,7 +351,7 @@ class Room:
             raise RoomError(f"enable at least {n} heroes for {n} players")
         seed = secrets.randbits(32) if seed is None else seed
         # (no pool when every hero is enabled: the draft deals exactly as it always has)
-        self.game = new_game(n, seed, draft=True, hero_pool=pool if self.disabled_heroes else None)
+        self.game = new_game(n, seed, draft=True, hero_pool=pool if self.disabled_heroes else None, battle=self.battle)
         self.bots = [make_bot(m.bot_level, seed + i) for i, m in enumerate(self.members)]
         for m in self.members:
             for c in m.conns:

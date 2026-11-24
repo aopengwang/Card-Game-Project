@@ -78,8 +78,12 @@ export const kingdomName = (k: string): string => tMaybe(`kingdom.${k}`) ?? k;
 export const isRed = (c: Card): boolean =>
   c.virtual ? c.color === "red" : c.suit === "heart" || c.suit === "diamond";
 
+/** The face a card shows: a Strike that deals fire/thunder damage is a "fire_strike" / "thunder_strike". */
+export const faceOf = (c: Pick<Card, "name" | "nature">): string =>
+  c.name === "strike" && c.nature && c.nature !== "normal" ? `${c.nature}_strike` : c.name;
+
 export function cardText(c: Card | undefined | null): string {
   if (!c) return tMaybe("log.aCard") ?? "a card";
-  if (c.virtual) return cardTitle(c.name);
-  return `${cardTitle(c.name)} ${SUIT_SYMBOL[c.suit]}${rankText(c.rank)}`;
+  if (c.virtual) return cardTitle(faceOf(c));
+  return `${cardTitle(faceOf(c))} ${SUIT_SYMBOL[c.suit]}${rankText(c.rank)}`;
 }

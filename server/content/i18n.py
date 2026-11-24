@@ -38,6 +38,21 @@ ZH_CARDS: dict[str, tuple[str, str]] = {
     "benevolent_shield": ("仁心盾", "黑色的击对你无效。"),
     "plus_horse": ("+1马", "其他角色计算与你的距离+1。"),
     "minus_horse": ("-1马", "你计算与其他角色的距离-1。"),
+    # 军争篇 (Battle expansion)
+    "wine": ("酒", "每回合限一次：本回合你使用的下一张击伤害+1。你处于濒死状态时，可以打出以回复1点体力。"),
+    "fire_attack": ("火攻", "对一名有手牌的角色（可以是你）使用：其展示一张手牌，然后你可以弃置一张与之花色相同的手牌，对其造成1点火焰伤害。"),
+    "iron_chain": ("铁索连环", "选择至多两名角色，令其被连环（已被连环则解除）；被连环的角色受到火焰或雷电伤害后，伤害传导给其他所有被连环的角色。也可以重铸：弃置此牌，摸一张牌。"),
+    "supply_shortage": ("兵粮寸断", "置于距离为1的一名其他角色判定区。判定：若结果不为梅花，其跳过摸牌阶段。"),
+    "ancient_blade": ("古刃", "攻击范围2。锁定技：你的击对没有手牌的角色造成伤害时，此伤害+1。"),
+    "vermilion_fan": ("朱羽扇", "攻击范围4。你可以将一张普通的击当火击使用。"),
+    "silver_lion": ("银狮甲", "锁定技：你受到大于1点的伤害时，伤害改为1点。此牌离开你的装备区时，你回复1点体力。"),
+    "rattan_armor": ("藤甲", "锁定技：普通的击、南蛮入侵和万箭齐发对你无效。你受到的火焰伤害+1。"),
+}
+
+# How a Strike with a damage nature shows (see content/names.py CARD_VARIANTS).
+ZH_CARD_VARIANTS: dict[str, tuple[str, str]] = {
+    "fire_strike": ("火击", "造成火焰伤害的击。"),
+    "thunder_strike": ("雷击", "造成雷电伤害的击。"),
 }
 
 ZH_HEROES: dict[str, str] = {

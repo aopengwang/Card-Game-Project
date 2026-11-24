@@ -1,4 +1,4 @@
-import { SUIT_SYMBOL, cardInfo, cardTitle, rankText, useContent } from "../content";
+import { SUIT_SYMBOL, cardInfo, cardTitle, faceOf, rankText, useContent } from "../content";
 import { t, tMaybe } from "../i18n";
 import type { Card as CardData } from "../types";
 import { Art } from "../components/Art";
@@ -36,7 +36,8 @@ export function CardTip({ name }: { name: string }) {
 /** A rice-paper card: corner seal (rank + suit), art window, title, type band. */
 export function Card({ card, size = "md", clickable, selected, dim, onClick, note, tip = true }: Props) {
   useContent();
-  const type = cardInfo(card.name)?.type ?? "basic";
+  const face = faceOf(card); // a Fire / Thunder Strike shows its own face
+  const type = cardInfo(face)?.type ?? "basic";
   const color = suitColor(card);
   const cls = [
     s.card,
@@ -55,7 +56,7 @@ export function Card({ card, size = "md", clickable, selected, dim, onClick, not
   ].join(" ");
   const rank = card.virtual ? "" : rankText(card.rank);
   const suit = card.virtual ? "·" : SUIT_SYMBOL[card.suit];
-  const label = `${cardTitle(card.name)}${card.virtual ? "" : ` ${suit}${rank}`}`;
+  const label = `${cardTitle(face)}${card.virtual ? "" : ` ${suit}${rank}`}`;
   const glyphSize = size === "sm" ? 28 : size === "lg" ? 56 : 40;
   const body = (
     <>
@@ -67,11 +68,11 @@ export function Card({ card, size = "md", clickable, selected, dim, onClick, not
         {/* your image if there is one; else the built-in ink scene, at every size */}
         <Art
           kind="cards"
-          id={card.name}
-          fallback={hasScene(card.name) ? <CardArt name={card.name} /> : <CardGlyph name={card.name} type={type} size={glyphSize} />}
+          id={face}
+          fallback={hasScene(face) ? <CardArt name={face} /> : <CardGlyph name={face} type={type} size={glyphSize} />}
         />
       </span>
-      <span className={s.title}>{cardTitle(card.name)}</span>
+      <span className={s.title}>{cardTitle(face)}</span>
       <span className={s.band} />
       {note && <span className={s.note}>{note}</span>}
     </>
@@ -86,7 +87,7 @@ export function Card({ card, size = "md", clickable, selected, dim, onClick, not
         {body}
       </div>
     );
-  return tip ? <Tip content={<CardTip name={card.name} />}>{el}</Tip> : el;
+  return tip ? <Tip content={<CardTip name={face} />}>{el}</Tip> : el;
 }
 
 /** The back of a card (draw pile, hidden hands). */

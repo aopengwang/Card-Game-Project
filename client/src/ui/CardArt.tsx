@@ -112,6 +112,19 @@ const Cloud = ({ at, o = 0.5 }: { at: string; o?: number }) => (
   />
 );
 
+/** A tongue of flame rising from (0,0), `h` tall. */
+const Flame = ({ at, h = 1 }: { at: string; h?: number }) => (
+  <g transform={`${at} scale(${h})`}>
+    <path d="M0 0C-9 0-12-8-8-15c2-4 1-8-1-11 6 2 10 7 9 12 2-3 2-6 1-9 6 4 9 11 7 17-1 4-4 6-8 6Z" fill={RED} opacity=".9" />
+    <path d="M0 0c-4 0-6-4-4-7 1-2 1-4 0-6 3 2 5 4 5 7 1-1 1-2 1-3 2 2 3 5 2 7-1 1-2 2-4 2Z" fill="#f0c45a" />
+  </g>
+);
+
+/** A chain link (an oval ring), centred on (0,0) and turned by `rot`. */
+const Link = ({ at, rot = 0 }: { at: string; rot?: number }) => (
+  <ellipse transform={`${at} rotate(${rot})`} rx="9" ry="5" fill="none" stroke={INK} strokeWidth="2.6" />
+);
+
 /** Water: a few curling wave lines. */
 const Waves = ({ y = 66 }: { y?: number }) => (
   <path
@@ -146,6 +159,38 @@ const SCENES: Record<string, ReactElement> = {
       <path d="M20 26l6 3M16 34l7 1M22 18l5 4" stroke={INK} strokeWidth="1.4" strokeLinecap="round" opacity=".45" />
     </>
   ),
+  fire_strike: (
+    <>
+      <Hills />
+      <path d="M14 70C40 50 70 30 108 10" stroke={RED} strokeWidth="6" strokeLinecap="round" opacity=".7" fill="none" />
+      <Flame at="translate(30 70)" h={1.2} />
+      <Flame at="translate(48 58)" h={0.9} />
+      <Flame at="translate(94 30)" h={0.7} />
+      <Jian at="translate(70 60) rotate(52)" len={56} edge="#5a1a12" />
+    </>
+  ),
+  thunder_strike: (
+    <>
+      <path d="M8 22c0-8 12-11 17-5 3-9 18-11 23-2 5-6 18-5 18 3 8-2 13 8 5 11H15c-7 0-10-5-7-7Z" fill={INK} opacity=".55" />
+      <Hills far={0.06} near={0.1} />
+      <path d="M40 26 30 44h8l-5 16 18-24H40l6-10Z" fill="#f0c45a" stroke={INK} strokeWidth=".8" />
+      <Jian at="translate(74 66) rotate(40)" len={58} edge="#2c3a52" />
+      <path d="M86 18l-3 6M96 22l-3 6" stroke="#f0c45a" strokeWidth="1.6" strokeLinecap="round" />
+    </>
+  ),
+  wine: (
+    <>
+      <Hills far={0.06} near={0.1} />
+      <path d="M30 74c-10-4-12-20-6-30 2-4 2-8 0-12h24c-2 4-2 8 0 12 6 10 4 26-6 30Z" fill={INK} opacity=".85" />
+      <path d="M26 32h28" stroke={INK} strokeWidth="3" strokeLinecap="round" />
+      <path d="M28 26h24l-2 6H30Z" fill={RED} />
+      <rect x="31" y="46" width="18" height="14" fill={PAPER} opacity=".9" />
+      <path d="M36 50h8M36 55h8" stroke={RED} strokeWidth="1.4" />
+      <path d="M74 64h22l-3 10H77Z" fill={INK} opacity=".8" />
+      <path d="M80 56c-2-4 2-6 0-10M88 56c-2-4 2-6 0-10" stroke={INK} strokeWidth="1.2" fill="none" opacity=".45" strokeLinecap="round" />
+    </>
+  ),
+
   peach: (
     <>
       <Hills far={0.06} near={0.1} />
@@ -305,7 +350,76 @@ const SCENES: Record<string, ReactElement> = {
     </>
   ),
 
+  fire_attack: (
+    <>
+      <Hills />
+      <path d="M16 74 40 44 64 74ZM60 74 84 40l26 34Z" fill={INK} opacity=".7" />
+      <path d="M40 44v-8M84 40v-8" stroke={INK} strokeWidth="1.6" />
+      <path d="M40 36h8l-8 3ZM84 32h8l-8 3Z" fill={RED} />
+      <Flame at="translate(40 62)" h={1.3} />
+      <Flame at="translate(86 60)" h={1.6} />
+      <Flame at="translate(62 72)" h={0.9} />
+      <path d="M50 22c4-4 2-8 6-12M76 18c4-4 2-8 6-12" stroke={INK} strokeWidth="1.4" fill="none" opacity=".35" strokeLinecap="round" />
+    </>
+  ),
+  iron_chain: (
+    <>
+      <Hills />
+      <Waves y={70} />
+      {[18, 34, 50, 66, 82, 98].map((x, i) => (
+        <Link key={x} at={`translate(${x} ${44 + Math.sin(i) * 4})`} rot={i % 2 ? 90 : 0} />
+      ))}
+      <path d="M8 66h104" stroke={INK} strokeWidth="1" opacity=".3" />
+      <path d="M58 30h6" stroke={RED} strokeWidth="2.4" strokeLinecap="round" />
+    </>
+  ),
+  supply_shortage: (
+    <>
+      <Hills />
+      <Sun x={94} y={20} r={7} />
+      <path d="M26 74c-6-10-4-24 8-30 6-3 16-3 22 0 12 6 14 20 8 30Z" fill={INK} opacity=".8" />
+      <path d="M38 44c0-6 4-8 8-8s8 2 8 8" stroke={INK} strokeWidth="2" fill="none" />
+      <path d="M40 54l10 10M50 54 40 64" stroke={RED} strokeWidth="2.6" strokeLinecap="round" />
+      <path d="M76 74h30l-4 6H80Z" fill={INK} opacity=".55" />
+      {[80, 86, 92, 98].map((x, i) => (
+        <circle key={x} cx={x} cy={70 - (i % 2) * 2} r="1.4" fill={GOLD} />
+      ))}
+    </>
+  ),
+
   // -- weapons
+  ancient_blade: (
+    <>
+      <Hills />
+      <Mist y={60} />
+      <g transform="translate(34 70) rotate(-40)">
+        <path d="M0 0C4-20 10-40 30-58 26-40 18-20 8 2Z" fill={INK} />
+        <path d="M4-6C8-24 14-38 26-52" stroke={PAPER} strokeWidth=".8" opacity=".5" fill="none" />
+        <path d="M-6 2h18l-2 4H-4Z" fill={GOLD} />
+        <rect x="0" y="6" width="5" height="14" rx="1.5" fill={INK} />
+        <path d="M2 20c-1 5 2 8-1 12" stroke={RED} strokeWidth="1.6" fill="none" strokeLinecap="round" />
+      </g>
+    </>
+  ),
+  vermilion_fan: (
+    <>
+      <Hills />
+      <Flame at="translate(94 30)" h={0.7} />
+      {[-50, -30, -10, 10, 30, 50].map((a) => (
+        <path
+          key={a}
+          transform={`rotate(${a} 50 68)`}
+          d="M50 68C46 52 46 34 50 18c4 16 4 34 0 50Z"
+          fill={RED}
+          stroke={INK}
+          strokeWidth=".8"
+          opacity=".85"
+        />
+      ))}
+      <path d="M50 68v12" stroke={INK} strokeWidth="3" strokeLinecap="round" />
+      <circle cx="50" cy="68" r="3" fill={GOLD} />
+    </>
+  ),
   crossbow: (
     <>
       <Hills />
@@ -447,6 +561,33 @@ const SCENES: Record<string, ReactElement> = {
       <circle cx="60" cy="42" r="22" fill="none" stroke={GOLD} strokeWidth="1.6" />
       <path d="M60 28c4 6 4 12 0 18-4-6-4-12 0-18ZM60 46c-6-2-12 0-14 4 6 2 10 0 14-4ZM60 46c6-2 12 0 14 4-6 2-10 0-14-4Z" fill={RED} />
       <circle cx="60" cy="42" r="3" fill={GOLD} />
+    </>
+  ),
+  silver_lion: (
+    <>
+      <Hills far={0.05} near={0.08} />
+      <path d="M34 20h52l6 20c0 20-14 32-32 38-18-6-32-18-32-38Z" fill="#c9ccd2" stroke={INK} strokeWidth="1.6" />
+      <circle cx="60" cy="42" r="15" fill="none" stroke={INK} strokeWidth="1.4" />
+      {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((a) => (
+        <path key={a} transform={`rotate(${a} 60 42)`} d="M60 27v-4" stroke={INK} strokeWidth="1.8" strokeLinecap="round" />
+      ))}
+      <circle cx="55" cy="40" r="1.6" fill={INK} />
+      <circle cx="65" cy="40" r="1.6" fill={INK} />
+      <path d="M55 48c3 3 7 3 10 0" stroke={RED} strokeWidth="1.8" fill="none" strokeLinecap="round" />
+    </>
+  ),
+  rattan_armor: (
+    <>
+      <Hills />
+      <path d="M38 16h44l8 14-6 6v36H36V36l-6-6Z" fill="#b68a4e" stroke={INK} strokeWidth="1.6" />
+      {[24, 34, 44, 54, 64].map((y) => (
+        <path key={y} d={`M38 ${y}h44`} stroke={INK} strokeWidth="1" opacity=".55" />
+      ))}
+      {[44, 52, 60, 68, 76].map((x) => (
+        <path key={x} d={`M${x} 18v54`} stroke={INK} strokeWidth="1" opacity=".35" />
+      ))}
+      <path d="M50 16c2 6 18 6 20 0" stroke={INK} strokeWidth="1.6" fill="none" />
+      <Flame at="translate(100 72)" h={0.8} />
     </>
   ),
   plus_horse: (

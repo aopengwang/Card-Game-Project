@@ -85,6 +85,8 @@ class Card:
     suit: Suit
     rank: int  # 1 (A) .. 13 (K); 0 for virtual cards with mixed ranks
     virtual_color: str | None = None  # "red" | "black" | "none" for virtual cards
+    # Damage it deals: "fire" / "thunder" Strikes are still Strikes everywhere a Strike counts.
+    nature: str = "normal"
 
     @property
     def is_virtual(self) -> bool:
@@ -104,6 +106,8 @@ class Card:
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {"id": self.id, "name": self.name, "suit": str(self.suit), "rank": self.rank}
+        if self.nature != "normal":
+            d["nature"] = self.nature
         if self.is_virtual:
             d["virtual"] = True
             d["color"] = self.virtual_color
@@ -116,6 +120,9 @@ class CardDef:
     name: str = ""
     type: CardType = CardType.BASIC
     target_count: int = 0  # how many targets the user picks (0 = none / implicit)
+    min_targets: int | None = None  # fewer allowed (None = exactly target_count)
+    # Played with no targets in your play phase, it's recast instead: discard it, draw 1.
+    recastable: bool = False
 
     def can_use(self, game: Game, user: Player) -> bool:
         """Can `user` actively use this card during their play phase?"""
@@ -159,8 +166,9 @@ class Damage:
     target: int
     amount: int
     card: Card | None = None
-    nature: str = "normal"  # later: "fire", "thunder"
+    nature: str = "normal"  # "normal" | "fire" | "thunder"
     prevented: bool = False
+    chained: bool = False  # passed on along an Iron Chain (it doesn't pass on again)
 
 
 @dataclass

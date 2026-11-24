@@ -1,4 +1,5 @@
-"""Basic cards: Strike, Dodge, Peach."""
+"""Basic cards: Strike (incl. Fire / Thunder Strikes: Strikes with a damage nature), Dodge,
+Peach, Wine."""
 from __future__ import annotations
 
 from engine import CardDef, CardType, CardUse, Event, Game, Player
@@ -24,8 +25,11 @@ class Strike(CardDef):
         ]
 
     def on_use(self, game: Game, use: CardUse) -> Gen:
+        user = game.players[use.source]
         if not use.data.get("free"):  # extra strikes (borrowed sword, glaive) don't count
-            game.players[use.source].strikes_used += 1
+            user.strikes_used += 1
+        if user.turn_usage.pop("_drunk", None):  # a Wine earlier this turn
+            use.damage_bonus += 1
         for target in list(use.targets):
             if not game.players[target].alive:
                 continue
@@ -37,7 +41,7 @@ class Strike(CardDef):
                 yield from game.trigger(Event.STRIKE_DODGED, (use, target))
                 if target not in use.data.get("forced", ()):
                     continue
-            yield from game.damage(use.source, target, 1 + use.damage_bonus, card=use.card)
+            yield from game.damage(use.source, target, 1 + use.damage_bonus, card=use.card, nature=use.card.nature)
 
     @staticmethod
     def _dodged(game: Game, use: CardUse, target: int) -> Gen:
@@ -73,4 +77,20 @@ class Peach(CardDef):
         yield from game.recover(use.source, 1, source=use.source)
 
 
-BASIC_DEFS: list[CardDef] = [Strike(), Dodge(), Peach()]
+class Wine(CardDef):
+    """Once per turn: your next Strike this turn deals +1 damage. When you are dying, you may
+    play it to recover 1 HP."""
+
+    name = "wine"
+    type = CardType.BASIC
+
+    def can_use(self, game: Game, user: Player) -> bool:
+        return not user.turn_usage.get("_wine")
+
+    def on_use(self, game: Game, use: CardUse) -> Gen:
+        usage = game.players[use.source].turn_usage
+        usage["_wine"] = usage["_drunk"] = 1
+        yield from ()
+
+
+BASIC_DEFS: list[CardDef] = [Strike(), Dodge(), Peach(), Wine()]

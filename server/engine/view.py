@@ -37,6 +37,7 @@ def view_for(game: Game, seat: int) -> dict[str, Any]:
                 "hp": p.hp,
                 "max_hp": p.max_hp,
                 "alive": p.alive,
+                "chained": p.chained,
                 "hand_count": len(p.hand),
                 "equips": [c.to_dict() for c in p.equips],
                 "judge": [game.judge_view(c) for c in p.judge],

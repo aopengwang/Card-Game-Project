@@ -19,7 +19,7 @@ const modules = import.meta.glob<Fixture>("./fixtures/*.json", { eager: true, im
 // Declared before FIXTURES: the sort below runs at module load.
 const ORDER = [
   "hero_pick", "play_strike", "play_skill", "respond_dodge", "nullify_chain", "dying_self",
-  "discard_phase", "choose_card", "confirm_armor", "arrange_deck", "pass_strike", "watching",
+  "discard_phase", "choose_card", "confirm_armor", "arrange_deck", "pass_strike", "battle_chain", "watching",
   "eight_players", "game_over",
 ];
 const rank = (id: string) => (ORDER.includes(id) ? ORDER.indexOf(id) : ORDER.length);

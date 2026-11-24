@@ -115,6 +115,16 @@ hero as a small card (hover for its skills); the host clicks one to leave it out
 hero pick or put it back. At least 4 must stay in, and at least one per player to start.
 Rooms live in memory; restarting the server ends all games.
 
+**Battle expansion (军争篇)**: on by default; the host can turn it off in the lobby's game
+settings. It adds 52 cards (one of each suit and rank, 160 in all; see `BATTLE_SPEC` in
+`server/content/standard.py`): Fire Strike ×5 and Thunder Strike ×9 (Strikes that deal
+fire / thunder damage), Wine ×5 (+1 damage to your next Strike, or saves you when
+dying), more Dodges, Peaches and Nullifies, Fire Attack ×3, Iron Chain ×6 (chained
+players share fire/thunder damage; can be recast), Supply Shortage ×2 (skip a draw
+phase), and Ancient Blade, Vermilion Fan, Silver Lion, Rattan Armor ×2 and a +1 Horse.
+The expansion has no heroes of its own. Code and tests use the standard 108-card deck
+unless they pass `battle=True` to `new_game`.
+
 **Card art**: every card has a built-in ink illustration (`client/src/ui/CardArt.tsx`).
 Drop `client/public/art/cards/<id>.png|webp|jpg` to replace one, then refresh; no rebuild
 needed. `docs/art-prompts.md` has a matching style and subject per card for an image
@@ -190,4 +200,5 @@ Compare levels: `python -m bots.arena --games 300 --players 5`. Watch one:
 5. [x] FastAPI WebSocket server: rooms, invite codes, timeouts, reconnect, AFK bot takeover
    (+ a plain-HTML test client at `/debug`)
 6. [x] React client: table layout, hero draft, targeting, timers, animations, art slots, mobile
-7. [ ] Better bots (hard level done), Kingdom Wars mode (60 heroes, dual heroes), expansions, replays
+7. [x] Battle expansion (军争篇): 52 cards, fire/thunder damage, Iron Chain, Wine, recasting
+8. [ ] Better bots (hard level done), Kingdom Wars mode (60 heroes, dual heroes), more expansions, replays

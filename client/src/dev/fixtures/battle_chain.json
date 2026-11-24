@@ -1,0 +1,1038 @@
+{
+ "id": "battle_chain",
+ "title": "Battle expansion: chained players, a Fire/Thunder Strike in hand",
+ "seed": 0,
+ "players": 6,
+ "room": {
+  "type": "room",
+  "code": "DEMOS",
+  "status": "playing",
+  "you": 1,
+  "host": 0,
+  "members": [
+   {
+    "name": "Mei",
+    "bot": false,
+    "level": null,
+    "connected": true
+   },
+   {
+    "name": "Kai",
+    "bot": false,
+    "level": null,
+    "connected": true
+   },
+   {
+    "name": "Ana",
+    "bot": false,
+    "level": null,
+    "connected": true
+   },
+   {
+    "name": "Bot 1",
+    "bot": true,
+    "level": "hard",
+    "connected": true
+   },
+   {
+    "name": "Lin",
+    "bot": false,
+    "level": null,
+    "connected": true
+   },
+   {
+    "name": "Bot 2",
+    "bot": true,
+    "level": "hard",
+    "connected": true
+   }
+  ],
+  "min_players": 4,
+  "max_players": 8,
+  "bot_levels": [
+   "easy",
+   "hard"
+  ]
+ },
+ "view": {
+  "you": 1,
+  "turn": 4,
+  "current": 1,
+  "phase": "play",
+  "draw_pile": 124,
+  "discard_pile": 13,
+  "processing": [],
+  "attack_range": 1,
+  "players": [
+   {
+    "seat": 0,
+    "hero": "liu_bei",
+    "kingdom": "shu",
+    "gender": "male",
+    "skills": [
+     {
+      "id": "open_hand",
+      "tags": [],
+      "text": "In your play phase, any number of times: give any number of hand cards to another\nplayer. The first time in a turn that you've given away 2 or more cards in all, recover\n1 HP."
+     }
+    ],
+    "spent": [],
+    "skill_uses": {},
+    "distance": 1,
+    "hp": 3,
+    "max_hp": 4,
+    "alive": true,
+    "chained": true,
+    "hand_count": 2,
+    "equips": [
+     {
+      "id": 91,
+      "name": "piercing_sword",
+      "suit": "spade",
+      "rank": 6
+     },
+     {
+      "id": 156,
+      "name": "silver_lion",
+      "suit": "club",
+      "rank": 1
+     }
+    ],
+    "judge": [],
+    "role": null
+   },
+   {
+    "seat": 1,
+    "hero": "guo_jia",
+    "kingdom": "wei",
+    "gender": "male",
+    "skills": [
+     {
+      "id": "heavens_will",
+      "tags": [],
+      "text": "After a judgment of yours takes effect, you take the judgment card."
+     },
+     {
+      "id": "final_stratagem",
+      "tags": [],
+      "text": "For each 1 damage you take, look at the top 2 cards of the deck and give them out as\nyou like, one at a time, to any players (yourself included)."
+     }
+    ],
+    "spent": [],
+    "skill_uses": {},
+    "distance": null,
+    "hp": 3,
+    "max_hp": 3,
+    "alive": true,
+    "chained": false,
+    "hand_count": 4,
+    "equips": [],
+    "judge": [],
+    "role": "rebel"
+   },
+   {
+    "seat": 2,
+    "hero": "zhuge_liang",
+    "kingdom": "shu",
+    "gender": "male",
+    "skills": [
+     {
+      "id": "star_chart",
+      "tags": [],
+      "text": "At the start of your start phase, look at the top X cards of the deck (X = living\nplayers, at most 5). Put any of them back on top in any order, and the rest on the bottom."
+     },
+     {
+      "id": "nothing_to_hide",
+      "tags": [
+       "locked"
+      ],
+      "text": "Locked. While you have no hand cards, you can't be targeted by Strike or Duel."
+     }
+    ],
+    "spent": [],
+    "skill_uses": {},
+    "distance": 1,
+    "hp": 3,
+    "max_hp": 3,
+    "alive": true,
+    "chained": false,
+    "hand_count": 3,
+    "equips": [],
+    "judge": [],
+    "role": null
+   },
+   {
+    "seat": 3,
+    "hero": "huang_gai",
+    "kingdom": "wu",
+    "gender": "male",
+    "skills": [
+     {
+      "id": "bitter_gambit",
+      "tags": [],
+      "text": "In your play phase, any number of times: lose 1 HP, then draw 2 cards."
+     }
+    ],
+    "spent": [],
+    "skill_uses": {},
+    "distance": 2,
+    "hp": 4,
+    "max_hp": 4,
+    "alive": true,
+    "chained": false,
+    "hand_count": 3,
+    "equips": [],
+    "judge": [],
+    "role": null
+   },
+   {
+    "seat": 4,
+    "hero": "sun_quan",
+    "kingdom": "wu",
+    "gender": "male",
+    "skills": [
+     {
+      "id": "weigh_options",
+      "tags": [],
+      "text": "Once per turn, in your play phase: discard any number of cards (hand or equipment),\nthen draw that many."
+     },
+     {
+      "id": "kinship",
+      "tags": [
+       "locked",
+       "lord"
+      ],
+      "text": "Lord, locked. When another Wu character saves you from dying with a Peach, you\nrecover 1 extra HP."
+     }
+    ],
+    "spent": [],
+    "skill_uses": {},
+    "distance": 3,
+    "hp": 4,
+    "max_hp": 5,
+    "alive": true,
+    "chained": true,
+    "hand_count": 3,
+    "equips": [
+     {
+      "id": 107,
+      "name": "minus_horse",
+      "suit": "diamond",
+      "rank": 13
+     },
+     {
+      "id": 90,
+      "name": "crossbow",
+      "suit": "diamond",
+      "rank": 1
+     }
+    ],
+    "judge": [],
+    "role": "lord"
+   },
+   {
+    "seat": 5,
+    "hero": "hua_tuo",
+    "kingdom": "qun",
+    "gender": "male",
+    "skills": [
+     {
+      "id": "emergency_cure",
+      "tags": [],
+      "text": "Outside your turn, you may play any red card (hand or equipment) as a Peach."
+     },
+     {
+      "id": "healing_herbs",
+      "tags": [],
+      "text": "Once per turn, in your play phase: discard a hand card to have a wounded character\n(you too) recover 1 HP."
+     }
+    ],
+    "spent": [],
+    "skill_uses": {},
+    "distance": 3,
+    "hp": 2,
+    "max_hp": 3,
+    "alive": true,
+    "chained": false,
+    "hand_count": 3,
+    "equips": [
+     {
+      "id": 103,
+      "name": "plus_horse",
+      "suit": "club",
+      "rank": 5
+     }
+    ],
+    "judge": [],
+    "role": null
+   }
+  ],
+  "hand": [
+   {
+    "id": 129,
+    "name": "dodge",
+    "suit": "diamond",
+    "rank": 10
+   },
+   {
+    "id": 35,
+    "name": "dodge",
+    "suit": "diamond",
+    "rank": 3
+   },
+   {
+    "id": 7,
+    "name": "strike",
+    "suit": "club",
+    "rank": 2
+   },
+   {
+    "id": 117,
+    "name": "strike",
+    "suit": "spade",
+    "rank": 8,
+    "nature": "thunder"
+   }
+  ],
+  "result": null
+ },
+ "log": [
+  {
+   "type": "hero_chosen",
+   "seat": 4,
+   "hero": "sun_quan"
+  },
+  {
+   "type": "heroes_revealed",
+   "heroes": [
+    "liu_bei",
+    "guo_jia",
+    "zhuge_liang",
+    "huang_gai",
+    "sun_quan",
+    "hua_tuo"
+   ]
+  },
+  {
+   "type": "game_start",
+   "players": 6,
+   "lord": 4,
+   "lord_hp": 5,
+   "heroes": [
+    "liu_bei",
+    "guo_jia",
+    "zhuge_liang",
+    "huang_gai",
+    "sun_quan",
+    "hua_tuo"
+   ]
+  },
+  {
+   "type": "draw",
+   "seat": 4,
+   "count": 4,
+   "reason": "deal"
+  },
+  {
+   "type": "draw",
+   "seat": 5,
+   "count": 4,
+   "reason": "deal"
+  },
+  {
+   "type": "draw",
+   "seat": 0,
+   "count": 4,
+   "reason": "deal"
+  },
+  {
+   "type": "draw",
+   "seat": 1,
+   "count": 4,
+   "reason": "deal",
+   "cards": [
+    {
+     "id": 129,
+     "name": "dodge",
+     "suit": "diamond",
+     "rank": 10
+    },
+    {
+     "id": 35,
+     "name": "dodge",
+     "suit": "diamond",
+     "rank": 3
+    },
+    {
+     "id": 72,
+     "name": "barbarians",
+     "suit": "spade",
+     "rank": 13
+    },
+    {
+     "id": 146,
+     "name": "iron_chain",
+     "suit": "club",
+     "rank": 13
+    }
+   ]
+  },
+  {
+   "type": "draw",
+   "seat": 2,
+   "count": 4,
+   "reason": "deal"
+  },
+  {
+   "type": "draw",
+   "seat": 3,
+   "count": 4,
+   "reason": "deal"
+  },
+  {
+   "type": "turn_start",
+   "seat": 4,
+   "turn": 1
+  },
+  {
+   "type": "phase",
+   "seat": 4,
+   "phase": "start"
+  },
+  {
+   "type": "phase",
+   "seat": 4,
+   "phase": "judge"
+  },
+  {
+   "type": "phase",
+   "seat": 4,
+   "phase": "draw"
+  },
+  {
+   "type": "draw",
+   "seat": 4,
+   "count": 2,
+   "reason": "draw"
+  },
+  {
+   "type": "phase",
+   "seat": 4,
+   "phase": "play"
+  },
+  {
+   "type": "use",
+   "seat": 4,
+   "card": {
+    "id": 98,
+    "name": "kirin_bow",
+    "suit": "heart",
+    "rank": 5
+   },
+   "targets": []
+  },
+  {
+   "type": "equip",
+   "seat": 4,
+   "card": {
+    "id": 98,
+    "name": "kirin_bow",
+    "suit": "heart",
+    "rank": 5
+   },
+   "slot": "weapon"
+  },
+  {
+   "type": "use",
+   "seat": 4,
+   "card": {
+    "id": 107,
+    "name": "minus_horse",
+    "suit": "diamond",
+    "rank": 13
+   },
+   "targets": []
+  },
+  {
+   "type": "equip",
+   "seat": 4,
+   "card": {
+    "id": 107,
+    "name": "minus_horse",
+    "suit": "diamond",
+    "rank": 13
+   },
+   "slot": "minus_horse"
+  },
+  {
+   "type": "skill",
+   "seat": 4,
+   "skill": "weigh_options",
+   "targets": [],
+   "cards": 1
+  },
+  {
+   "type": "discard",
+   "seat": 4,
+   "cards": [
+    {
+     "id": 120,
+     "name": "strike",
+     "suit": "club",
+     "rank": 7,
+     "nature": "thunder"
+    }
+   ],
+   "reason": "weigh_options"
+  },
+  {
+   "type": "draw",
+   "seat": 4,
+   "count": 1,
+   "reason": "weigh_options"
+  },
+  {
+   "type": "use",
+   "seat": 4,
+   "card": {
+    "id": 90,
+    "name": "crossbow",
+    "suit": "diamond",
+    "rank": 1
+   },
+   "targets": []
+  },
+  {
+   "type": "discard",
+   "seat": 4,
+   "cards": [
+    {
+     "id": 98,
+     "name": "kirin_bow",
+     "suit": "heart",
+     "rank": 5
+    }
+   ],
+   "reason": "replace_equip"
+  },
+  {
+   "type": "equip",
+   "seat": 4,
+   "card": {
+    "id": 90,
+    "name": "crossbow",
+    "suit": "diamond",
+    "rank": 1
+   },
+   "slot": "weapon"
+  },
+  {
+   "type": "phase",
+   "seat": 4,
+   "phase": "discard"
+  },
+  {
+   "type": "phase",
+   "seat": 4,
+   "phase": "end"
+  },
+  {
+   "type": "turn_start",
+   "seat": 5,
+   "turn": 2
+  },
+  {
+   "type": "phase",
+   "seat": 5,
+   "phase": "start"
+  },
+  {
+   "type": "phase",
+   "seat": 5,
+   "phase": "judge"
+  },
+  {
+   "type": "phase",
+   "seat": 5,
+   "phase": "draw"
+  },
+  {
+   "type": "draw",
+   "seat": 5,
+   "count": 2,
+   "reason": "draw"
+  },
+  {
+   "type": "phase",
+   "seat": 5,
+   "phase": "play"
+  },
+  {
+   "type": "use",
+   "seat": 5,
+   "card": {
+    "id": 103,
+    "name": "plus_horse",
+    "suit": "club",
+    "rank": 5
+   },
+   "targets": []
+  },
+  {
+   "type": "equip",
+   "seat": 5,
+   "card": {
+    "id": 103,
+    "name": "plus_horse",
+    "suit": "club",
+    "rank": 5
+   },
+   "slot": "plus_horse"
+  },
+  {
+   "type": "use",
+   "seat": 5,
+   "card": {
+    "id": 111,
+    "name": "strike",
+    "suit": "diamond",
+    "rank": 4,
+    "nature": "fire"
+   },
+   "targets": [
+    4
+   ]
+  },
+  {
+   "type": "damage",
+   "source": 5,
+   "target": 4,
+   "amount": 1,
+   "nature": "fire",
+   "hp": 4
+  },
+  {
+   "type": "phase",
+   "seat": 5,
+   "phase": "discard"
+  },
+  {
+   "type": "discard",
+   "seat": 5,
+   "cards": [
+    {
+     "id": 77,
+     "name": "harvest",
+     "suit": "heart",
+     "rank": 4
+    }
+   ],
+   "reason": "discard_phase"
+  },
+  {
+   "type": "phase",
+   "seat": 5,
+   "phase": "end"
+  },
+  {
+   "type": "turn_start",
+   "seat": 0,
+   "turn": 3
+  },
+  {
+   "type": "phase",
+   "seat": 0,
+   "phase": "start"
+  },
+  {
+   "type": "phase",
+   "seat": 0,
+   "phase": "judge"
+  },
+  {
+   "type": "phase",
+   "seat": 0,
+   "phase": "draw"
+  },
+  {
+   "type": "draw",
+   "seat": 0,
+   "count": 2,
+   "reason": "draw"
+  },
+  {
+   "type": "phase",
+   "seat": 0,
+   "phase": "play"
+  },
+  {
+   "type": "use",
+   "seat": 0,
+   "card": {
+    "id": 91,
+    "name": "piercing_sword",
+    "suit": "spade",
+    "rank": 6
+   },
+   "targets": []
+  },
+  {
+   "type": "equip",
+   "seat": 0,
+   "card": {
+    "id": 91,
+    "name": "piercing_sword",
+    "suit": "spade",
+    "rank": 6
+   },
+   "slot": "weapon"
+  },
+  {
+   "type": "use",
+   "seat": 0,
+   "card": {
+    "id": 55,
+    "name": "ex_nihilo",
+    "suit": "heart",
+    "rank": 9
+   },
+   "targets": [
+    0
+   ]
+  },
+  {
+   "type": "draw",
+   "seat": 0,
+   "count": 2,
+   "reason": "ex_nihilo"
+  },
+  {
+   "type": "use",
+   "seat": 0,
+   "card": {
+    "id": 156,
+    "name": "silver_lion",
+    "suit": "club",
+    "rank": 1
+   },
+   "targets": []
+  },
+  {
+   "type": "equip",
+   "seat": 0,
+   "card": {
+    "id": 156,
+    "name": "silver_lion",
+    "suit": "club",
+    "rank": 1
+   },
+   "slot": "armor"
+  },
+  {
+   "type": "skill",
+   "seat": 0,
+   "skill": "open_hand",
+   "targets": [
+    4
+   ],
+   "cards": 1
+  },
+  {
+   "type": "give",
+   "seat": 0,
+   "target": 4,
+   "reason": "open_hand"
+  },
+  {
+   "type": "use",
+   "seat": 0,
+   "card": {
+    "id": 149,
+    "name": "supply_shortage",
+    "suit": "club",
+    "rank": 4
+   },
+   "targets": [
+    1
+   ]
+  },
+  {
+   "type": "phase",
+   "seat": 0,
+   "phase": "discard"
+  },
+  {
+   "type": "phase",
+   "seat": 0,
+   "phase": "end"
+  },
+  {
+   "type": "turn_start",
+   "seat": 1,
+   "turn": 4
+  },
+  {
+   "type": "phase",
+   "seat": 1,
+   "phase": "start"
+  },
+  {
+   "type": "phase",
+   "seat": 1,
+   "phase": "judge"
+  },
+  {
+   "type": "delayed",
+   "seat": 1,
+   "card": {
+    "id": 149,
+    "name": "supply_shortage",
+    "suit": "club",
+    "rank": 4
+   }
+  },
+  {
+   "type": "judge",
+   "seat": 1,
+   "reason": "supply_shortage",
+   "card": {
+    "id": 7,
+    "name": "strike",
+    "suit": "club",
+    "rank": 2
+   }
+  },
+  {
+   "type": "judge_result",
+   "seat": 1,
+   "reason": "supply_shortage",
+   "card": {
+    "id": 7,
+    "name": "strike",
+    "suit": "club",
+    "rank": 2
+   },
+   "hit": false
+  },
+  {
+   "type": "skill",
+   "seat": 1,
+   "skill": "heavens_will"
+  },
+  {
+   "type": "take",
+   "seat": 1,
+   "target": null,
+   "zone": "processing",
+   "reason": "heavens_will",
+   "cards": [
+    {
+     "id": 7,
+     "name": "strike",
+     "suit": "club",
+     "rank": 2
+    }
+   ]
+  },
+  {
+   "type": "phase",
+   "seat": 1,
+   "phase": "draw"
+  },
+  {
+   "type": "draw",
+   "seat": 1,
+   "count": 2,
+   "reason": "draw",
+   "cards": [
+    {
+     "id": 153,
+     "name": "nullify",
+     "suit": "spade",
+     "rank": 13
+    },
+    {
+     "id": 117,
+     "name": "strike",
+     "suit": "spade",
+     "rank": 8,
+     "nature": "thunder"
+    }
+   ]
+  },
+  {
+   "type": "phase",
+   "seat": 1,
+   "phase": "play"
+  },
+  {
+   "type": "use",
+   "seat": 1,
+   "card": {
+    "id": 72,
+    "name": "barbarians",
+    "suit": "spade",
+    "rank": 13
+   },
+   "targets": [
+    2,
+    3,
+    4,
+    5,
+    0
+   ]
+  },
+  {
+   "type": "respond",
+   "seat": 2,
+   "card": {
+    "id": 24,
+    "name": "strike",
+    "suit": "diamond",
+    "rank": 6
+   },
+   "reason": "barbarians"
+  },
+  {
+   "type": "respond",
+   "seat": 3,
+   "card": {
+    "id": 18,
+    "name": "strike",
+    "suit": "club",
+    "rank": 10
+   },
+   "reason": "barbarians"
+  },
+  {
+   "type": "respond",
+   "seat": 0,
+   "card": {
+    "id": 151,
+    "name": "nullify",
+    "suit": "heart",
+    "rank": 1
+   },
+   "reason": "nullify"
+  },
+  {
+   "type": "nullify",
+   "seat": 0,
+   "card": {
+    "id": 72,
+    "name": "barbarians",
+    "suit": "spade",
+    "rank": 13
+   },
+   "target": 4,
+   "cancelled": true
+  },
+  {
+   "type": "respond",
+   "seat": 1,
+   "card": {
+    "id": 153,
+    "name": "nullify",
+    "suit": "spade",
+    "rank": 13
+   },
+   "reason": "nullify"
+  },
+  {
+   "type": "nullify",
+   "seat": 1,
+   "card": {
+    "id": 72,
+    "name": "barbarians",
+    "suit": "spade",
+    "rank": 13
+   },
+   "target": 4,
+   "cancelled": false
+  },
+  {
+   "type": "respond",
+   "seat": 4,
+   "card": {
+    "id": 113,
+    "name": "strike",
+    "suit": "spade",
+    "rank": 4,
+    "nature": "thunder"
+   },
+   "reason": "barbarians"
+  },
+  {
+   "type": "damage",
+   "source": 1,
+   "target": 5,
+   "amount": 1,
+   "nature": "normal",
+   "hp": 2
+  },
+  {
+   "type": "damage",
+   "source": 1,
+   "target": 0,
+   "amount": 1,
+   "nature": "normal",
+   "hp": 3
+  },
+  {
+   "type": "use",
+   "seat": 1,
+   "card": {
+    "id": 146,
+    "name": "iron_chain",
+    "suit": "club",
+    "rank": 13
+   },
+   "targets": [
+    4,
+    0
+   ]
+  },
+  {
+   "type": "chain",
+   "seat": 4,
+   "chained": true
+  },
+  {
+   "type": "chain",
+   "seat": 0,
+   "chained": true
+  }
+ ],
+ "waiting": null,
+ "request": {
+  "id": 1,
+  "req": {
+   "kind": "play",
+   "seat": 1,
+   "error": null,
+   "options": [
+    {
+     "card_id": 7,
+     "target_count": 1,
+     "candidates": [
+      0,
+      2
+     ],
+     "min_targets": null
+    },
+    {
+     "card_id": 117,
+     "target_count": 1,
+     "candidates": [
+      0,
+      2
+     ],
+     "min_targets": null
+    }
+   ],
+   "conversions": [],
+   "skills": []
+  },
+  "timeout": 30
+ }
+}

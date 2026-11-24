@@ -7,7 +7,7 @@
   "type": "room",
   "code": "DEMOS",
   "status": "playing",
-  "you": 0,
+  "you": 3,
   "host": 0,
   "members": [
    {
@@ -29,9 +29,9 @@
     "connected": true
    },
    {
-    "name": "Bot 2",
-    "bot": true,
-    "level": "hard",
+    "name": "Bo",
+    "bot": false,
+    "level": null,
     "connected": true
    },
    {
@@ -49,11 +49,11 @@
   ]
  },
  "view": {
-  "you": 0,
+  "you": 3,
   "turn": 0,
-  "current": 0,
+  "current": 3,
   "phase": null,
-  "draw_pile": 108,
+  "draw_pile": 160,
   "discard_pile": 0,
   "processing": [],
   "attack_range": 1,
@@ -66,14 +66,15 @@
     "skills": [],
     "spent": [],
     "skill_uses": {},
-    "distance": null,
+    "distance": 2,
     "hp": 4,
     "max_hp": 4,
     "alive": true,
+    "chained": false,
     "hand_count": 0,
     "equips": [],
     "judge": [],
-    "role": "lord"
+    "role": null
    },
    {
     "seat": 1,
@@ -83,10 +84,11 @@
     "skills": [],
     "spent": [],
     "skill_uses": {},
-    "distance": 1,
+    "distance": 2,
     "hp": 4,
     "max_hp": 4,
     "alive": true,
+    "chained": false,
     "hand_count": 0,
     "equips": [],
     "judge": [],
@@ -100,10 +102,11 @@
     "skills": [],
     "spent": [],
     "skill_uses": {},
-    "distance": 2,
+    "distance": 1,
     "hp": 4,
     "max_hp": 4,
     "alive": true,
+    "chained": false,
     "hand_count": 0,
     "equips": [],
     "judge": [],
@@ -117,14 +120,15 @@
     "skills": [],
     "spent": [],
     "skill_uses": {},
-    "distance": 2,
+    "distance": null,
     "hp": 4,
     "max_hp": 4,
     "alive": true,
+    "chained": false,
     "hand_count": 0,
     "equips": [],
     "judge": [],
-    "role": null
+    "role": "lord"
    },
    {
     "seat": 4,
@@ -138,6 +142,7 @@
     "hp": 4,
     "max_hp": 4,
     "alive": true,
+    "chained": false,
     "hand_count": 0,
     "equips": [],
     "judge": [],
@@ -153,15 +158,15 @@
   "id": 1,
   "req": {
    "kind": "choose_hero",
-   "seat": 0,
+   "seat": 3,
    "error": null,
    "options": [
     "cao_cao",
     "liu_bei",
     "sun_quan",
     "wei_lie",
-    "zhuge_liang",
-    "lu_bu"
+    "huang_yueying",
+    "gan_ning"
    ]
   },
   "timeout": 30

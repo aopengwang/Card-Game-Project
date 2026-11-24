@@ -11,6 +11,8 @@ export interface Card {
   color?: "red" | "black" | "none";
   /** In a judgment area: the card's own name when it sits there *as* `name` (e.g. a Diamond as Indulgence). */
   real?: string;
+  /** Damage nature of a Strike: "fire" / "thunder" (absent = ordinary). */
+  nature?: string;
 }
 
 export interface SkillInfo {
@@ -33,6 +35,8 @@ export interface PlayerView {
   hp: number;
   max_hp: number;
   alive: boolean;
+  /** Bound by an Iron Chain: fire/thunder damage to one chained player reaches all of them. */
+  chained?: boolean;
   hand_count: number;
   equips: Card[];
   judge: Card[];
@@ -80,6 +84,8 @@ export interface RoomInfo {
   option_limits?: Record<keyof GameOptions, [number, number]>;
   /** Heroes the host has left out of the draft (ids). */
   disabled_heroes?: string[];
+  /** Playing with the Battle expansion's 52 cards. */
+  battle?: boolean;
 }
 
 export interface GameOptions {
@@ -225,6 +231,7 @@ export interface CardInfo {
   slot?: string;
   range?: number;
   zh?: string; // Chinese name, sent in both languages (seal / brush characters)
+  recast?: boolean; // with no targets, it's recast (discard it, draw 1)
 }
 
 export interface HeroInfo {

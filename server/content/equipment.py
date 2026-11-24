@@ -221,6 +221,45 @@ class KirinBow(Weapon):
     skill = _KirinBowSkill()
 
 
+class _AncientBladeSkill(Skill):
+    name = "ancient_blade"
+    events = (Event.DAMAGE_CAUSED,)
+
+    def can_trigger(self, game, owner, event, dmg):
+        return dmg.source == owner.seat and _is_strike(dmg.card) and not game.players[dmg.target].hand
+
+    def on_trigger(self, game, owner, event, dmg) -> Gen:
+        dmg.amount += 1
+        yield from ()
+
+
+class AncientBlade(Weapon):
+    """Range 2. Locked: when your Strike deals damage to a player with no hand cards, it deals
+    +1 damage."""
+
+    name = "ancient_blade"
+    attack_range = 2
+    skill = _AncientBladeSkill()
+
+
+class _VermilionFanViewAs(ViewAs):
+    name = "vermilion_fan"
+    as_name = "strike"
+    as_nature = "fire"
+    in_response = False
+
+    def cards(self, game, owner):
+        return [c.id for c in owner.hand if c.name == "strike" and c.nature == "normal"]
+
+
+class VermilionFan(Weapon):
+    """Range 4. You may use an ordinary Strike as a Fire Strike."""
+
+    name = "vermilion_fan"
+    attack_range = 4
+    view_as = _VermilionFanViewAs()
+
+
 # ---------------------------------------------------------------- armor
 
 
@@ -266,6 +305,62 @@ class BenevolentShield(EquipDef):
     skill = _BenevolentShieldSkill()
 
 
+class _SilverLionSkill(Skill):
+    name = "silver_lion"
+    events = (Event.DAMAGE_INFLICTED,)
+
+    def can_trigger(self, game, owner, event, dmg):
+        return dmg.target == owner.seat and dmg.amount > 1 and game.armor_against(owner.seat, dmg.source, dmg.card)
+
+    def on_trigger(self, game, owner, event, dmg) -> Gen:
+        dmg.amount = 1
+        game._log("reduced", seat=owner.seat, reason=self.name)
+        yield from ()
+
+
+class SilverLion(EquipDef):
+    """Locked: damage of more than 1 to you is reduced to 1. When it leaves your equipment
+    area, you recover 1 HP."""
+
+    name = "silver_lion"
+    slot = EquipSlot.ARMOR
+    skill = _SilverLionSkill()
+
+    def on_unequip(self, game, owner, card_id) -> Gen:
+        if owner.alive:
+            yield from game.recover(owner.seat, 1, source=owner.seat)
+
+
+class _RattanArmorSkill(Skill):
+    name = "rattan_armor"
+    events = (Event.TARGET_CONFIRMED, Event.DAMAGE_INFLICTED)
+
+    def can_trigger(self, game, owner, event, data):
+        if event == Event.DAMAGE_INFLICTED:
+            return data.target == owner.seat and data.nature == "fire" and game.armor_against(owner.seat, data.source, data.card)
+        use, target = data
+        plain = (_is_strike(use.card) and use.card.nature == "normal") or use.card.name in ("barbarians", "arrows")
+        return target == owner.seat and plain and game.armor_against(owner.seat, use.source, use.card)
+
+    def on_trigger(self, game, owner, event, data) -> Gen:
+        if event == Event.DAMAGE_INFLICTED:
+            data.amount += 1  # it burns
+        else:
+            use, target = data
+            use.cancelled.add(target)
+            game._log("blocked", seat=target, card=use.card.to_dict(), reason=self.name)
+        yield from ()
+
+
+class RattanArmor(EquipDef):
+    """Locked: ordinary Strikes, Barbarian Invasion and Arrow Barrage have no effect on you.
+    Fire damage to you is +1."""
+
+    name = "rattan_armor"
+    slot = EquipSlot.ARMOR
+    skill = _RattanArmorSkill()
+
+
 # ---------------------------------------------------------------- horses
 
 
@@ -288,4 +383,6 @@ class MinusHorse(EquipDef):
 EQUIPMENT_DEFS: list[EquipDef] = [
     Crossbow(), PiercingSword(), TwinSwords(), FrostBlade(), DragonGlaive(), StoneAxe(),
     SerpentSpear(), Halberd(), KirinBow(), EightTrigrams(), BenevolentShield(), PlusHorse(), MinusHorse(),
+    # Battle expansion
+    AncientBlade(), VermilionFan(), SilverLion(), RattanArmor(),
 ]

@@ -166,6 +166,13 @@ test("host sets the game's timers; everyone sees them; the game uses them", asyn
   await host.getByLabel("Hero pick & discard").selectOption("30");
   await expect(guest.locator(".game-settings")).toContainText("30s");
 
+  // The Battle expansion: on unless the host turns it off.
+  await expect(guest.locator(".game-settings")).toContainText("On (160 cards)");
+  await host.getByLabel("Battle expansion").selectOption("off");
+  await expect(guest.locator(".game-settings")).toContainText("Off (108 cards)");
+  await host.getByLabel("Battle expansion").selectOption("on");
+  await expect(guest.locator(".game-settings")).toContainText("On (160 cards)");
+
   // The game uses them. Every player's first prompt is the hero pick: 30 seconds.
   for (let i = 0; i < 2; i++) await host.getByRole("button", { name: "Add bot" }).click();
   await host.getByRole("button", { name: "Start game" }).click();

@@ -49,13 +49,15 @@ from engine.view import log_for, role_visible
 
 CARD_VALUE = {
     "peach": 9, "nullify": 7, "ex_nihilo": 7, "dodge": 6, "snatch": 6, "indulgence": 6,
-    "duel": 5, "dismantle": 5, "strike": 4, "barbarians": 4, "arrows": 4, "borrowed_sword": 3,
-    "harvest": 3, "peach_garden": 3, "lightning": 1,
+    "supply_shortage": 6, "wine": 5, "duel": 5, "dismantle": 5, "strike": 4, "barbarians": 4,
+    "arrows": 4, "fire_attack": 4, "borrowed_sword": 3, "harvest": 3, "peach_garden": 3,
+    "iron_chain": 3, "lightning": 1,
 }
 EQUIP_VALUE = {
-    "eight_trigrams": 7, "benevolent_shield": 6, "minus_horse": 5, "plus_horse": 5, "crossbow": 5,
-    "serpent_spear": 4, "dragon_glaive": 4, "stone_axe": 4, "piercing_sword": 4, "frost_blade": 4,
-    "twin_swords": 3, "halberd": 3, "kirin_bow": 3,
+    "eight_trigrams": 7, "benevolent_shield": 6, "silver_lion": 6, "minus_horse": 5, "plus_horse": 5,
+    "crossbow": 5, "rattan_armor": 5, "vermilion_fan": 5, "serpent_spear": 4, "dragon_glaive": 4,
+    "stone_axe": 4, "piercing_sword": 4, "frost_blade": 4, "ancient_blade": 4, "twin_swords": 3,
+    "halberd": 3, "kirin_bow": 3,
 }
 HERO_TIER = {
     "guo_jia": 9, "liu_bei": 8, "sun_quan": 8, "zhang_liao": 8, "hua_tuo": 8, "diaochan": 8, "wei_lie": 8,
@@ -66,9 +68,13 @@ HERO_TIER = {
 }
 # How strongly a public action reveals allegiance (weight of "acting against X").
 HOSTILE_WEIGHT = {
-    "strike": 1.0, "duel": 1.0, "indulgence": 1.2, "dismantle": 0.5, "snatch": 0.5, "borrowed_sword": 0.3,
+    "strike": 1.0, "duel": 1.0, "indulgence": 1.2, "supply_shortage": 1.2, "fire_attack": 0.8,
+    "dismantle": 0.5, "snatch": 0.5, "borrowed_sword": 0.3,
 }
-HARMFUL_TRICKS = {"dismantle", "snatch", "duel", "barbarians", "arrows", "indulgence", "lightning", "borrowed_sword"}
+HARMFUL_TRICKS = {
+    "dismantle", "snatch", "duel", "barbarians", "arrows", "indulgence", "lightning", "borrowed_sword",
+    "fire_attack", "supply_shortage",
+}
 HELPFUL_TRICKS = {"ex_nihilo", "peach_garden", "harvest"}
 HARMFUL_SKILLS = {"false_letter", "call_to_arms"}
 FRIENDLY_SKILLS = {"open_hand", "wedding_vow", "healing_herbs"}
@@ -77,6 +83,7 @@ GOOD_JUDGMENTS = {"eight_trigrams", "rippling_steps", "blood_for_blood", "headlo
 # The rule behind each judgment, so the bot can tell what a replacement card would do.
 JUDGE_RULES = {
     "indulgence": lambda c: c["suit"] != "heart",
+    "supply_shortage": lambda c: c["suit"] != "club",
     "lightning": lambda c: c["suit"] == "spade" and 2 <= c["rank"] <= 9,
     "eight_trigrams": lambda c: c["suit"] in ("heart", "diamond"),
     "headlong_charge": lambda c: c["suit"] in ("heart", "diamond"),
@@ -373,11 +380,12 @@ class SmartBot:
             target = self._steal_target(game, me, o.candidates)
             if target is not None:
                 return Play(o.card_id, (target,))
-        if o := first("indulgence"):
-            es = self._enemies(game, me, o.candidates)
-            if es:
-                best = max(es, key=lambda s: (self._focus(game, me, s), self._hand_count(game, s), -self.rel(game, me, s)))
-                return Play(o.card_id, (best,))
+        for name in ("indulgence", "supply_shortage"):
+            if o := first(name):
+                es = self._enemies(game, me, o.candidates)
+                if es:
+                    best = max(es, key=lambda s: (self._focus(game, me, s), self._hand_count(game, s), -self.rel(game, me, s)))
+                    return Play(o.card_id, (best,))
         if o := first("borrowed_sword"):
             wielders = [w for w in o.candidates if self.rel(game, me, w) <= ENEMY]
             if wielders:
@@ -401,10 +409,23 @@ class SmartBot:
             if (o := first(name)) and self._aoe_worth(game, me):
                 return Play(o.card_id)
 
-        # 8. Strike the best target in range.
+        # 7b. Chain enemies together when we can set them alight; a Fire Attack on an enemy.
+        if (o := first("iron_chain")) and self._has_elemental(game, me):
+            loose = [s for s in self._enemies(game, me, o.candidates) if not game.players[s].chained]
+            if loose:
+                return Play(o.card_id, tuple(loose[: o.target_count]))
+        if (o := first("fire_attack")) and len(p.hand) >= 3:
+            es = [s for s in self._enemies(game, me, o.candidates)]
+            if es:
+                best = max(es, key=lambda s: (game.players[s].chained, self._burns(game, s), -game.players[s].hp))
+                return Play(o.card_id, (best,))
+
+        # 8. Strike the best target in range (a Wine first, unless we need it to survive).
         if by_name.get("strike"):
             play = self._strike_play(game, me, by_name["strike"])
             if play is not None:
+                if (w := first("wine")) and p.hp > 1:
+                    return Play(w.card_id)
                 return play
 
         # 9. Group cards that favour our side.
@@ -415,8 +436,35 @@ class SmartBot:
         if (o := first("lightning")) and p.hp >= 4 and sum(self.rel(game, me, s) for s in self._alive(game) if s != me) < -1:
             return Play(o.card_id)
 
-        # 10. Trade in what's left over.
+        # 10. Trade in what's left over: recast an Iron Chain we have no use for, Weigh Options.
+        if o := first("iron_chain"):
+            return Play(o.card_id)  # no targets: recast
         return self._weigh(game, me, req)
+
+    def _has_elemental(self, game: Game, me: int) -> bool:
+        """Can we deal fire/thunder damage (to set off a chain)?"""
+        p = game.players[me]
+        if any(c.nature != "normal" or c.name == "fire_attack" for c in p.hand):
+            return True
+        w = game.equip_in(p, EquipSlot.WEAPON)
+        return w is not None and w.name == "vermilion_fan" and any(c.name == "strike" for c in p.hand)
+
+    @staticmethod
+    def _burns(game: Game, seat: int) -> bool:
+        armor = game.equip_in(game.players[seat], EquipSlot.ARMOR)
+        return armor is not None and armor.name == "rattan_armor"
+
+    def _blocked(self, game: Game, me: int, cid: int, seat: int) -> bool:
+        """Would `seat`'s armor stop this Strike card?"""
+        card = game.cards[cid]
+        armor = game.equip_in(game.players[seat], EquipSlot.ARMOR)
+        if armor is None or not game.armor_against(seat, me, card):
+            return False
+        if armor.name == "benevolent_shield":
+            return card.is_black
+        if armor.name == "rattan_armor":
+            return card.nature == "normal"
+        return False
 
     def _aoe_worth(self, game: Game, me: int) -> float:
         total = 0.0
@@ -446,23 +494,21 @@ class SmartBot:
                 penalty = 0.4
             return -self.rel(game, me, s) * 2 + (3 - min(t.hp, 3)) * 0.6 - penalty + self._focus(game, me, s)
 
-        target = max(es, key=score)
-        t = game.players[target]
-        armor = game.equip_in(t, EquipSlot.ARMOR)
-        pick = opts[0]
-        if armor is not None and armor.name == "benevolent_shield":
-            reds = [o for o in opts if game.cards[o.card_id].is_red]
-            if not reds:
-                others = [s for s in es if s != target]
-                if not others:
-                    return None
-                target = max(others, key=score)
-            else:
-                pick = reds[0]
-        targets = [target]
-        if pick.target_count > 1:
-            targets += [s for s in es if s != target and s in pick.candidates][: pick.target_count - 1]
-        return Play(pick.card_id, tuple(targets))
+        # The best target that one of our Strikes gets through to (armor can stop some:
+        # Benevolent Shield black ones, Rattan Armor ordinary ones).
+        for target in sorted(es, key=score, reverse=True):
+            usable = [o for o in opts if target in o.candidates and not self._blocked(game, me, o.card_id, target)]
+            if not usable:
+                continue
+            t = game.players[target]
+            elemental_wanted = t.chained or self._burns(game, target)
+            # fire/thunder for chained or rattan-armoured targets; otherwise save them
+            pick = max(usable, key=lambda o: (game.cards[o.card_id].nature != "normal") == elemental_wanted)
+            targets = [target]
+            if pick.target_count > 1:
+                targets += [s for s in es if s != target and s in pick.candidates][: pick.target_count - 1]
+            return Play(pick.card_id, tuple(targets))
+        return None
 
     def _dismantle_target(self, game: Game, me: int, cands) -> int | None:
         for s in cands:  # a friend stuck with Indulgence / Lightning: clear it
@@ -559,6 +605,9 @@ class SmartBot:
         if conv.as_name in ("barbarians", "arrows") and self._aoe_worth(game, me):
             cards = self._conversion_cards(game, me, conv)
             return Play(skill=conv.skill, cards=cards) if cards is not None else None
+        if conv.skill == "vermilion_fan":  # set fire to the chained or the rattan-armoured
+            es = [s for s in self._enemies(game, me, conv.candidates) if game.players[s].chained or self._burns(game, s)]
+            return Play(skill=conv.skill, cards=(conv.cards[0],), targets=(es[0],)) if es else None
         # one-card conversions: spend a card that's worth less than what it becomes
         single = self._lowest(game, me, conv.cards, 1) if conv.count == 1 else []
         if single and self._value(game, me, single[0]) >= 7:
@@ -694,6 +743,10 @@ class SmartBot:
     def _choose_card(self, game: Game, me: int, req: ChooseCardRequest) -> Any:
         if req.reason == "bend_fate":
             return self._bend_fate(game, me, req)
+        if req.reason == "fire_attack":
+            if req.context.get("step") == "discard":  # pay a card to burn them, unless they're a friend
+                return self._lowest(game, me, req.options, 1)[0] if self.rel(game, me, req.context.get("target")) < FRIEND else None
+            return self._lowest(game, me, req.options, 1)[0]  # show our least useful card
         if req.about is None:  # harvest-style pick from revealed cards
             return max(req.options, key=lambda i: (self._value(game, me, i), -i))
         if req.about == me:  # giving away one of our own cards

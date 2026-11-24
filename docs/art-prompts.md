@@ -57,6 +57,24 @@ writing or seals with characters (the card already has its own seal and title).
 | `plus_horse` | +1 Horse | a strong warhorse standing calm and guarded, red saddle cloth, red sun |
 | `minus_horse` | −1 Horse | a warhorse at full gallop, speed lines of dry brush, red saddle cloth |
 
+### Battle expansion
+
+Fire and Thunder Strikes are Strikes that deal fire / thunder damage; they have their own
+faces (`fire_strike`, `thunder_strike`).
+
+| id | card | subject (append to the style block) |
+|---|---|---|
+| `fire_strike` | Fire Strike | a sword slash trailing tongues of vermilion flame |
+| `thunder_strike` | Thunder Strike | a sword raised under a dark storm cloud, a gold lightning bolt striking |
+| `wine` | Wine | a dark wine jar sealed with red cloth beside a small cup, steam rising |
+| `fire_attack` | Fire Attack | an army camp of tents set ablaze at night, flames rising |
+| `iron_chain` | Iron Chain | heavy iron chain links binding warships on a river |
+| `supply_shortage` | Supply Shortage | an empty grain sack slumped by a broken cart, a few scattered grains |
+| `ancient_blade` | Ancient Blade | a broad curved saber with a gold guard and a red tassel |
+| `vermilion_fan` | Vermilion Fan | a fan of vermilion feathers, a small flame at its edge |
+| `silver_lion` | Silver Lion | a silver breastplate with a lion's face embossed at its centre |
+| `rattan_armor` | Rattan Armor | a vest of woven rattan, a wisp of fire licking at its hem |
+
 ## Hero portraits (optional)
 
 `client/public/art/heroes/<hero id>.png`, 3:2 landscape (e.g. 900×600). It's cropped from

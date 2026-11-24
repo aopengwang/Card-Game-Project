@@ -63,7 +63,27 @@ export function GameSettings({ room }: { room: RoomInfo }) {
             </div>
           );
         })}
+        {room.battle != null && (
+          <div className={s.option} title={t("game.battleHint")}>
+            <label htmlFor="opt-battle">{t("game.battle")}</label>
+            {editable ? (
+              <select
+                id="opt-battle"
+                value={room.battle ? "on" : "off"}
+                onChange={(e) => send({ type: "deck", battle: e.target.value === "on" })}
+              >
+                <option value="on">{t("game.battleOn")}</option>
+                <option value="off">{t("game.battleOff")}</option>
+              </select>
+            ) : (
+              <output id="opt-battle" className={s.optionValue}>
+                {room.battle ? t("game.battleOn") : t("game.battleOff")}
+              </output>
+            )}
+          </div>
+        )}
       </div>
+      {room.battle && <p className={s.note}>{t("game.battleHint")}</p>}
       {!isHost && <p className={s.note}>{t("game.hostOnly")}</p>}
     </div>
   );

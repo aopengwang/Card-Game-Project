@@ -274,6 +274,60 @@ class BorrowedSword(InstantTrick):
             yield from game.move_cards([weapon.id], Zone.HAND, use.source, reason="borrowed_sword")
 
 
+class FireAttack(InstantTrick):
+    """Target a player with hand cards (you too): they show one of their hand cards; you may
+    then discard a hand card of the same suit to deal them 1 fire damage."""
+
+    name = "fire_attack"
+    harmful = True
+    target_count = 1
+
+    def candidates(self, game, user):
+        return [s for s in _everyone(game, user) if game.players[s].hand]
+
+    def effect(self, game, use, target):
+        t = game.players[target]
+        if not t.hand:
+            return
+        shown = yield from game.ask(
+            ChooseCardRequest(seat=target, reason="fire_attack", about=target, options=[c.id for c in t.hand],
+                              context={"step": "show", "source": use.source})
+        )
+        card = game.cards[shown]
+        game._log("show", seat=target, card=card.to_dict(), reason="fire_attack")
+        user = game.players[use.source]
+        same = [c.id for c in user.hand if c.suit == card.suit]
+        if not same or not user.alive:
+            return
+        pay = yield from game.ask(
+            ChooseCardRequest(seat=use.source, reason="fire_attack", about=use.source, options=same, optional=True,
+                              context={"step": "discard", "suit": str(card.suit), "target": target})
+        )
+        if pay is None:
+            return
+        yield from game.discard(use.source, [pay], reason="fire_attack")
+        yield from game.damage(use.source, target, 1 + use.damage_bonus, card=use.card, nature="fire")
+
+
+class IronChain(InstantTrick):
+    """Choose up to 2 players: each is chained (or freed if already chained). Fire or thunder
+    damage to a chained player reaches every chained player. Or recast it: discard it, draw 1."""
+
+    name = "iron_chain"
+    target_count = 2
+    min_targets = 0  # no targets: the play phase recasts it instead
+    recastable = True
+
+    def candidates(self, game, user):
+        return _everyone(game, user)
+
+    def effect(self, game, use, target):
+        t = game.players[target]
+        t.chained = not t.chained
+        game._log("chain", seat=target, chained=t.chained)
+        yield from ()
+
+
 class Nullify(CardDef):
     """Played in response: cancel a trick's effect on one target (a Nullify can be Nullified)."""
 
@@ -337,6 +391,30 @@ class Indulgence(DelayedTrick):
         yield from ()
 
 
+class SupplyShortage(DelayedTrick):
+    """Target a player at distance 1. Judge: unless it's a Club, they skip their draw phase."""
+
+    name = "supply_shortage"
+    target_count = 1
+
+    def can_use(self, game, user):
+        return True
+
+    def candidates(self, game, user):
+        reach = game.trick_reach(user)
+        return [
+            s for s in _others(game, user)
+            if game.distance(user.seat, s) <= reach and not game.has_in_judge(game.players[s], self.name)
+        ]
+
+    def hits(self, judge_card):
+        return judge_card.suit != Suit.CLUB
+
+    def on_hit(self, game, owner, card):
+        owner.skip_phases.add(Phase.DRAW)
+        yield from ()
+
+
 class Lightning(DelayedTrick):
     """Placed on yourself. Judge: Spade 2-9 deals 3 thunder damage; otherwise it moves on."""
 
@@ -370,4 +448,6 @@ class Lightning(DelayedTrick):
 TRICK_DEFS: list[CardDef] = [
     ExNihilo(), Dismantle(), Snatch(), Duel(), Barbarians(), Arrows(),
     PeachGarden(), Harvest(), BorrowedSword(), Nullify(), Indulgence(), Lightning(),
+    # Battle expansion
+    FireAttack(), IronChain(), SupplyShortage(),
 ]

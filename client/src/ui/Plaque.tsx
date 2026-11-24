@@ -237,6 +237,16 @@ export function Plaque({ player: p, name, variant = "seat", isYou, isCurrent, is
         </>
       }
     >
+      {p.chained && p.alive && (
+        <Tip content={<TipBody title={t("seat.chained")} text={t("seat.chainedHint")} />}>
+          <span className={`${s.chain} chained`} role="img" aria-label={t("seat.chained")}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+              <rect x="1.5" y="5" width="7" height="5" rx="2.5" transform="rotate(-35 5 7.5)" />
+              <rect x="7.5" y="6" width="7" height="5" rx="2.5" transform="rotate(-35 11 8.5)" />
+            </svg>
+          </span>
+        </Tip>
+      )}
       {!p.alive && (
         <span className={`${s.stamp} death-stamp`} lang={getLang() === "zh" ? "zh-CN" : undefined}>
           {t("seat.fallen")}
