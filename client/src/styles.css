@@ -264,7 +264,7 @@ select:focus-visible {
 }
 /* the card you point at or picked comes to the front of the fan */
 /* hand cards take the window's size tier (the Card's own size class has lower specificity) */
-.hand .hand-slot .card { --w: var(--hand-w, 88px); --h: var(--hand-h, 124px); }
+.hand .hand-slot .card { --w: var(--hand-w, 88px); } /* height follows at 5:7 */
 .hand-slot:hover,
 .hand-slot:focus-within,
 .hand-slot.is-selected { z-index: 2; }

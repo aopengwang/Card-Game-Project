@@ -54,6 +54,14 @@ for (const id of FIXTURES) {
       await page.evaluate(() => document.fonts.ready);
 
       expect(await page.evaluate(blockedClickables)).toEqual([]);
+      // Every card on screen is a playing card: 5:7, whatever its size or place.
+      const offRatio = await page.evaluate(() =>
+        Array.from(document.querySelectorAll<HTMLElement>(".card"))
+          .map((el) => ({ el, w: el.offsetWidth, h: el.offsetHeight }))
+          .filter(({ w, h }) => w > 0 && Math.abs(h / w - 1.4) > 0.015)
+          .map(({ el, w, h }) => `${el.getAttribute("aria-label")} ${w}x${h}`),
+      );
+      expect(offRatio, "cards not at 5:7").toEqual([]);
       if (view.name.startsWith("desktop")) {
         // The table is pinned to the window: content changes must never resize the page
         // (a growing page made the whole table jump up and down mid-game).

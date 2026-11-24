@@ -50,10 +50,13 @@ export interface SizeTier {
   playW: number;
 }
 
+/** Card height for a width: every card is a playing card, 5:7 (see Card.module.css). */
+export const cardHeight = (w: number): number => Math.ceil((w * 7) / 5);
+
 const TIERS: SizeTier[] = [
-  { name: "compact", handW: 88, handH: 124, dockH: 280, centerH: 126, playSize: "sm", playW: 64 },
-  { name: "roomy", handW: 110, handH: 154, dockH: 310, centerH: 160, playSize: "md", playW: 88 },
-  { name: "large", handW: 126, handH: 176, dockH: 332, centerH: 160, playSize: "md", playW: 88 },
+  { name: "compact", handW: 88, handH: cardHeight(88), dockH: 280, centerH: 126, playSize: "sm", playW: 64 },
+  { name: "roomy", handW: 110, handH: cardHeight(110), dockH: 310, centerH: 160, playSize: "md", playW: 88 },
+  { name: "large", handW: 125, handH: cardHeight(125), dockH: 332, centerH: 160, playSize: "md", playW: 88 },
 ];
 
 /**
