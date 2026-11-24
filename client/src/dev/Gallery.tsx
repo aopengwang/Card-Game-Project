@@ -46,6 +46,7 @@ function GalleryIndex() {
           Ink &amp; Lacquer foundations, and real game moments captured from hard-bot games
           (<code>python -m tools.dump_fixtures</code>), each rendered by the live table UI.
           Open one at any window size; the language toggle applies to all of them.
+          Table animations can be replayed in the <a className={s.link} href="?fx">animation lab</a>.
         </p>
 
         <section className={s.section} aria-labelledby="palette">

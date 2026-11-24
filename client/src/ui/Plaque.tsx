@@ -207,7 +207,7 @@ export function Plaque({ player: p, name, variant = "seat", isYou, isCurrent, is
       }
     >
       {!p.alive && (
-        <span className={s.stamp} lang={getLang() === "zh" ? "zh-CN" : undefined}>
+        <span className={`${s.stamp} death-stamp`} lang={getLang() === "zh" ? "zh-CN" : undefined}>
           {t("seat.fallen")}
         </span>
       )}

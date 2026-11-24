@@ -1,4 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { holdDeath, killBlow } from "../fx/killBlow";
+import { fxSpeed, Stage } from "../fx/stage";
 import { getLang, t } from "../i18n";
 import { playAll, type SoundName } from "../sound";
 import type { LogEntry } from "../types";
@@ -11,7 +13,8 @@ import s from "./Effects.module.css";
  *   - a played card flies from the player's seat to its spot on the battlefield,
  *   - an ink stroke runs from the player to each target,
  *   - damage / healing float up over the seat as numbers,
- *   - your turn opens with a brush banner.
+ *   - your turn opens with a brush banner,
+ *   - a death plays the killing blow (fx/killBlow.ts); these big moments queue on a Stage.
  * Only entries that arrive while you watch animate: a reconnect, a rejoin or the gallery
  * shows the table at rest. Positions come from the DOM ([data-seat], [data-play-key]),
  * so this works for every layout (seats in a row, stacked, phone).
@@ -77,7 +80,11 @@ export function Effects({ log, you, aim, playSize = "sm" }: { log: LogEntry[]; y
   const [fx, setFx] = useState<Fx[]>([]);
   const [aimPaths, setAimPaths] = useState<string[]>([]);
   const [resizes, setResizes] = useState(0);
+  const stage = useRef<Stage | null>(null);
+  stage.current ??= new Stage();
   const aimKey = aim.join(",");
+
+  useEffect(() => () => stage.current?.clear(), []);
 
   useEffect(() => {
     const onResize = () => setResizes((n) => n + 1);
@@ -101,10 +108,18 @@ export function Effects({ log, you, aim, playSize = "sm" }: { log: LogEntry[]; y
     const start = seen.current;
     seen.current = log.length;
     if (log.length <= start) return;
-    // Sounds play even with reduced motion (that setting is about movement, not audio).
-    playAll(soundsFor(log.slice(start), you));
     const el = layer.current;
-    if (reducedMotion() || !el) return;
+    const motion = !!el && !reducedMotion();
+    const deaths = motion ? log.slice(start).filter((e) => e.type === "death") : [];
+    // Sounds play even with reduced motion (that setting is about movement, not audio).
+    // A killing blow sounds its own gong when it lands.
+    playAll(soundsFor(log.slice(start), you).filter((n) => !(deaths.length && n === "death")));
+    if (!motion || !el) return;
+    for (const d of deaths) {
+      const release = holdDeath(d.seat); // before this paints: the victim falls on impact
+      const killer = typeof d.killer === "number" ? d.killer : null;
+      stage.current!.add({ run: () => killBlow(el, killer, d.seat, release), skip: release });
+    }
     const centre = (target: Element | null) => centreIn(el, target);
     const seat = (n: number | null | undefined) => (n == null ? null : centre(document.querySelector(`[data-seat="${n}"]`)));
 
@@ -135,7 +150,7 @@ export function Effects({ log, you, aim, playSize = "sm" }: { log: LogEntry[]; y
     setFx((live) => [...live, ...made].slice(-MAX_LIVE));
     const ids = new Set(made.map((f) => f.id));
     const longest = Math.max(...made.map((f) => LIFE[f.kind]));
-    window.setTimeout(() => setFx((live) => live.filter((f) => !ids.has(f.id))), longest + 50);
+    window.setTimeout(() => setFx((live) => live.filter((f) => !ids.has(f.id))), longest / fxSpeed() + 50);
   }, [log, you]);
 
   return (

@@ -1,0 +1,107 @@
+/* Animation lab controls: a small floating panel under the top bar (Hide folds it away). */
+.panel {
+  position: fixed;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40; /* over the table and its effects */
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: calc(100vw - 32px);
+  padding: 8px 12px;
+  border: 1px solid var(--ik-gold-line-strong);
+  border-radius: var(--ik-radius-lg);
+  background: rgba(20, 10, 8, 0.92);
+  box-shadow: var(--ik-shadow-raised);
+  color: var(--ik-text);
+  font: 13px / 1.3 var(--ik-font-body);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.title {
+  color: var(--ik-gold);
+  font-family: var(--ik-font-display);
+  letter-spacing: 0.04em;
+}
+
+.link {
+  color: var(--ik-text-muted);
+}
+
+.toggle {
+  margin-left: auto;
+}
+
+.body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.field > span {
+  color: var(--ik-text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.panel select,
+.panel button {
+  min-height: 30px;
+  padding: 4px 10px;
+  border: 1px solid var(--ik-gold-line);
+  border-radius: var(--ik-radius-sm);
+  background: var(--ik-panel);
+  color: var(--ik-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.speeds {
+  display: flex;
+}
+
+.speeds button {
+  border-radius: 0;
+}
+
+.speeds button:first-child {
+  border-radius: var(--ik-radius-sm) 0 0 var(--ik-radius-sm);
+}
+
+.speeds button:last-child {
+  border-radius: 0 var(--ik-radius-sm) var(--ik-radius-sm) 0;
+}
+
+.speeds button[aria-pressed="true"] {
+  border-color: var(--ik-gold);
+  color: var(--ik-gold);
+}
+
+.panel .play {
+  border-color: var(--ik-vermilion-bright);
+  background: var(--ik-vermilion);
+  color: #fff4e4;
+  font-weight: 700;
+}
+
+.play kbd {
+  margin-left: 6px;
+  padding: 0 5px;
+  border: 1px solid rgba(255, 244, 228, 0.5);
+  border-radius: 3px;
+  font: 11px / 1.4 var(--ik-font-body);
+}

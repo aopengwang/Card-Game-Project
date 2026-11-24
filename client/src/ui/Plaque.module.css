@@ -328,7 +328,7 @@
   text-transform: uppercase;
   white-space: nowrap;
   pointer-events: none;
-  animation: stampIn 420ms var(--ik-ease-out) both;
+  animation: stampIn calc(420ms * var(--fx-slow, 1)) var(--ik-ease-out) both;
 }
 
 .stamp:lang(zh-CN) {

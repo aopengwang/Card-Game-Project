@@ -1,4 +1,4 @@
-/* Lengths match LIFE in Effects.tsx. */
+/* Lengths match LIFE in Effects.tsx. --fx-slow (stage.ts) slows them down in the animation lab. */
 .layer {
   position: absolute;
   inset: 0;
@@ -24,7 +24,7 @@
   stroke-dasharray: var(--len);
   stroke-dashoffset: var(--len);
   filter: drop-shadow(0 0 6px rgba(227, 98, 75, 0.55));
-  animation: draw 1100ms var(--ik-ease-out) forwards;
+  animation: draw calc(1100ms * var(--fx-slow, 1)) var(--ik-ease-out) forwards;
 }
 
 @keyframes draw {
@@ -64,7 +64,7 @@
 .flight {
   position: absolute;
   transform: translate(-50%, -50%);
-  animation: fly 520ms var(--ik-ease-out) forwards;
+  animation: fly calc(520ms * var(--fx-slow, 1)) var(--ik-ease-out) forwards;
 }
 
 @keyframes fly {
@@ -88,7 +88,7 @@
   font: 700 34px / 1 var(--ik-font-display);
   color: var(--ik-vermilion-bright);
   text-shadow: 0 2px 0 #1c0d0a, 0 0 14px rgba(227, 98, 75, 0.6);
-  animation: rise 1200ms var(--ik-ease-out) forwards;
+  animation: rise calc(1200ms * var(--fx-slow, 1)) var(--ik-ease-out) forwards;
 }
 
 .heal {
@@ -122,7 +122,7 @@
   top: 38%;
   display: flex;
   justify-content: center;
-  animation: banner 1500ms var(--ik-ease-out) forwards;
+  animation: banner calc(1500ms * var(--fx-slow, 1)) var(--ik-ease-out) forwards;
 }
 
 .bannerText {

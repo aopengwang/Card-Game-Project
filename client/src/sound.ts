@@ -8,7 +8,19 @@ import { useSyncExternalStore } from "react";
  * Browsers only allow audio after the player interacts with the page, so the audio
  * context starts on the first click or key press; sounds before that are skipped.
  */
-export type SoundName = "card" | "equip" | "select" | "tick" | "tickLast" | "damage" | "heal" | "turn" | "death" | "victory" | "defeat";
+export type SoundName =
+  | "card"
+  | "equip"
+  | "select"
+  | "tick"
+  | "tickLast"
+  | "damage"
+  | "heal"
+  | "turn"
+  | "slam"
+  | "death"
+  | "victory"
+  | "defeat";
 
 const KEY = "sgs.sound";
 type Prefs = { volume: number; muted: boolean };
@@ -132,6 +144,12 @@ const SOUNDS: Record<SoundName, (c: AudioContext, t: number) => void> = {
   },
   // your turn: a small temple bell
   turn: (c, t) => bell(c, t, N.C5, 1.6, 0.22, [[1, 1], [2, 0.5], [2.76, 0.35], [5.4, 0.15]]),
+  // a killing blow lands: a heavy body-blow thump and a crack
+  slam: (c, t) => {
+    tone(c, t, 95, 0.55, 0.95, "sine", 34);
+    tone(c, t, 190, 0.14, 0.4, "triangle", 70);
+    noise(c, t, 0.22, 0.55, 2400, 260, 0.7);
+  },
   // a player falls: a deep gong
   death: (c, t) => {
     bell(c, t, 98, 2.6, 0.45, [[1, 1], [1.48, 0.6], [2.2, 0.4], [3.3, 0.2]]);

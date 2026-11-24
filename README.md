@@ -44,9 +44,12 @@ Without a build, "/" falls back to the plain test client, which is always at `/d
   the frame moves by a pixel.
 - **Motion** (`client/src/components/Effects.tsx`): played cards fly from the seat to the
   battlefield, an ink stroke runs to each target, damage/healing float over the seat, your
-  turn opens with a banner, and a dashed line shows the targets you're aiming at. It's a
-  layer over the table (never moves the layout), only animates what happens while you
-  watch, and is off with the system "reduce motion" setting.
+  turn opens with a banner, and a dashed line shows the targets you're aiming at. A death
+  plays the **killing blow** (`client/src/fx/`): the killer's hero card lifts off, flies
+  over the victim and slams down on it. Big moments like that queue on a `Stage`
+  (`fx/stage.ts`) and play one at a time. It's a layer over the table (never moves the
+  layout), only animates what happens while you watch, and is off with the system
+  "reduce motion" setting.
 - **Keyboard**: `1`-`9` pick a hand card, `Enter` the main action (Use / Play / Confirm /
   Yes), `Esc` back out (Cancel / Don't play / No), `E` end your play phase. Buttons show
   their key; add one with `<Button shortcut=…>` (`components/shortcuts.ts`).
@@ -54,13 +57,29 @@ Without a build, "/" falls back to the plain test client, which is always at `/d
   type, plus real game moments rendered by the live UI: hero pick, Nullify chain,
   dying, 8 players, game over, and more. Regenerate the moments from seeded hard-bot
   games with `cd server; python -m tools.dump_fixtures`.
+- **Animation lab**: open `/?fx` (or `/?fx=kill`, `double`, `fate`, `strike`, `heal`,
+  `turn`; add `&lang=zh`). It replays one effect on a real table: pick the effect, who
+  kills whom and the speed (1x / 0.5x / 0.25x), then press Play or `P`. Use it to tune a
+  new animation in seconds instead of playing games. To add an effect, add an entry to
+  `EFFECTS` in `client/src/dev/FxLab.tsx` listing the log entries a game would send.
+- **Developer URLs** (client, served by the game server; not linked from the game):
+
+  | URL | What it shows |
+  |-----|---------------|
+  | `/?gallery` | palette, type, card art, hero cards, and every captured game moment |
+  | `/?gallery=<moment>` | one captured moment on the live table, e.g. `/?gallery=play_strike` |
+  | `/?fx` | the animation lab above |
+  | `/debug` | the plain test client (also what `/` shows without a build) |
+  | `/?room=CODE` | join a room from an invite link |
+
+  Add `&lang=zh` (or `&lang=en`) to any of them to pick the language.
 - **Browser tests** (Playwright, uses your installed Chrome): `cd client; npm run e2e`.
   For every gallery moment (desktop English and phone Chinese) it checks that nothing
   covers a clickable card/seat/button, that phones never scroll sideways, and compares a
   screenshot. It also plays two full games through the UI (English, and Chinese with a
   live switch to English), checks the home and lobby screens (`screens.spec.ts`), table
-  motion and keyboard play (`motion.spec.ts`) and that the table never moves
-  (`stability.spec.ts`). After an intended visual change, refresh the baselines with
+  motion and keyboard play (`motion.spec.ts`), the killing blow (`fx.spec.ts`, replayed
+  in the animation lab) and that the table never moves (`stability.spec.ts`). After an intended visual change, refresh the baselines with
   `npm run e2e -- --update-snapshots` and look at the new images before committing.
 
 ## Dev

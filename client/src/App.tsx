@@ -8,22 +8,31 @@ import { Table, Toasts } from "./components/Table";
 const params = new URLSearchParams(location.search);
 const roomFromUrl = params.get("room");
 const galleryFixture = params.get("gallery"); // developer gallery: /?gallery[=fixture]
+const fxLab = params.get("fx"); // animation lab: /?fx[=effect]
 
 // Loaded on demand so fixtures never ship in the game's main bundle.
 const Gallery = lazy(() => import("./dev/Gallery"));
+const FxLab = lazy(() => import("./dev/FxLab"));
 
 export function App() {
   const net = useNet();
   const lang = useLang();
   useEffect(() => {
     loadContent();
-    if (galleryFixture === null) resume(roomFromUrl);
+    if (galleryFixture === null && fxLab === null) resume(roomFromUrl);
   }, []);
   useEffect(() => {
     document.documentElement.lang = getLang() === "zh" ? "zh-CN" : "en";
     document.title = t("app.title");
   }, [lang]);
 
+  if (fxLab !== null) {
+    return (
+      <Suspense fallback={null}>
+        <FxLab initial={fxLab} />
+      </Suspense>
+    );
+  }
   if (galleryFixture !== null) {
     return (
       <Suspense fallback={null}>
