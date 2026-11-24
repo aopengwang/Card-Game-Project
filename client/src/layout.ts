@@ -35,7 +35,7 @@ export const LAYOUT = {
   pad: 8, // table edge to seats
   gap: 10, // between a seat and the battlefield
   plaqueMinW: 90, // narrower than this and the seats stack instead
-  plaqueMaxW: 176,
+  plaqueMaxW: 144,
   centerH: 126,
   centerMaxW: 600,
   centerMinW: 300,
