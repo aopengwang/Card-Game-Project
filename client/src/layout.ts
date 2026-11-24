@@ -19,23 +19,30 @@ export interface TableLayout {
   seats: Box[];
   /** The battlefield: draw/discard piles and the latest plays. */
   center: Box;
-  /** Height of every opponent plaque (they never grow with content). */
+  /** Size of every opponent's seat: a 5:7 hero card plus its info rows (never grows). */
+  plaqueWidth: number;
   plaqueHeight: number;
 }
 
-/** Fixed sizes the layout is built from; the CSS reads them back as custom properties. */
+/**
+ * Height of the rows under a hero card (HP + hand count, then the equipment slots).
+ * Fixed, so a seat's height is just card + this. Must match Plaque.module.css (.info).
+ */
+export const PLAQUE_INFO_H = 52;
+
+/** Fixed sizes the layout is built from. */
 export const LAYOUT = {
-  pad: 10, // table edge to seats
-  gap: 12, // between a seat and the battlefield
-  plaqueTall: 184,
-  plaqueShort: 168, // short windows (laptops with toolbars)
-  shortBelow: 400, // table heights under this use the short plaque
-  plaqueMinW: 128,
+  pad: 8, // table edge to seats
+  gap: 10, // between a seat and the battlefield
+  plaqueMinW: 90, // narrower than this and the seats stack instead
   plaqueMaxW: 176,
   centerH: 126,
   centerMaxW: 600,
   centerMinW: 300,
 } as const;
+
+/** A seat's height for its width: the 5:7 hero card plus the info rows. */
+export const plaqueHeightFor = (w: number): number => Math.ceil((w * 7) / 5) + PLAQUE_INFO_H;
 
 export interface SizeTier {
   name: "compact" | "roomy" | "large";
@@ -77,11 +84,14 @@ export function sizeTier(windowW: number, windowH: number): SizeTier {
  */
 export function tableLayout(count: number, w: number, h: number, centerH: number = LAYOUT.centerH): TableLayout | null {
   const L = LAYOUT;
-  const plaqueHeight = h < L.shortBelow ? L.plaqueShort : L.plaqueTall;
+  // Seat width: as wide as fits across the table, and short enough that a seat (5:7 card
+  // + info rows) still leaves room for the battlefield underneath.
+  const byWidth = (w - L.pad * (count + 1)) / Math.max(count, 1);
+  const byHeight = ((h - L.pad - L.gap - centerH - PLAQUE_INFO_H) * 5) / 7;
+  const pw = Math.floor(Math.min(L.plaqueMaxW, byWidth, byHeight));
   // Too narrow or short for one row of seats over the battlefield: the caller stacks them.
-  if (count * L.plaqueMinW + (count + 1) * L.pad > w) return null;
-  if (L.pad + plaqueHeight + L.gap + centerH > h) return null;
-  const pw = Math.max(L.plaqueMinW, Math.min(L.plaqueMaxW, (w - L.pad * (count + 1)) / Math.max(count, 1)));
+  if (pw < L.plaqueMinW) return null;
+  const plaqueHeight = plaqueHeightFor(pw);
 
   // How far the outermost seats may drop: down to the bottom of the table.
   const drop = Math.max(0, Math.min(h - plaqueHeight - 2 * L.pad, 260));
@@ -91,7 +101,7 @@ export function tableLayout(count: number, w: number, h: number, centerH: number
     const u = count === 1 ? 0 : count === 2 ? (i === 0 ? 0.6 : -0.6) : 1 - (2 * i) / (count - 1);
     const x = w / 2 + u * (w / 2 - L.pad - pw / 2);
     const bend = Math.max(0, (Math.abs(u) - 0.5) / 0.5); // the inner half stays level
-    seats.push({ left: Math.round(x - pw / 2), top: Math.round(L.pad + drop * bend * bend), width: Math.round(pw), height: plaqueHeight });
+    seats.push({ left: Math.round(x - pw / 2), top: Math.round(L.pad + drop * bend * bend), width: pw, height: plaqueHeight });
   }
 
   // Battlefield: centred in the space under the level seats, as wide as the seats that
@@ -110,7 +120,7 @@ export function tableLayout(count: number, w: number, h: number, centerH: number
   let top = Math.max(highest, Math.round((highest + h - L.pad - centerH) / 2));
   if (widthAt(top) < L.centerMinW) top = highest;
   const cw = Math.max(L.centerMinW, widthAt(top));
-  return { seats, center: { left: Math.round(w / 2 - cw / 2), top, width: cw, height: centerH }, plaqueHeight };
+  return { seats, center: { left: Math.round(w / 2 - cw / 2), top, width: cw, height: centerH }, plaqueWidth: pw, plaqueHeight };
 }
 
 /** True if two boxes overlap (touching edges don't count). For tests. */

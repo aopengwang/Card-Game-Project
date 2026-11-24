@@ -5,37 +5,41 @@
 }
 
 /* ---------------------------------------------------------------- hero pick */
+/* cards side by side (up to 6 in a row), capped so the whole choice fits on screen */
 .heroGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: var(--ik-space-4);
+  grid-template-columns: repeat(auto-fill, minmax(140px, 170px));
+  justify-content: center;
+  gap: var(--ik-space-5) var(--ik-space-4);
 }
 
+/* a 5:7 hero card (the same face as at the table) with its skills listed underneath */
 .heroCard {
-  --kingdom: var(--ik-gold-muted);
   display: flex;
   flex-direction: column;
+  gap: var(--ik-space-2);
   padding: 0;
-  overflow: hidden;
   text-align: left;
   font: inherit;
   color: var(--ik-text);
-  border-radius: var(--ik-radius-lg);
-  border: 1px solid var(--ik-gold-line);
-  border-top: 4px solid var(--kingdom);
-  background: var(--ik-panel);
-  box-shadow: var(--ik-shadow-raised);
+  border: 0;
+  background: none;
   cursor: pointer;
-  transition: transform var(--ik-dur-fast) var(--ik-ease-out), border-color var(--ik-dur-fast) var(--ik-ease-out),
-    box-shadow var(--ik-dur-fast) var(--ik-ease-out);
 }
 
-.heroCard:hover,
-.heroCard:focus-visible {
-  transform: translateY(-3px);
+.heroCard :global(.hero-face) {
+  transition: transform var(--ik-dur-fast) var(--ik-ease-out), box-shadow var(--ik-dur-fast) var(--ik-ease-out),
+    border-color var(--ik-dur-fast) var(--ik-ease-out);
+}
+
+.heroCard:hover :global(.hero-face),
+.heroCard:focus-visible :global(.hero-face) {
+  transform: translateY(-4px);
   border-color: var(--ik-gold);
-  border-top-color: var(--kingdom);
   box-shadow: var(--ik-glow-turn);
+}
+
+.heroCard:focus-visible {
   outline: none;
 }
 
@@ -48,26 +52,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--ik-space-2);
-  padding: var(--ik-space-3);
-}
-
-.heroHead {
-  display: flex;
-  align-items: center;
-  gap: var(--ik-space-2);
-}
-
-.heroName {
-  font: 700 var(--ik-text-xl) / 1.1 var(--ik-font-display);
-  color: var(--ik-text-strong);
-}
-
-.kingdom {
-  font: 600 10px / 1.6 var(--ik-font-body);
-  color: var(--ik-on-vermilion);
-  background: var(--kingdom);
-  border-radius: var(--ik-radius-pill);
-  padding: 0 8px;
+  padding: 0 2px;
 }
 
 .heroMeta {

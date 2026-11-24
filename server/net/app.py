@@ -29,7 +29,9 @@ STATIC = Path(__file__).parent / "static"
 CLIENT_DIST = Path(__file__).resolve().parents[2] / "client" / "dist"
 # Card / hero images, served straight from the source folder: drop a file in and refresh,
 # no rebuild. Anything missing falls back to the built-in ink illustrations.
-ART_DIR = Path(__file__).resolve().parents[2] / "client" / "public" / "art"
+ART_DIR = Path(os.environ.get("SGS_ART_DIR") or Path(__file__).resolve().parents[2] / "client" / "public" / "art")
+# (SGS_ART_DIR: the browser tests point this at an empty folder, so their screenshots
+# show the built-in art whatever images you've added.)
 ART_EXTS = (".png", ".webp", ".jpg", ".jpeg")
 
 

@@ -39,15 +39,17 @@ test("interface size: scales everything, still fits the window, and is remembere
   expect(await cardWidth()).toBeGreaterThan(before * 1.15); // the hand got visibly bigger
   await checkFits(page, 900);
 
-  // Tooltips sit next to what they describe (they're drawn outside the zoomed app).
-  const chip = page.locator(".seat [tabindex='0']").first();
-  await chip.hover();
+  // Tooltips sit right next to what they describe (they're drawn outside the zoomed app,
+  // so a wrong zoom would push them away). Here: a hero card's skills, shown beside it.
+  const card = page.locator(".seat-slot .hero-face").first();
+  await card.hover();
   const tip = page.locator("[data-radix-popper-content-wrapper]");
   await tip.waitFor();
-  const [a, b] = [await chip.boundingBox(), await tip.boundingBox()];
-  const gap = Math.max(0, b!.y - (a!.y + a!.height), a!.y - (b!.y + b!.height));
-  expect(gap, "tooltip touches its chip").toBeLessThan(16);
-  expect(Math.abs(b!.x + b!.width / 2 - (a!.x + a!.width / 2)), "tooltip centred on its chip").toBeLessThan(b!.width / 2 + 20);
+  const [a, b] = [(await card.boundingBox())!, (await tip.boundingBox())!];
+  const gapX = Math.max(0, b.x - (a.x + a.width), a.x - (b.x + b.width));
+  const gapY = Math.max(0, b.y - (a.y + a.height), a.y - (b.y + b.height));
+  expect(Math.max(gapX, gapY), "tooltip touches its hero card").toBeLessThan(16);
+  expect(Math.min(gapX, gapY), "tooltip is beside the card, not off diagonally").toBe(0);
 
   await page.reload();
   await page.locator(".table-screen").waitFor();
@@ -88,18 +90,36 @@ test("host sets the game's timers; everyone sees them; the game uses them", asyn
   await expect(guest.locator(".game-settings")).toContainText("10s");
   await expect(guest.locator(".game-settings select")).toHaveCount(0); // read-only for guests
 
-  // Start, pick a hero, and wait for our play phase: its timer starts from 45.
+  await host.getByLabel("Hero pick & discard").selectOption("30");
+  await expect(guest.locator(".game-settings")).toContainText("30s");
+
+  // The game uses them. Every player's first prompt is the hero pick: 30 seconds.
   for (let i = 0; i < 2; i++) await host.getByRole("button", { name: "Add bot" }).click();
   await host.getByRole("button", { name: "Start game" }).click();
-  const endPhase = host.getByRole("button", { name: EN.endPhase, exact: true });
+  const timer = host.locator(".action-bar.active [role=timer]");
   await expect(async () => {
-    // keep both players answering (heroes, responses, discards) until the host's play phase
-    await step(host, EN, { holdPlay: true });
+    await step(guest, EN); // the guest keeps the game moving (it may pick first)
+    await expect(host.locator(".hero-card").first()).toBeVisible({ timeout: 200 });
+  }).toPass({ timeout: 60_000, intervals: [100] });
+  const heroSecs = Number(await timer.textContent());
+  expect(heroSecs).toBeGreaterThan(20);
+  expect(heroSecs).toBeLessThanOrEqual(30);
+  await host.locator(".hero-card").first().click();
+
+  // The host's next prompt, whatever it is, runs on its own timer: 45s for the play
+  // phase, 30s for a discard, 10s for a response.
+  let checked = "";
+  await expect(async () => {
     await step(guest, EN);
-    await expect(endPhase).toBeVisible({ timeout: 200 });
+    if (!(await host.locator(".action-bar.active").isVisible().catch(() => false))) throw new Error("waiting for the host's turn to answer");
+    const secs = Number(await timer.textContent());
+    const title = (await host.locator(".action-title").textContent()) ?? "";
+    const play = (await host.locator(".action-bar.active .end-phase").count()) > 0;
+    const limit = play ? 45 : /discard/i.test(title) ? 30 : 10;
+    expect(secs, `"${title}"`).toBeLessThanOrEqual(limit);
+    expect(secs, `"${title}"`).toBeGreaterThan(limit - 10);
+    checked = title;
   }).toPass({ timeout: 90_000, intervals: [100] });
-  const secs = Number(await host.locator(".action-bar.active [role=timer]").textContent());
-  expect(secs).toBeGreaterThan(35);
-  expect(secs).toBeLessThanOrEqual(45);
+  expect(checked).not.toBe("");
   expect(errors).toEqual([]);
 });

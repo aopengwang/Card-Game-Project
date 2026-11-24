@@ -31,8 +31,9 @@
   outline: none;
 }
 
+/* hero pick: room for six 170px hero cards side by side */
 .wide {
-  width: min(980px, 100%);
+  width: min(1180px, 100%);
 }
 
 .title {

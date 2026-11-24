@@ -1,24 +1,24 @@
+/*
+ * Hero card seat (layout from the hero card template, in Ink & Lacquer style):
+ *   a 5:7 card with the art across all of it, kingdom badge top-left, role seal
+ *   top-right, a frosted name strip at the bottom; under it, HP + hand count, then the
+ *   four equipment slots. The rows under the card are a fixed 52px (PLAQUE_INFO_H in
+ *   layout.ts), so a seat's height is card + 52 whatever is on it.
+ */
 .plaque {
   --kingdom: var(--ik-gold-muted);
   position: relative;
   box-sizing: border-box;
   width: 100%;
-  /* Fixed height, set by the table layout: content never resizes a plaque. */
-  height: var(--plaque-h, 184px);
   display: flex;
   flex-direction: column;
-  border-radius: var(--ik-radius-lg);
-  background: var(--ik-panel);
-  border: 1px solid var(--ik-gold-line);
-  border-top: 3px solid var(--kingdom);
-  box-shadow: var(--ik-shadow-raised);
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--ik-text);
   font: inherit;
   text-align: left;
-  padding: 0;
-  overflow: visible;
-  transition: box-shadow var(--ik-dur-fast) var(--ik-ease-out), border-color var(--ik-dur-fast) var(--ik-ease-out),
-    filter 400ms var(--ik-ease-out);
+  transition: filter 400ms var(--ik-ease-out);
 }
 
 .wei { --kingdom: var(--ik-wei); }
@@ -26,26 +26,121 @@
 .wu { --kingdom: var(--ik-wu); }
 .qun { --kingdom: var(--ik-qun); }
 
-/* The portrait band takes whatever height the info rows leave. */
-.top {
-  flex: 1 1 0;
-  min-height: 0;
-  position: relative;
-  border-radius: calc(var(--ik-radius-lg) - 3px) calc(var(--ik-radius-lg) - 3px) 0 0;
-  overflow: hidden;
+.faceWrap {
+  display: block;
+  border-radius: var(--ik-radius-lg);
 }
 
-.seal {
+.faceWrap:focus-visible {
+  outline: 3px solid var(--ik-gold);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------- the card */
+.face {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  border-radius: var(--ik-radius-lg);
+  overflow: hidden;
+  container-type: inline-size; /* the brush character and labels scale with the card */
+  border: 1px solid var(--ik-gold-line-strong);
+  box-shadow: inset 0 3px 0 var(--kingdom), var(--ik-shadow-raised);
+  transition: box-shadow var(--ik-dur-fast) var(--ik-ease-out), border-color var(--ik-dur-fast) var(--ik-ease-out);
+}
+
+/* the art fills the card */
+.face > :first-child {
+  position: absolute !important;
+  inset: 0;
+}
+
+/* frosted glass: badges and the name strip stay readable over any art */
+.faction,
+.nameplate {
+  backdrop-filter: blur(6px) saturate(1.2);
+  -webkit-backdrop-filter: blur(6px) saturate(1.2);
+}
+
+.faction {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 1px 7px;
+  border-radius: var(--ik-radius-pill);
+  background: color-mix(in srgb, var(--kingdom) 82%, transparent);
+  color: var(--ik-on-vermilion);
+  font: 700 clamp(9px, 7.5cqw, 12px) / 1.5 var(--ik-font-body);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.role {
   position: absolute;
   top: 6px;
   right: 6px;
 }
 
+.nameplate {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 5px 7px 6px;
+  background: linear-gradient(180deg, rgba(20, 10, 8, 0.35), rgba(20, 10, 8, 0.78));
+  border-top: 1px solid rgba(217, 179, 108, 0.35);
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.name {
+  min-width: 0;
+  font: 600 clamp(11px, 9cqw, 15px) / 1.2 var(--ik-font-body);
+  color: var(--ik-text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.heroName {
+  font: 600 clamp(11px, 9.5cqw, 17px) / 1.15 var(--ik-font-display);
+  color: #e6d6b3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.badge {
+  flex-shrink: 0;
+  font: 600 9px / 1.5 var(--ik-font-body);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ik-text-muted);
+  border: 1px solid var(--ik-gold-line-strong);
+  border-radius: var(--ik-radius-sm);
+  padding: 0 4px;
+}
+
+.badgeWarn {
+  color: var(--ik-danger-text);
+  border-color: var(--ik-vermilion-bright);
+}
+
+/* pending judgment cards hang down the left edge of the art */
 .judge {
   position: absolute;
   left: 6px;
-  bottom: 6px;
+  top: 30px;
   display: flex;
+  flex-direction: column;
   gap: 4px;
 }
 
@@ -61,88 +156,45 @@
   justify-content: center;
   color: var(--ik-band-trick);
   font: 15px / 1 var(--ik-font-brush);
-  transform: rotate(8deg);
+  transform: rotate(-6deg);
 }
 
+/* ---------------------------------------------------------------- rows under the card */
 .info {
+  box-sizing: border-box;
+  height: 52px; /* = PLAQUE_INFO_H */
   flex: none;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 7px 8px 8px;
-  min-width: 0;
-}
-
-.nameRow {
-  display: flex;
-  align-items: center;
   gap: 6px;
-  min-width: 0;
-}
-
-.name {
-  font: 600 var(--ik-text-md) var(--ik-font-body);
-  color: var(--ik-text-strong);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.badge {
-  flex-shrink: 0;
-  font: 600 10px var(--ik-font-body);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ik-text-muted);
-  border: 1px solid var(--ik-gold-line-strong);
-  border-radius: var(--ik-radius-sm);
-  padding: 0 5px;
-}
-
-.badgeWarn {
-  color: var(--ik-danger-text);
-  border-color: var(--ik-vermilion-bright);
-}
-
-.heroRow {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  font: 600 15px / 1.1 var(--ik-font-display);
-  color: #d9c9a8;
-}
-
-.heroName {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.kingdom {
-  flex-shrink: 0;
-  font: 600 10px / 1.5 var(--ik-font-body);
-  color: var(--ik-on-vermilion);
-  background: var(--kingdom);
-  border-radius: var(--ik-radius-pill);
-  padding: 0 7px;
+  padding-top: 6px;
 }
 
 .stats {
   display: flex;
   align-items: center;
-  gap: 10px;
-  height: 14px;
+  gap: 8px;
+  height: 18px;
   white-space: nowrap;
   overflow: hidden;
   font: 500 var(--ik-text-xs) var(--ik-font-body);
   color: var(--ik-text-muted);
 }
 
+.spacer {
+  flex: 1;
+}
+
 .stat {
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  padding: 0 5px;
+  height: 18px;
+  border-radius: var(--ik-radius-sm);
+  border: 1px solid var(--ik-gold-line);
+  background: rgba(12, 6, 5, 0.45);
+  color: var(--ik-text);
 }
 
 .slots {
@@ -170,59 +222,36 @@
   color: var(--ik-text-strong);
 }
 
-/* One row on a seat: chips shrink (with "…") rather than wrap; hover shows the full rule. */
-.skills {
+/* skills on hover: several rule blocks stacked in one tooltip */
+.skillsTip {
   display: flex;
-  flex-wrap: nowrap;
-  gap: 4px;
-  height: 18px;
-  overflow: hidden;
+  flex-direction: column;
+  gap: var(--ik-space-3);
 }
 
-.skill {
-  flex: 0 1 auto;
-  min-width: 26px;
-  box-sizing: border-box;
-  height: 18px;
-  font: 600 10.5px / 16px var(--ik-font-body);
-  color: var(--ik-danger-text);
-  border: 1px solid rgba(217, 85, 63, 0.5);
-  border-radius: var(--ik-radius-sm);
-  padding: 0 5px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.skillSpent {
-  color: var(--ik-text-faint);
-  border-color: rgba(156, 138, 109, 0.4);
-  text-decoration: line-through;
-}
-
-/* ---------------------------------------------------------------- states */
-.current {
+/* ---------------------------------------------------------------- states (on the card) */
+.current .face {
   border-color: var(--ik-gold);
-  border-top-color: var(--kingdom);
-  box-shadow: var(--ik-glow-turn);
+  box-shadow: inset 0 3px 0 var(--kingdom), var(--ik-glow-turn);
   animation: turnGlow 1.8s ease-in-out infinite;
 }
 
 @keyframes turnGlow {
   50% {
-    box-shadow: 0 0 0 4px rgba(217, 179, 108, 0.26), 0 0 36px rgba(217, 179, 108, 0.5);
+    box-shadow: inset 0 3px 0 var(--kingdom), 0 0 0 4px rgba(217, 179, 108, 0.26), 0 0 36px rgba(217, 179, 108, 0.5);
   }
 }
 
-.waited::after {
+.waited .face::after {
   content: "";
   position: absolute;
-  right: 10px;
-  bottom: 10px;
-  width: 7px;
-  height: 7px;
+  right: 8px;
+  bottom: 44px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--ik-gold);
+  box-shadow: 0 0 6px var(--ik-gold);
   animation: blink 1s ease-in-out infinite;
 }
 
@@ -234,33 +263,38 @@
 
 .clickable {
   cursor: pointer;
-  border: 2px dashed rgba(227, 98, 75, 0.8);
-  border-top: 3px solid var(--kingdom);
 }
 
-.clickable:hover {
-  background: var(--ik-panel-raised);
+.clickable .face {
+  border: 2px dashed rgba(227, 98, 75, 0.9);
+}
+
+.clickable:hover .face {
+  filter: brightness(1.08);
 }
 
 .clickable:focus-visible {
+  outline: none;
+}
+
+.clickable:focus-visible .face {
   outline: 3px solid var(--ik-gold);
   outline-offset: 2px;
 }
 
-.selected {
+.selected .face {
   border: 2px solid var(--ik-vermilion-bright);
-  border-top: 3px solid var(--kingdom);
-  box-shadow: var(--ik-glow-target);
+  box-shadow: inset 0 3px 0 var(--kingdom), var(--ik-glow-target);
 }
 
-.dying {
+.dying .face {
   border-color: var(--ik-vermilion-bright);
   animation: dyingPulse 1.2s ease-in-out infinite;
 }
 
 @keyframes dyingPulse {
   50% {
-    box-shadow: 0 0 34px rgba(227, 98, 75, 0.65);
+    box-shadow: inset 0 3px 0 var(--kingdom), 0 0 34px rgba(227, 98, 75, 0.65);
   }
 }
 
@@ -297,7 +331,12 @@
   animation: stampIn 420ms var(--ik-ease-out) both;
 }
 
-/* the "Fallen" seal is pressed down onto the plaque */
+.stamp:lang(zh-CN) {
+  font: 22px / 1 var(--ik-font-brush);
+  letter-spacing: 0.1em;
+}
+
+/* the "Fallen" seal is pressed down onto the card */
 @keyframes stampIn {
   from {
     opacity: 0;
@@ -309,36 +348,16 @@
   }
 }
 
-.stamp:lang(zh-CN) {
-  font: 22px / 1 var(--ik-font-brush);
-  letter-spacing: 0.1em;
-}
-
-/* larger variant for your own seat */
-.self {
-  height: var(--plaque-h, 258px);
-}
-
+/* your own seat: same card, slightly larger type */
 .self .name {
-  font-size: var(--ik-text-lg);
-}
-
-.self .heroRow {
-  font-size: 18px;
-}
-
-/* Your own plaque has room for two rows of skills. */
-.self .skills {
-  flex-wrap: wrap;
-  align-content: flex-start;
-  height: 40px;
+  font-size: clamp(12px, 9cqw, 17px);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .current,
-  .dying,
+  .current .face,
+  .dying .face,
   .hit,
-  .waited::after {
+  .waited .face::after {
     animation: none;
   }
 }

@@ -1,5 +1,6 @@
 // Home and lobby: layout checks + screenshot baselines (desktop English, phone Chinese).
 import { expect, test, type Page } from "@playwright/test";
+import { settleFonts } from "./helpers";
 
 const VIEWS = [
   { name: "desktop-en", lang: "en", size: { width: 1440, height: 900 }, labels: { name: "e.g. Jason", create: "Create a room", add: "Add bot" } },
@@ -32,7 +33,7 @@ for (const view of VIEWS) {
     await page.goto(`/?lang=${view.lang}`);
     await page.getByPlaceholder(view.labels.name).waitFor();
     await page.waitForLoadState("networkidle");
-    await page.evaluate(() => document.fonts.ready);
+    await settleFonts(page);
     await checkLayout(page, view.name.startsWith("phone"));
     await expect(page).toHaveScreenshot(`home-${view.name}.png`, { fullPage: true });
 
@@ -43,6 +44,7 @@ for (const view of VIEWS) {
     await checkLayout(page, view.name.startsWith("phone"));
     // the room code is random: mask it
     const mask = [page.locator(".room-title"), page.locator(".room-code"), page.locator(".invite-link")];
+    await settleFonts(page);
     await expect(page).toHaveScreenshot(`lobby-${view.name}.png`, { fullPage: true, mask });
     expect(errors).toEqual([]);
   });

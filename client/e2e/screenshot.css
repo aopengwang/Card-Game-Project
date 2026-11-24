@@ -1,0 +1,7 @@
+/* Applied only while taking test screenshots (playwright.config.ts, stylePath).
+   Chrome's backdrop blur (the frosted glass on hero cards) isn't pixel-identical from one
+   capture to the next, so screenshots compare without it. The game keeps the blur. */
+* {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}

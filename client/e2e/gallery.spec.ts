@@ -2,6 +2,7 @@
 // Update baselines after an intended visual change: npm run e2e -- --update-snapshots
 import { readdirSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { settleFonts } from "./helpers";
 
 // A fixture renders in a second or two: fail fast rather than wait out the 3-minute
 // default meant for the full-game tests.
@@ -51,7 +52,7 @@ for (const id of FIXTURES) {
       await page.goto(`/?gallery=${id}&lang=${view.lang}`);
       await page.locator(".table-screen").waitFor();
       await page.waitForLoadState("networkidle");
-      await page.evaluate(() => document.fonts.ready);
+      await settleFonts(page);
 
       expect(await page.evaluate(blockedClickables)).toEqual([]);
       // Every card on screen is a playing card: 5:7, whatever its size or place.
@@ -86,6 +87,7 @@ for (const id of FIXTURES) {
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
         expect(overflow, "page scrolls sideways on a phone").toBeLessThanOrEqual(0);
       }
+      await settleFonts(page); // (the clickable check above scrolled things into view)
       await expect(page).toHaveScreenshot(`${id}-${view.name}.png`, { fullPage: true });
       expect(errors).toEqual([]);
     });
@@ -112,11 +114,33 @@ for (const lang of ["en", "zh"] as const) {
       window.scrollTo(0, 0);
     });
     await page.waitForLoadState("networkidle");
-    await page.evaluate(() => document.fonts.ready);
+    await settleFonts(page);
     await expect(page).toHaveScreenshot(`showcase-${lang}.png`, { fullPage: true });
     expect(errors).toEqual([]);
   });
 }
+
+test("hero cards: 5:7 art, skills only on hover", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/?gallery=play_strike&lang=en");
+  await page.locator(".table-screen").waitFor();
+  const faces = page.locator(".seat .hero-face");
+  // every hero card (opponents and yours) is a 5:7 card
+  for (const r of await faces.evaluateAll((els) => els.map((el) => el.getBoundingClientRect().height / el.getBoundingClientRect().width))) {
+    expect(Math.abs(r - 1.4)).toBeLessThan(0.02);
+  }
+  // skill names aren't printed on the seat...
+  const seat = page.locator(".seat-slot").first();
+  const tip = page.getByRole("tooltip");
+  await expect(tip).toHaveCount(0);
+  // ...they show when you hover its hero card, with the full rules
+  await seat.locator(".hero-face").hover();
+  await expect(tip).toBeVisible();
+  expect(((await tip.textContent()) ?? "").length).toBeGreaterThan(30);
+  const firstSkill = ((await tip.locator("b, strong, [class*=title]").first().textContent()) ?? "").trim();
+  expect(firstSkill.length).toBeGreaterThan(0);
+  expect(await seat.locator(".seat").textContent()).not.toContain(firstSkill);
+});
 
 test("gallery index lists every fixture in both languages", async ({ page }) => {
   await page.goto("/?gallery");

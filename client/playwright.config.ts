@@ -13,7 +13,7 @@ export default defineConfig({
   reporter: [["list"]],
   expect: {
     // A fixed small budget, not a ratio: 1% of a full page is enough to hide a changed icon.
-    toHaveScreenshot: { maxDiffPixels: 150, animations: "disabled", caret: "hide" },
+    toHaveScreenshot: { maxDiffPixels: 150, animations: "disabled", caret: "hide", stylePath: "./e2e/screenshot.css" },
   },
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
@@ -23,7 +23,8 @@ export default defineConfig({
     command: `"${python}" -m uvicorn net.app:app --port ${PORT}`,
     cwd: "../server",
     url: `http://127.0.0.1:${PORT}/api/content`,
-    env: { SGS_BOT_DELAY: "0.1" },
+    // An empty art folder: screenshots use the built-in art, not whatever you've added.
+    env: { SGS_BOT_DELAY: "0.1", SGS_ART_DIR: "../client/e2e/art" },
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
   },

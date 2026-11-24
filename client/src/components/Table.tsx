@@ -131,7 +131,6 @@ export function Table({ net }: { net: NetState }) {
         <div
           ref={arenaRef}
           className={`arena ${layout ? "placed" : "stacked"}`}
-          style={layout ? ({ "--plaque-h": `${layout.plaqueHeight}px` } as CSSProperties) : undefined}
         >
           {opponents.map((seat, i) => (
             // The slot does the positioning, so the seat's own transforms (press, shake) can't move it.

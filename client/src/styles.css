@@ -237,14 +237,15 @@ select:focus-visible {
 .dock {
   box-sizing: border-box;
   display: grid;
-  grid-template-columns: 236px minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   gap: var(--ik-space-4);
   padding: 10px var(--ik-space-4);
   overflow: clip;
   border-top: 1px solid var(--ik-gold-line);
   background: rgba(12, 6, 5, 0.5);
 }
-.dock-self { --plaque-h: calc(var(--dock-h, 280px) - 22px); }
+/* your hero card: as wide as fits the dock's height (5:7 card + 52px of rows, 20px padding) */
+.dock-self { width: calc((var(--dock-h, 280px) - 20px - 52px) * 5 / 7); }
 .dock-main { display: grid; grid-template-rows: 108px calc(var(--hand-h, 124px) + 20px); gap: 8px; min-width: 0; }
 .hand {
   box-sizing: border-box;
@@ -302,7 +303,7 @@ select:focus-visible {
     gap: var(--ik-space-2);
   }
   .arena.placed::before { display: none; }
-  .arena .seat-slot { position: static; width: auto; --plaque-h: 184px; }
+  .arena .seat-slot { position: static; width: auto; }
   .arena.placed .center, .arena.stacked .center {
     position: static;
     width: auto;
@@ -324,7 +325,7 @@ select:focus-visible {
     box-shadow: var(--ik-shadow-modal);
   }
   .dock { grid-template-columns: 1fr; padding: var(--ik-space-2); }
-  .dock-self { max-width: 360px; --plaque-h: 236px; }
+  .dock-self { width: 180px; }
   .dock-main { grid-template-rows: auto 144px; }
 }
 @media (prefers-reduced-motion: reduce) {

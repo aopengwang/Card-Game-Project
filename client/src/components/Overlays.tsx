@@ -1,10 +1,11 @@
 import { useEffect, useRef } from "react";
-import { heroInfo, heroName, kingdomName, useContent } from "../content";
+import { heroInfo, heroName, useContent } from "../content";
 import { describe, type LogLine } from "../describe";
 import { getLang, serverText, t, tMaybe, useLang } from "../i18n";
 import { answer, send } from "../net";
 import type { ChooseHeroReq, GameView, LogEntry, RoomInfo } from "../types";
-import { Beads, Portrait, RoleSeal } from "../ui/Bits";
+import { Beads, RoleSeal } from "../ui/Bits";
+import { HeroFace } from "../ui/Plaque";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 import s from "./Overlays.module.css";
@@ -29,13 +30,10 @@ export function HeroCard({ id, onClick }: { id: string; onClick?: () => void }) 
   const h = heroInfo(id);
   if (!h) return null;
   return (
-    <button type="button" className={`${s.heroCard} ${s[h.kingdom] ?? ""} hero-card`} onClick={onClick}>
-      <Portrait hero={id} width="100%" height={110} />
+    <button type="button" className={`${s.heroCard} hero-card`} onClick={onClick}>
+      {/* the same hero card as at the table; here the skills are listed underneath */}
+      <HeroFace hero={id} kingdom={h.kingdom} title={h.name} />
       <span className={s.heroBody}>
-        <span className={s.heroHead}>
-          <span className={s.heroName}>{h.name}</span>
-          <span className={s.kingdom}>{kingdomName(h.kingdom)}</span>
-        </span>
         <span className={s.heroMeta}>
           <Beads hp={h.max_hp} max={h.max_hp} />
           <span>{tMaybe(`gender.${h.gender}`) ?? h.gender}</span>

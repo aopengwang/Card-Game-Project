@@ -78,6 +78,23 @@ export function collectErrors(page: Page, into: string[]) {
   });
 }
 
+/**
+ * Wait until every character on the page is drawn in its real font. Web fonts (Chinese
+ * above all) arrive in slices fetched per character, and document.fonts.ready can settle
+ * before a slice is even requested, so a screenshot may catch the fallback font. Ask for
+ * exactly the page's characters in each of the design's fonts, then wait.
+ */
+export async function settleFonts(page: Page) {
+  await page.evaluate(async () => {
+    const text = document.body.innerText + (document.querySelector("[role=dialog]") as HTMLElement | null)?.innerText;
+    const css = getComputedStyle(document.documentElement);
+    const families = ["--ik-font-brush", "--ik-font-display", "--ik-font-body"].map((v) => css.getPropertyValue(v).trim()).filter(Boolean);
+    const unique = [...new Set(text)].join("");
+    await Promise.all(families.flatMap((f) => ["400", "600", "700"].map((w) => document.fonts.load(`${w} 24px ${f}`, unique).catch(() => []))));
+    await document.fonts.ready;
+  });
+}
+
 /** Create a room as `name`, fill it with hard bots up to `players`, start the game. */
 export async function startBotGame(page: Page, name: string, players: number) {
   await page.goto("/?lang=en");

@@ -115,7 +115,8 @@ export function Portrait({
   hero: string;
   width: number | string;
   height: number | string;
-  charSize?: number;
+  /** px, or any CSS length (e.g. "55cqw" to scale with a container). */
+  charSize?: number | string;
 }) {
   useContent();
   const known = !!heroInfo(hero);

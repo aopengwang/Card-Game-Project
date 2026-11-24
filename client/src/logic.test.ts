@@ -2,7 +2,7 @@ import { beforeEach, describe as group, expect, it } from "vitest";
 import { setContent } from "./content";
 import { _setLangForTests } from "./i18n";
 import { describe, recentPlays } from "./describe";
-import { handFan, opponentOrder, overlaps, sizeTier, tableLayout } from "./layout";
+import { handFan, opponentOrder, overlaps, plaqueHeightFor, sizeTier, tableLayout } from "./layout";
 import { soundsFor } from "./components/Effects";
 import { _reset, getState, onMessage } from "./net";
 import {
@@ -167,6 +167,11 @@ group("layout", () => {
     expect(tableLayout(5, 1200, 500)).toEqual(tableLayout(5, 1200, 500));
     expect(new Set(tableLayout(7, 1200, 500)!.seats.map((s) => s.height)).size).toBe(1);
     expect(tableLayout(7, 600, 500)).toBeNull();
+    // a seat is a 5:7 hero card plus the fixed info rows
+    for (const [n, w, h] of [[3, 1100, 540], [7, 1100, 540], [5, 1300, 322]]) {
+      const l = tableLayout(n, w, h)!;
+      for (const s of l.seats) expect(s.height).toBe(plaqueHeightFor(s.width));
+    }
   });
 
   it("fanned hand keeps at least half of every card visible", () => {

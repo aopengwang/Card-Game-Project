@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { cardInfo, cardTitle, heroInfo, kingdomName, sealChar, skillText, skillTitle, useContent } from "../content";
 import { getLang, t, tMaybe } from "../i18n";
 import type { Card as CardData, PlayerView } from "../types";
@@ -96,11 +96,75 @@ function JudgeCards({ cards }: { cards: CardData[] }) {
   );
 }
 
-/** A player's seat: portrait, role seal, name/hero, HP beads, equipment, skills. */
+/** Screen-reader name for a seat's card: the skills, since they're no longer printed. */
+const skillsLabel = (p: PlayerView) => `${t("seat.skills")}: ${p.skills.map((sk) => skillTitle(sk.id)).join(", ")}`;
+
+/** A hero's skills, full rules: shown when you hover or focus a hero card. */
+export function SkillsTip({ skills, spent = [] }: { skills: PlayerView["skills"]; spent?: string[] }) {
+  return (
+    <span className={s.skillsTip}>
+      {skills.map((sk) => {
+        const tags = sk.tags.map((tag) => tMaybe(`tag.${tag}`) ?? tag);
+        if (spent.includes(sk.id)) tags.push(t("seat.used"));
+        return <TipBody key={sk.id} title={skillTitle(sk.id)} tags={tags} text={skillText(sk.id) ?? sk.text} />;
+      })}
+    </span>
+  );
+}
+
 /**
- * Fixed height (the --plaque-h custom property, set by the table): nothing a player gains
- * (skills, equipment, judgment cards) makes a plaque grow, so seats never shift. The
- * portrait takes whatever height the info rows leave.
+ * The face of a hero card: art across the whole 5:7 card (your portrait, or the ink scene
+ * with the hero's brush character), kingdom badge top-left, role seal top-right, and a
+ * frosted name strip along the bottom. Used by seats and by hero pick.
+ */
+export function HeroFace({
+  hero,
+  kingdom,
+  role,
+  title,
+  subtitle,
+  badges,
+  judge,
+  children,
+  className,
+}: {
+  hero: string;
+  kingdom: string;
+  role?: string | null;
+  title: ReactNode;
+  subtitle?: ReactNode;
+  badges?: ReactNode;
+  judge?: CardData[];
+  children?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <span className={`${s.face} ${s[kingdom] ?? ""} ${className ?? ""} hero-face`}>
+      <Portrait hero={hero} width="100%" height="100%" charSize="58cqw" />
+      {kingdom && <span className={s.faction}>{kingdomName(kingdom)}</span>}
+      {role !== undefined && (
+        <span className={s.role}>
+          <RoleSeal role={role} />
+        </span>
+      )}
+      {judge && <JudgeCards cards={judge} />}
+      <span className={s.nameplate}>
+        <span className={s.nameRow}>
+          <span className={s.name}>{title}</span>
+          {badges}
+        </span>
+        {subtitle && <span className={s.heroName}>{subtitle}</span>}
+      </span>
+      {children}
+    </span>
+  );
+}
+
+/**
+ * A player's seat, laid out like the hero card template: the 5:7 hero card, then HP and
+ * hand count, then the four equipment slots. Skills appear on hover (SkillsTip). The rows
+ * under the card have a fixed height (PLAQUE_INFO_H), so a seat is always card + rows
+ * tall: nothing a player gains makes it grow, and seats never shift.
  */
 export function Plaque({ player: p, name, variant = "seat", isYou, isCurrent, isWaitedOn, offline, clickable, selected, onClick, range }: Props) {
   useContent();
@@ -127,27 +191,45 @@ export function Plaque({ player: p, name, variant = "seat", isYou, isCurrent, is
     p.alive ? "" : "dead",
   ].join(" ");
 
-  const inner = (
-    <>
-      <div className={s.top}>
-        <Portrait hero={p.hero} width="100%" height="100%" charSize={self ? 64 : 40} />
-        <span className={s.seal}>
-          <RoleSeal role={p.role} />
-        </span>
-        <JudgeCards cards={p.judge} />
-      </div>
-      <div className={s.info}>
-        <div className={s.nameRow}>
-          <span className={s.name}>{name}</span>
+  const face = (
+    <HeroFace
+      hero={p.hero}
+      kingdom={p.kingdom}
+      role={p.role}
+      judge={p.judge}
+      title={name}
+      subtitle={hero ? hero.name : t("seat.choosing")}
+      badges={
+        <>
           {isYou && <span className={s.badge}>{t("badge.you")}</span>}
           {offline && <span className={`${s.badge} ${s.badgeWarn}`}>{t("badge.offline")}</span>}
-        </div>
-        <div className={s.heroRow}>
-          <span className={s.heroName}>{hero ? hero.name : t("seat.choosing")}</span>
-          {p.kingdom && <span className={s.kingdom}>{kingdomName(p.kingdom)}</span>}
-        </div>
+        </>
+      }
+    >
+      {!p.alive && (
+        <span className={s.stamp} lang={getLang() === "zh" ? "zh-CN" : undefined}>
+          {t("seat.fallen")}
+        </span>
+      )}
+    </HeroFace>
+  );
+
+  const inner = (
+    <>
+      {/* hover or focus the card for the hero's skills */}
+      {p.skills.length > 0 ? (
+        <Tip content={<SkillsTip skills={p.skills} spent={p.spent} />} side="right">
+          <span className={s.faceWrap} tabIndex={clickable ? undefined : 0} role="group" aria-label={skillsLabel(p)}>
+            {face}
+          </span>
+        </Tip>
+      ) : (
+        <span className={s.faceWrap}>{face}</span>
+      )}
+      <div className={s.info}>
         <div className={s.stats}>
           <Beads hp={p.hp} max={p.max_hp} size={self ? "lg" : "md"} dying={dying} />
+          <span className={s.spacer} />
           <span className={s.stat} title={t("seat.handCount")} aria-label={`${t("seat.handCount")}: ${p.hand_count}`}>
             <svg width="11" height="13" viewBox="0 0 11 13" aria-hidden="true">
               <rect x="0.75" y="0.75" width="9.5" height="11.5" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.3" />
@@ -169,25 +251,7 @@ export function Plaque({ player: p, name, variant = "seat", isYou, isCurrent, is
           )}
         </div>
         <EquipSlots equips={p.equips} />
-        {/* Always rendered (even empty) so every plaque has the same rows. */}
-        <div className={s.skills}>
-          {p.skills.map((sk) => {
-            const tags = sk.tags.map((tag) => tMaybe(`tag.${tag}`) ?? tag);
-            return (
-              <Tip key={sk.id} content={<TipBody title={skillTitle(sk.id)} tags={tags} text={skillText(sk.id) ?? sk.text} />}>
-                <span className={`${s.skill} ${p.spent.includes(sk.id) ? s.skillSpent : ""}`} tabIndex={clickable ? undefined : 0}>
-                  {skillTitle(sk.id)}
-                </span>
-              </Tip>
-            );
-          })}
-        </div>
       </div>
-      {!p.alive && (
-        <span className={s.stamp} lang={getLang() === "zh" ? "zh-CN" : undefined}>
-          {t("seat.fallen")}
-        </span>
-      )}
     </>
   );
 
