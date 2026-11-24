@@ -46,6 +46,8 @@ def content_info(ruleset: Ruleset, lang: str = "en") -> dict[str, Any]:
         if zh and name in ZH_CARDS:
             title, text = ZH_CARDS[name]
         info: dict[str, Any] = {"title": title, "type": str(d.type), "text": text}
+        if name in ZH_CARDS:
+            info["zh"] = ZH_CARDS[name][0]  # always sent: seal / brush characters in both languages
         if isinstance(d, EquipDef):
             info["slot"] = str(d.slot)
             if d.attack_range is not None:
@@ -55,10 +57,13 @@ def content_info(ruleset: Ruleset, lang: str = "en") -> dict[str, Any]:
     skills: dict[str, dict[str, Any]] = {}
     for h in ruleset.heroes.values():
         hd = h.to_dict()
+        hd["zh"] = ZH_HEROES.get(h.id, h.name)  # brush-character portraits in both languages
         if zh and h.id in ZH_HEROES:
             hd["name"] = ZH_HEROES[h.id]
         for s in hd["skills"]:
             s["title"], s["text"] = skill_title(s["id"]), _clean(s["text"])
+            if s["id"] in ZH_SKILLS:
+                s["zh"] = ZH_SKILLS[s["id"]][0]
             if zh and s["id"] in ZH_SKILLS:
                 s["title"], s["text"] = ZH_SKILLS[s["id"]]
             skills[s["id"]] = s
@@ -67,6 +72,8 @@ def content_info(ruleset: Ruleset, lang: str = "en") -> dict[str, Any]:
     for skill in GAINED_SKILLS:
         s = skill_info(skill)
         s["title"], s["text"] = skill_title(s["id"]), _clean(s["text"])
+        if s["id"] in ZH_SKILLS:
+            s["zh"] = ZH_SKILLS[s["id"]][0]
         if zh and s["id"] in ZH_SKILLS:
             s["title"], s["text"] = ZH_SKILLS[s["id"]]
         skills.setdefault(s["id"], s)

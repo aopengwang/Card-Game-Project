@@ -6,7 +6,7 @@ import { useState } from "react";
  */
 export function Art({ kind, id, fallback, className }: { kind: "cards" | "heroes"; id: string; fallback: React.ReactNode; className?: string }) {
   const [failed, setFailed] = useState(false);
-  if (failed) return <div className={`art-fallback ${className ?? ""}`}>{fallback}</div>;
+  if (failed) return fallback == null ? null : <div className={`art-fallback ${className ?? ""}`}>{fallback}</div>;
   return (
     <img
       className={`art ${className ?? ""}`}

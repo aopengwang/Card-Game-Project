@@ -1,0 +1,204 @@
+/* ---------------------------------------------------------------- jade HP beads */
+.beads {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bead {
+  --size: 10px;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  box-sizing: border-box;
+  border: 1px solid var(--ik-bead-empty);
+  transition: background var(--ik-dur-card) var(--ik-ease-out), box-shadow var(--ik-dur-card) var(--ik-ease-out);
+}
+
+.lg .bead {
+  --size: 13px;
+}
+
+.on {
+  border: none;
+  background: radial-gradient(circle at 35% 30%, var(--ik-jade-light), var(--ik-jade) 58%, var(--ik-jade-deep));
+}
+
+.lost {
+  animation: crack var(--ik-dur-hit) var(--ik-ease-out);
+}
+
+.gained {
+  animation: glow 700ms var(--ik-ease-out);
+}
+
+.dying .bead {
+  border-color: var(--ik-vermilion-bright);
+}
+
+@keyframes crack {
+  0% {
+    background: var(--ik-vermilion-bright);
+    transform: scale(1.35);
+  }
+  60% {
+    background: var(--ik-vermilion);
+    transform: scale(0.85);
+  }
+}
+
+@keyframes glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(122, 224, 180, 0);
+  }
+  40% {
+    box-shadow: 0 0 10px 4px rgba(122, 224, 180, 0.8);
+  }
+}
+
+/* ---------------------------------------------------------------- role seals */
+.seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border-radius: var(--ik-radius-sm);
+  color: var(--ik-on-vermilion);
+  flex-shrink: 0;
+}
+
+.sealZh {
+  width: 26px;
+  height: 26px;
+  font: 700 15px / 1 var(--ik-font-brush);
+}
+
+.sealEn {
+  height: 22px;
+  padding: 0 7px;
+  font: 700 10px / 1 var(--ik-font-body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sealLg.sealZh {
+  width: 44px;
+  height: 44px;
+  font-size: 26px;
+}
+
+.sealLg.sealEn {
+  height: 30px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+
+.lord {
+  background: var(--ik-role-lord);
+  box-shadow: inset 0 0 0 2px rgba(251, 243, 226, 0.5);
+}
+
+.loyalist {
+  background: var(--ik-role-loyalist);
+}
+
+.rebel {
+  background: var(--ik-role-rebel);
+  color: var(--ik-text);
+  border: 1px solid rgba(239, 230, 210, 0.25);
+}
+
+.spy {
+  background: var(--ik-role-spy);
+  color: var(--ik-text);
+}
+
+.hidden {
+  border: 1px dashed rgba(28, 23, 20, 0.55);
+  background: rgba(244, 236, 218, 0.65);
+  color: var(--ik-ink-soft);
+  font-family: var(--ik-font-body);
+}
+
+.onDark.hidden {
+  border-color: rgba(239, 230, 210, 0.45);
+  background: transparent;
+  color: var(--ik-text-muted);
+}
+
+/* ---------------------------------------------------------------- timer ring */
+.timer {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timer svg {
+  position: absolute;
+  inset: 0;
+}
+
+.ringTrack {
+  stroke: rgba(201, 163, 90, 0.2);
+}
+
+.ringFill {
+  stroke: var(--ik-gold);
+  transition: stroke-dashoffset 250ms linear, stroke var(--ik-dur-fast);
+}
+
+.timer.low .ringFill {
+  stroke: var(--ik-vermilion-bright);
+}
+
+.timerText {
+  position: relative;
+  font: 600 var(--ik-text-sm) var(--ik-font-body);
+  color: var(--ik-text-strong);
+}
+
+.timer.low .timerText {
+  color: var(--ik-danger-text);
+}
+
+/* ---------------------------------------------------------------- portrait */
+.portrait {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(170deg, #ece2cc, #d6c6a2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.portrait img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mountains {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.brushChar {
+  position: relative;
+  font-family: var(--ik-font-brush);
+  line-height: 1;
+  color: var(--ik-ink);
+  opacity: 0.86;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lost,
+  .gained {
+    animation: none;
+  }
+}

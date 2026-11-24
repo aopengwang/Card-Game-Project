@@ -51,7 +51,20 @@ async function step(page: Page, labels: { endPhase: string; pass: string[]; conf
 function collectErrors(page: Page, into: string[]) {
   page.on("pageerror", (e) => into.push(String(e)));
   page.on("console", (m) => {
-    if (m.type() === "error" && !m.text().includes("404")) into.push(m.text()); // 404 = missing art (expected)
+    // Resource failures are judged by URL below; anything else logged as an error counts.
+    if (m.type() === "error" && !m.text().startsWith("Failed to load resource")) into.push(m.text());
+  });
+  page.on("requestfailed", (r) => {
+    const url = new URL(r.url());
+    // Our own server must never fail. Third-party hosts (Google Fonts) can blip: the game
+    // falls back to system fonts, so that's not a game failure.
+    if (url.origin === new URL(page.url()).origin) into.push(`request failed: ${r.url()} ${r.failure()?.errorText}`);
+  });
+  page.on("response", (r) => {
+    const url = new URL(r.url());
+    if (r.status() >= 400 && url.origin === new URL(page.url()).origin && !url.pathname.startsWith("/art/")) {
+      into.push(`HTTP ${r.status()} ${r.url()}`); // /art/ 404s are expected (art slots without files)
+    }
   });
 }
 

@@ -118,7 +118,10 @@ group("layout", () => {
     const pos = seatPositions(4);
     expect(pos[0].x).toBeGreaterThan(50);
     expect(pos[3].x).toBeLessThan(50);
-    expect(Math.min(...pos.map((p) => p.y))).toBeGreaterThan(5);
+    // y is a 0-100 position within the seat band: middle seats higher than the end ones
+    for (const p of pos) expect(p.y).toBeGreaterThanOrEqual(0);
+    for (const p of pos) expect(p.y).toBeLessThanOrEqual(100);
+    expect(pos[1].y).toBeLessThan(pos[0].y);
   });
 });
 

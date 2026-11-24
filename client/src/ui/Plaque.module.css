@@ -1,0 +1,302 @@
+.plaque {
+  --kingdom: var(--ik-gold-muted);
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--ik-radius-lg);
+  background: var(--ik-panel);
+  border: 1px solid var(--ik-gold-line);
+  border-top: 3px solid var(--kingdom);
+  box-shadow: var(--ik-shadow-raised);
+  color: var(--ik-text);
+  font: inherit;
+  text-align: left;
+  padding: 0;
+  overflow: visible;
+  transition: box-shadow var(--ik-dur-fast) var(--ik-ease-out), border-color var(--ik-dur-fast) var(--ik-ease-out),
+    filter 400ms var(--ik-ease-out);
+}
+
+.wei { --kingdom: var(--ik-wei); }
+.shu { --kingdom: var(--ik-shu); }
+.wu { --kingdom: var(--ik-wu); }
+.qun { --kingdom: var(--ik-qun); }
+
+.top {
+  position: relative;
+  border-radius: calc(var(--ik-radius-lg) - 3px) calc(var(--ik-radius-lg) - 3px) 0 0;
+  overflow: hidden;
+}
+
+.seal {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+.judge {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  display: flex;
+  gap: 4px;
+}
+
+.judgeCard {
+  width: 22px;
+  height: 30px;
+  border-radius: 3px;
+  background: linear-gradient(160deg, var(--ik-paper), var(--ik-paper-shade));
+  border: 1px solid var(--ik-paper-edge);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ik-band-trick);
+  font: 15px / 1 var(--ik-font-brush);
+  transform: rotate(8deg);
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 9px 9px;
+  min-width: 0;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.name {
+  font: 600 var(--ik-text-md) var(--ik-font-body);
+  color: var(--ik-text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.badge {
+  flex-shrink: 0;
+  font: 600 10px var(--ik-font-body);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ik-text-muted);
+  border: 1px solid var(--ik-gold-line-strong);
+  border-radius: var(--ik-radius-sm);
+  padding: 0 5px;
+}
+
+.badgeWarn {
+  color: var(--ik-danger-text);
+  border-color: var(--ik-vermilion-bright);
+}
+
+.heroRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font: 600 15px / 1.1 var(--ik-font-display);
+  color: #d9c9a8;
+}
+
+.heroName {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kingdom {
+  flex-shrink: 0;
+  font: 600 10px / 1.5 var(--ik-font-body);
+  color: var(--ik-on-vermilion);
+  background: var(--kingdom);
+  border-radius: var(--ik-radius-pill);
+  padding: 0 7px;
+}
+
+.stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font: 500 var(--ik-text-xs) var(--ik-font-body);
+  color: var(--ik-text-muted);
+}
+
+.stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.slots {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.slot {
+  height: 22px;
+  border-radius: var(--ik-radius-sm);
+  border: 1px solid rgba(201, 163, 90, 0.22);
+  color: rgba(239, 230, 210, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  box-sizing: border-box;
+  font: 600 10px var(--ik-font-body);
+}
+
+.slotFull {
+  border-color: var(--ik-gold-line-strong);
+  background: rgba(201, 163, 90, 0.16);
+  color: var(--ik-text-strong);
+}
+
+.skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.skill {
+  font: 600 10.5px / 1.5 var(--ik-font-body);
+  color: var(--ik-danger-text);
+  border: 1px solid rgba(217, 85, 63, 0.5);
+  border-radius: var(--ik-radius-sm);
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
+.skillSpent {
+  color: var(--ik-text-faint);
+  border-color: rgba(156, 138, 109, 0.4);
+  text-decoration: line-through;
+}
+
+/* ---------------------------------------------------------------- states */
+.current {
+  border-color: var(--ik-gold);
+  border-top-color: var(--kingdom);
+  box-shadow: var(--ik-glow-turn);
+  animation: turnGlow 1.8s ease-in-out infinite;
+}
+
+@keyframes turnGlow {
+  50% {
+    box-shadow: 0 0 0 4px rgba(217, 179, 108, 0.26), 0 0 36px rgba(217, 179, 108, 0.5);
+  }
+}
+
+.waited::after {
+  content: "";
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ik-gold);
+  animation: blink 1s ease-in-out infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+.clickable {
+  cursor: pointer;
+  border: 2px dashed rgba(227, 98, 75, 0.8);
+  border-top: 3px solid var(--kingdom);
+}
+
+.clickable:hover {
+  background: var(--ik-panel-raised);
+}
+
+.clickable:focus-visible {
+  outline: 3px solid var(--ik-gold);
+  outline-offset: 2px;
+}
+
+.selected {
+  border: 2px solid var(--ik-vermilion-bright);
+  border-top: 3px solid var(--kingdom);
+  box-shadow: var(--ik-glow-target);
+}
+
+.dying {
+  border-color: var(--ik-vermilion-bright);
+  animation: dyingPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes dyingPulse {
+  50% {
+    box-shadow: 0 0 34px rgba(227, 98, 75, 0.65);
+  }
+}
+
+.hit {
+  animation: shake var(--ik-dur-hit) var(--ik-ease-out);
+}
+
+@keyframes shake {
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+
+.dead {
+  filter: grayscale(1) brightness(0.6);
+}
+
+.stamp {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%) rotate(-12deg);
+  border: 2px solid var(--ik-vermilion-bright);
+  border-radius: var(--ik-radius-sm);
+  padding: 2px 10px;
+  background: rgba(20, 10, 8, 0.88);
+  color: var(--ik-vermilion-bright);
+  font: 700 var(--ik-text-sm) var(--ik-font-body);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.stamp:lang(zh-CN) {
+  font: 22px / 1 var(--ik-font-brush);
+  letter-spacing: 0.1em;
+}
+
+/* larger variant for your own seat */
+.self .name {
+  font-size: var(--ik-text-lg);
+}
+
+.self .heroRow {
+  font-size: 18px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .current,
+  .dying,
+  .hit,
+  .waited::after {
+    animation: none;
+  }
+}

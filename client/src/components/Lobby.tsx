@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { memberName, t, tMaybe, useLang } from "../i18n";
 import { createRoom, joinRoom, leave, send, type NetState } from "../net";
+import { Button } from "../ui/Button";
 import { LangToggle } from "./LangToggle";
 
 const NAME_KEY = "cardgame_name";
@@ -46,9 +47,9 @@ export function Home({ error, initialCode }: { error: string | null; initialCode
           <input value={name} maxLength={20} onChange={(e) => setName(e.target.value)} placeholder={t("home.namePlaceholder")} autoFocus />
         </label>
         <div className="home-actions">
-          <button className="primary" disabled={busy || !name.trim()} onClick={() => run(() => createRoom(name))}>
+          <Button variant="primary" disabled={busy || !name.trim()} onClick={() => run(() => createRoom(name))}>
             {t("home.create")}
-          </button>
+          </Button>
           <div className="join-row">
             <input
               value={code}
@@ -58,9 +59,9 @@ export function Home({ error, initialCode }: { error: string | null; initialCode
               aria-label={t("home.codeLabel")}
               className="code-input"
             />
-            <button disabled={busy || !name.trim() || code.trim().length !== 5} onClick={() => run(() => joinRoom(code, name))}>
+            <Button disabled={busy || !name.trim() || code.trim().length !== 5} onClick={() => run(() => joinRoom(code, name))}>
               {t("home.join")}
-            </button>
+            </Button>
           </div>
         </div>
         {error && <div className="error-line">{error}</div>}
@@ -98,7 +99,9 @@ export function Lobby({ net }: { net: NetState }) {
         </div>
         <div className="invite">
           <code>{link}</code>
-          <button onClick={copy}>{copied ? t("lobby.copied") : t("lobby.copy")}</button>
+          <Button shape="small" onClick={copy}>
+            {copied ? t("lobby.copied") : t("lobby.copy")}
+          </Button>
         </div>
         <ol className="members">
           {room.members.map((m, i) => (
@@ -113,9 +116,9 @@ export function Lobby({ net }: { net: NetState }) {
               {i === room.you && <span className="badge">{t("badge.you")}</span>}
               {!m.connected && <span className="badge warn">{t("badge.offline")}</span>}
               {isHost && i !== room.host && (
-                <button className="small-btn" onClick={() => send({ type: "remove", seat: i })}>
+                <Button shape="small" variant="ghost" className="member-remove" onClick={() => send({ type: "remove", seat: i })}>
                   {t("lobby.remove")}
-                </button>
+                </Button>
               )}
             </li>
           ))}
@@ -130,12 +133,12 @@ export function Lobby({ net }: { net: NetState }) {
                   </option>
                 ))}
               </select>
-              <button disabled={n >= room.max_players} onClick={() => send({ type: "add_bot", level })}>
+              <Button disabled={n >= room.max_players} onClick={() => send({ type: "add_bot", level })}>
                 {t("lobby.addBot")}
-              </button>
-              <button className="primary" disabled={n < room.min_players} onClick={() => send({ type: "start" })}>
+              </Button>
+              <Button variant="primary" disabled={n < room.min_players} onClick={() => send({ type: "start" })}>
                 {room.status === "finished" ? t("lobby.rematch") : t("lobby.start")}
-              </button>
+              </Button>
               <span className="muted small">
                 {t("lobby.players", { n, max: room.max_players })}
                 {n < room.min_players ? t("lobby.needMore", { min: room.min_players }) : ""}
@@ -146,9 +149,9 @@ export function Lobby({ net }: { net: NetState }) {
         ) : (
           <p className="muted">{t("lobby.waitHost")}</p>
         )}
-        <button className="link-btn" onClick={() => leave()}>
+        <Button variant="ghost" shape="small" className="leave-room" onClick={() => leave()}>
           {t("lobby.leave")}
-        </button>
+        </Button>
       </div>
     </div>
   );

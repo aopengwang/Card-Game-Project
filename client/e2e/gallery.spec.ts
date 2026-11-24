@@ -46,23 +46,58 @@ for (const id of FIXTURES) {
       const errors: string[] = [];
       page.on("pageerror", (e) => errors.push(String(e)));
       await page.setViewportSize(view.size);
+      // Freeze the clock so countdown timers render identically on every run (no masking).
+      await page.clock.setFixedTime(new Date("2026-01-01T12:00:00Z"));
       await page.goto(`/?gallery=${id}&lang=${view.lang}`);
       await page.locator(".table-screen").waitFor();
       await page.waitForLoadState("networkidle");
       await page.evaluate(() => document.fonts.ready);
 
       expect(await page.evaluate(blockedClickables)).toEqual([]);
+      if (view.name.startsWith("desktop")) {
+        // The table is pinned to the window: content changes must never resize the page
+        // (a growing page made the whole table jump up and down mid-game).
+        const fit = await page.evaluate(() => ({
+          table: Math.round(document.querySelector(".table-screen")!.getBoundingClientRect().height),
+          page: document.documentElement.scrollHeight,
+          window: window.innerHeight,
+          bar: Math.round(document.querySelector(".action-bar")!.getBoundingClientRect().height),
+        }));
+        expect(fit).toEqual({ table: view.size.height, page: view.size.height, window: view.size.height, bar: 118 });
+        // ...and every opponent's plaque fits on the table (none cut off by the top bar or dock).
+        const clipped = await page.evaluate(() => {
+          const table = document.querySelector(".table-main")!.getBoundingClientRect();
+          return Array.from(document.querySelectorAll<HTMLElement>(".seat-slot"))
+            .map((el) => ({ el, r: el.getBoundingClientRect() }))
+            .filter(({ r }) => r.top < table.top - 1 || r.bottom > table.bottom + 1)
+            .map(({ el, r }) => `${el.textContent?.slice(0, 20)} ${Math.round(r.top)}-${Math.round(r.bottom)}`);
+        });
+        expect(clipped).toEqual([]);
+      }
       if (view.name.startsWith("phone")) {
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
         expect(overflow, "page scrolls sideways on a phone").toBeLessThanOrEqual(0);
       }
-      await expect(page).toHaveScreenshot(`${id}-${view.name}.png`, {
-        fullPage: true,
-        mask: [page.locator(".timer")], // the countdown changes every frame
-      });
+      await expect(page).toHaveScreenshot(`${id}-${view.name}.png`, { fullPage: true });
       expect(errors).toEqual([]);
     });
   }
+}
+
+for (const lang of ["en", "zh"] as const) {
+  test(`component showcase · ${lang}`, async ({ page }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (e) => errors.push(String(e)));
+    page.on("console", (m) => m.type() === "error" && !m.text().startsWith("Failed to load resource") && errors.push(m.text()));
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.clock.setFixedTime(new Date("2026-01-01T12:00:00Z"));
+    await page.goto(`/?gallery&lang=${lang}`);
+    await page.getByText("Seat plaques").waitFor();
+    await page.waitForLoadState("networkidle");
+    await page.evaluate(() => document.fonts.ready);
+    await expect(page).toHaveScreenshot(`showcase-${lang}.png`, { fullPage: true });
+    expect(errors).toEqual([]);
+  });
 }
 
 test("gallery index lists every fixture in both languages", async ({ page }) => {

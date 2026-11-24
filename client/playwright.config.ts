@@ -12,7 +12,8 @@ export default defineConfig({
   fullyParallel: true,
   reporter: [["list"]],
   expect: {
-    toHaveScreenshot: { maxDiffPixelRatio: 0.01, animations: "disabled", caret: "hide" },
+    // A fixed small budget, not a ratio: 1% of a full page is enough to hide a changed icon.
+    toHaveScreenshot: { maxDiffPixels: 150, animations: "disabled", caret: "hide" },
   },
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,

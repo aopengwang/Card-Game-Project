@@ -33,6 +33,9 @@ Without a build, "/" falls back to the plain test client, which is always at `/d
 - **Ink & Lacquer tokens**: `client/src/styles/tokens.css` (colors, fonts per language,
   spacing, shadows, motion). Components use `var(--ik-…)`, never raw values.
   `tokens.test.ts` checks text contrast (WCAG AA) and that JS motion timings match.
+- **Components** (`client/src/ui/`): Card, Plaque (seat), RoleSeal, Beads (HP), TimerRing,
+  Portrait, Button / SealButton, Modal (Radix Dialog), Tip (Radix Tooltip). Build new UI
+  from these; the gallery shows each one in every state.
 - **Gallery**: open `/?gallery` (add `&lang=zh` for Chinese). It shows the palette and
   type, plus real game moments rendered by the live UI: hero pick, Nullify chain,
   dying, 8 players, game over, and more. Regenerate the moments from seeded hard-bot

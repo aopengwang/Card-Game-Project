@@ -16,6 +16,7 @@ export interface SkillInfo {
   tags: string[];
   text: string;
   title?: string;
+  zh?: string; // Chinese name, sent in both languages (seal characters)
 }
 
 export interface PlayerView {
@@ -193,11 +194,13 @@ export interface CardInfo {
   text: string;
   slot?: string;
   range?: number;
+  zh?: string; // Chinese name, sent in both languages (seal / brush characters)
 }
 
 export interface HeroInfo {
   id: string;
   name: string;
+  zh?: string;
   kingdom: string;
   max_hp: number;
   gender: string;

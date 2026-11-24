@@ -1,0 +1,83 @@
+.bar {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ik-space-3) var(--ik-space-4);
+  /* Fixed height whether idle, prompting, or showing choice cards, so the table never
+     shifts. Room for title + error + hint, or a row of small cards; rarer extras scroll. */
+  height: 118px;
+  overflow-y: auto;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--ik-gold-line);
+  background: linear-gradient(180deg, rgba(40, 21, 16, 0.96), rgba(28, 14, 11, 0.96));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  color: var(--ik-text);
+  font-family: var(--ik-font-body);
+}
+
+.active {
+  border-color: rgba(217, 179, 108, 0.6);
+}
+
+.idle {
+  justify-content: center;
+  background: rgba(36, 19, 15, 0.6);
+  box-shadow: none;
+}
+
+.waiting {
+  color: var(--ik-text-muted);
+  font-size: var(--ik-text-md);
+}
+
+.text {
+  flex: 1 1 260px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  font: 700 var(--ik-text-xl) / 1.2 var(--ik-font-display);
+  color: var(--ik-text-strong);
+}
+
+.hint {
+  font-size: var(--ik-text-sm);
+  color: var(--ik-text-muted);
+}
+
+.error {
+  font-size: var(--ik-text-sm);
+  font-weight: 600;
+  color: var(--ik-danger-text);
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ik-space-2);
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ik-space-2);
+  padding: 4px 0;
+}
+
+@media (max-width: 760px) {
+  .bar {
+    padding: 10px;
+  }
+  .title {
+    font-size: var(--ik-text-lg);
+  }
+  .buttons {
+    width: 100%;
+  }
+}

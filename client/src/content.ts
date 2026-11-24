@@ -58,6 +58,17 @@ export function reasonTitle(reason: string): string {
   return tMaybe(`reason.${reason}`) ?? titleCase(reason);
 }
 
+/** One brush/seal character for a card, skill or hero (from its Chinese name). */
+export function sealChar(kind: "card" | "skill" | "hero", id: string, which: "first" | "last" = "first"): string {
+  const zh =
+    kind === "card" ? content.cards[id]?.zh : kind === "skill" ? content.skills[id]?.zh : heroInfo(id)?.zh;
+  const chars = Array.from(zh ?? "");
+  if (chars.length === 0) return (kind === "card" ? cardTitle(id) : kind === "skill" ? skillTitle(id) : heroName(id)).slice(0, 1);
+  return which === "first" ? chars[0] : chars[chars.length - 1];
+}
+
+export const cardInfo = (name: string) => content.cards[name];
+
 export const roleName = (role: string): string => tMaybe(`role.${role}`) ?? titleCase(role);
 export const kingdomName = (k: string): string => tMaybe(`kingdom.${k}`) ?? k;
 

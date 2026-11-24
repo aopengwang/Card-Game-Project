@@ -2,14 +2,15 @@ import { useState } from "react";
 import { skillTitle, useContent } from "../content";
 import { recentPlays } from "../describe";
 import { joinList, memberName, t, tMaybe, useLang } from "../i18n";
-import { opponentOrder, seatPositions } from "../layout";
+import { opponentOrder, seatPositions, seatTop } from "../layout";
 import { leave, type NetState } from "../net";
 import { EMPTY, cardClickable, clickCard, clickSeat, seatClickable, type Selection } from "../selection";
+import { Button } from "../ui/Button";
+import { Card, CardBack } from "../ui/Card";
+import { Plaque } from "../ui/Plaque";
 import { ActionBar } from "./ActionBar";
-import { CardView } from "./CardView";
 import { LangToggle } from "./LangToggle";
 import { GameOver, HeroPick, LogPanel } from "./Overlays";
-import { Seat } from "./Seat";
 
 export function Table({ net }: { net: NetState }) {
   useLang();
@@ -62,38 +63,42 @@ export function Table({ net }: { net: NetState }) {
         {net.conn !== "open" && <span className="pill warn">{t("conn.reconnecting")}</span>}
         <span className="spacer" />
         <LangToggle />
-        <button className="log-toggle" onClick={() => setShowLog(!showLog)}>
+        <Button shape="pill" className="log-toggle" onClick={() => setShowLog(!showLog)} aria-expanded={showLog}>
           {showLog ? t("table.hideLog") : t("table.log")}
-        </button>
-        <button onClick={() => window.confirm(t("table.leaveConfirm")) && leave()}>{t("table.leave")}</button>
+        </Button>
+        <Button shape="pill" variant="ghost" onClick={() => window.confirm(t("table.leaveConfirm")) && leave()}>
+          {t("table.leave")}
+        </Button>
       </header>
 
       <div className="table-main">
         <div className="arena">
           {opponents.map((seat, i) => (
             // The slot does the positioning, so the seat's own transforms (press, shake) can't move it.
-            <div key={seat} className="seat-slot" style={{ left: `${positions[i].x}%`, top: `${positions[i].y}%` }}>
-              <Seat player={view.players[seat]} name={nameOf(seat)} {...seatProps(seat)} />
+            <div key={seat} className="seat-slot" style={{ left: `${positions[i].x}%`, top: seatTop(positions[i].y) }}>
+              <Plaque player={view.players[seat]} name={nameOf(seat)} {...seatProps(seat)} />
             </div>
           ))}
           <div className="center">
             <div className="piles">
-              <span className="pile" title={t("table.drawPile")}>
-                {t("table.deck", { n: view.draw_pile })}
+              <span className="pile">
+                <CardBack size="sm" label={t("table.drawPile")} />
+                <span>{t("table.deck", { n: view.draw_pile })}</span>
               </span>
-              <span className="pile" title={t("table.discardPile")}>
-                {t("table.discard", { n: view.discard_pile })}
+              <span className="pile">
+                <span className="pile-empty" aria-hidden="true" />
+                <span>{t("table.discard", { n: view.discard_pile })}</span>
               </span>
             </div>
             <div className="plays">
               {plays.length === 0 && (
-                <span className="muted small">
+                <span className="turn-note">
                   {view.current === view.you ? t("table.yourTurn") : t("table.theirTurn", { name: name(view.current) })}
                 </span>
               )}
               {plays.map((p) => (
                 <div key={p.key} className="play-slot">
-                  <CardView card={p.card} size="sm" />
+                  <Card card={p.card} size="sm" />
                   <span className="play-by">{p.seat != null ? name(p.seat) : ""}</span>
                 </div>
               ))}
@@ -108,16 +113,18 @@ export function Table({ net }: { net: NetState }) {
       </div>
 
       <footer className="dock">
-        <Seat player={me} name={nameOf(view.you)} isYou {...seatProps(view.you)} offline={false} />
+        <div className="dock-self">
+          <Plaque player={me} name={nameOf(view.you)} variant="self" isYou {...seatProps(view.you)} offline={false} />
+        </div>
         <div className="dock-main">
           <ActionBar request={request} view={view} sel={sel} setSel={setSel} name={name} waitingText={waitingText} />
           <div className="hand" aria-label={t("table.hand")}>
-            {view.hand.length === 0 && <span className="muted small">{t("table.noCards")}</span>}
+            {view.hand.length === 0 && <span className="turn-note">{t("table.noCards")}</span>}
             {view.hand.map((c) => {
               const clickable = cardClickable(req, sel, c.id);
               const selected = sel.cards.includes(c.id) || (sel.mode?.type === "card" && sel.mode.cardId === c.id);
               return (
-                <CardView
+                <Card
                   key={c.id}
                   card={c}
                   clickable={clickable}
@@ -128,7 +135,7 @@ export function Table({ net }: { net: NetState }) {
               );
             })}
           </div>
-          <div className="muted small">
+          <div className="dock-meta">
             {t("table.range", { n: view.attack_range })}
             {me.skills.length > 0 && ` · ${t("table.skills", { list: joinList(me.skills.map((s) => skillTitle(s.id))) })}`}
           </div>

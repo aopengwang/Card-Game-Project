@@ -49,6 +49,9 @@ def test_content_info_in_both_languages():
     assert wei["name"] == "魏烈" and wei["skills"][0]["title"] == "战利"
     assert en["skills"]["seize_power"]["text"] and zh["skills"]["seize_power"]["title"] == "夺权"
     assert content_info(STANDARD, "klingon")["lang"] == "en"
+    # Chinese names travel in both languages (seal / brush characters in the UI).
+    assert en["cards"]["indulgence"]["zh"] == "乐不思蜀" and en["skills"]["iron_edict"]["zh"] == "铁令"
+    assert {h["id"]: h for h in en["heroes"]}["cao_cao"]["zh"] == "曹操"
 
 
 def test_content_endpoint_language_param():

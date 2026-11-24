@@ -1,0 +1,196 @@
+.card {
+  --w: 88px;
+  --h: 124px;
+  position: relative;
+  box-sizing: border-box;
+  width: var(--w);
+  height: var(--h);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border-radius: var(--ik-radius-md);
+  border: 1px solid var(--ik-paper-edge);
+  background: linear-gradient(160deg, var(--ik-paper), var(--ik-paper-shade));
+  color: var(--ik-ink);
+  box-shadow: var(--ik-shadow-card);
+  font: inherit;
+  text-align: center;
+  user-select: none;
+  transition: transform var(--ik-dur-fast) var(--ik-ease-out), box-shadow var(--ik-dur-fast) var(--ik-ease-out),
+    filter var(--ik-dur-fast) var(--ik-ease-out);
+}
+
+.sm {
+  --w: 64px;
+  --h: 90px;
+  padding: 4px;
+  gap: 3px;
+}
+
+.lg {
+  --w: 120px;
+  --h: 168px;
+  padding: 8px;
+  gap: 6px;
+}
+
+/* corner seal: vermilion for red suits, ink for black ones (color matters in judgments) */
+.seal {
+  align-self: flex-start;
+  min-width: 22px;
+  height: 26px;
+  padding: 0 3px;
+  box-sizing: border-box;
+  border-radius: 3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font: 700 11px / 1.02 var(--ik-font-body);
+  color: var(--ik-on-vermilion);
+  background: var(--ik-ink);
+}
+
+.red .seal {
+  background: var(--ik-vermilion);
+}
+
+.colorless .seal {
+  background: var(--ik-ink-muted);
+}
+
+.sm .seal {
+  min-width: 18px;
+  height: 21px;
+  font-size: 9px;
+}
+
+.lg .seal {
+  min-width: 28px;
+  height: 32px;
+  font-size: 13px;
+}
+
+.art {
+  flex: 1;
+  min-height: 0;
+  border-radius: var(--ik-radius-sm);
+  background: rgba(28, 23, 20, 0.06);
+  color: var(--ik-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Up to two lines, so long English names ("Eight Trigrams") aren't cut off. */
+.title {
+  font: 700 13px / 1.05 var(--ik-font-display);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  flex-shrink: 0;
+}
+
+.sm .title {
+  font-size: 11px;
+}
+
+.lg .title {
+  font-size: 16px;
+}
+
+.band {
+  height: 4px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  background: var(--ik-band-basic);
+}
+
+.trick .band {
+  background: var(--ik-band-trick);
+}
+
+.equipment .band {
+  background: var(--ik-band-equipment);
+}
+
+/* converted ("virtual") cards: several physical cards used as one */
+.virtual {
+  border: 2px dashed var(--ik-ink-muted);
+  background: linear-gradient(160deg, #ece3cf, #ddd0b2);
+}
+
+.virtual .band {
+  opacity: 0.5;
+}
+
+/* states */
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 14px 24px rgba(0, 0, 0, 0.55);
+}
+
+.clickable:focus-visible {
+  outline: 3px solid var(--ik-gold);
+  outline-offset: 2px;
+}
+
+.selected {
+  transform: translateY(-16px);
+  border: 2px solid var(--ik-gold);
+  box-shadow: 0 0 0 3px rgba(217, 179, 108, 0.3), 0 16px 30px rgba(0, 0, 0, 0.6);
+}
+
+.selected:hover {
+  transform: translateY(-18px);
+}
+
+.dim {
+  filter: saturate(0.55) brightness(0.68);
+}
+
+.note {
+  position: absolute;
+  left: 50%;
+  bottom: -18px;
+  transform: translateX(-50%);
+  font: 500 var(--ik-text-xs) var(--ik-font-body);
+  color: var(--ik-text-muted);
+  white-space: nowrap;
+}
+
+/* card back */
+.back {
+  border: 1px solid var(--ik-gold-muted);
+  background: linear-gradient(160deg, #7a231b, #4e140f);
+  box-shadow: inset 0 0 0 5px #4e140f, inset 0 0 0 6px rgba(201, 163, 90, 0.6), var(--ik-shadow-card);
+  align-items: center;
+  justify-content: center;
+}
+
+.backChar {
+  font: calc(var(--w) * 0.42) / 1 var(--ik-font-brush);
+  color: var(--ik-gold);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+}

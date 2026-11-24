@@ -1,55 +1,54 @@
 import { useEffect, useRef } from "react";
-import { heroInfo, heroName, kingdomName, roleName, useContent } from "../content";
+import { heroInfo, heroName, kingdomName, useContent } from "../content";
 import { describe, type LogLine } from "../describe";
 import { serverText, t, tMaybe, useLang } from "../i18n";
 import { answer, send } from "../net";
 import type { ChooseHeroReq, GameView, LogEntry, RoomInfo } from "../types";
-import { Art } from "./Art";
+import { Beads, Portrait, RoleSeal } from "../ui/Bits";
+import { Button } from "../ui/Button";
+import { Modal } from "../ui/Modal";
+import s from "./Overlays.module.css";
 
 export function HeroPick({ req, isLordPick }: { req: ChooseHeroReq; isLordPick: boolean }) {
   useContent();
   return (
-    <div className="overlay">
-      <div className="modal hero-pick" role="dialog" aria-label={t("hero.choose")}>
-        <h2>{t("hero.choose")}</h2>
-        <p className="muted">{isLordPick ? t("hero.lordNote") : t("hero.otherNote")}</p>
-        {req.error && <div className="error-line">{serverText(req.error)}</div>}
-        <div className="hero-grid">
-          {req.options.map((id) => {
-            const h = heroInfo(id);
-            if (!h) return null;
-            return (
-              <button key={id} type="button" className={`hero-card kingdom-${h.kingdom}`} onClick={() => answer(id)}>
-                <div className="hero-head">
-                  <Art kind="heroes" id={id} className="portrait lg" fallback={<span className="portrait-initial">{h.name[0]}</span>} />
-                  <div>
-                    <div className="hero-name">{h.name}</div>
-                    <div className="muted small">
-                      {t("hero.stats", {
-                        kingdom: kingdomName(h.kingdom),
-                        hp: h.max_hp,
-                        gender: tMaybe(`gender.${h.gender}`) ?? h.gender,
-                      })}
-                    </div>
-                  </div>
-                </div>
-                {h.skills.map((s) => (
-                  <div key={s.id} className="hero-skill">
-                    <b>{s.title ?? s.id}</b>
-                    {s.tags.map((tag) => (
-                      <span key={tag} className="badge">
-                        {tMaybe(`tag.${tag}`) ?? tag}
-                      </span>
-                    ))}
-                    <div className="small">{s.text}</div>
-                  </div>
+    <Modal open wide dismissible={false} title={t("hero.choose")} description={isLordPick ? t("hero.lordNote") : t("hero.otherNote")}>
+      {req.error && <div className={s.error}>{serverText(req.error)}</div>}
+      <div className={s.heroGrid}>
+        {req.options.map((id) => {
+          const h = heroInfo(id);
+          if (!h) return null;
+          return (
+            <button key={id} type="button" className={`${s.heroCard} ${s[h.kingdom] ?? ""} hero-card`} onClick={() => answer(id)}>
+              <Portrait hero={id} width="100%" height={110} />
+              <span className={s.heroBody}>
+                <span className={s.heroHead}>
+                  <span className={s.heroName}>{h.name}</span>
+                  <span className={s.kingdom}>{kingdomName(h.kingdom)}</span>
+                </span>
+                <span className={s.heroMeta}>
+                  <Beads hp={h.max_hp} max={h.max_hp} />
+                  <span>{tMaybe(`gender.${h.gender}`) ?? h.gender}</span>
+                </span>
+                {h.skills.map((sk) => (
+                  <span key={sk.id} className={s.skill}>
+                    <span className={s.skillHead}>
+                      <b className={s.skillName}>{sk.title ?? sk.id}</b>
+                      {sk.tags.map((tag) => (
+                        <span key={tag} className={s.tag}>
+                          {tMaybe(`tag.${tag}`) ?? tag}
+                        </span>
+                      ))}
+                    </span>
+                    <span className={s.skillText}>{sk.text}</span>
+                  </span>
                 ))}
-              </button>
-            );
-          })}
-        </div>
+              </span>
+            </button>
+          );
+        })}
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -59,34 +58,34 @@ export function GameOver({ view, room, name, onClose }: { view: GameView; room: 
   const isHost = room.you === room.host;
   const won = result.winners.includes(view.you);
   return (
-    <div className="overlay">
-      <div className="modal game-over" role="dialog" aria-label={won ? t("over.victory") : t("over.defeat")}>
-        <h2>{won ? t("over.victory") : t("over.defeat")}</h2>
-        <p>{t("over.wins", { side: tMaybe(`side.${result.side}`) ?? result.side })}</p>
-        <table className="results">
-          <tbody>
-            {view.players.map((p) => (
-              <tr key={p.seat} className={result.winners.includes(p.seat) ? "winner" : ""}>
-                <td>{name(p.seat)}</td>
-                <td>{heroName(p.hero)}</td>
-                <td>{p.role ? roleName(p.role) : "?"}</td>
-                <td>{p.alive ? t("over.alive") : t("over.fallen")}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <div className="row">
-          {isHost ? (
-            <button className="primary" onClick={() => send({ type: "start" })}>
-              {t("lobby.rematch")}
-            </button>
-          ) : (
-            <span className="muted">{t("over.waitRematch")}</span>
-          )}
-          <button onClick={onClose}>{t("over.look")}</button>
-        </div>
+    <Modal
+      open
+      title={won ? t("over.victory") : t("over.defeat")}
+      description={t("over.wins", { side: tMaybe(`side.${result.side}`) ?? result.side })}
+      onClose={onClose}
+      className={`${s.over} game-over`}
+    >
+      <ul className={s.results}>
+        {view.players.map((p) => (
+          <li key={p.seat} className={`${s.result} ${result.winners.includes(p.seat) ? s.winner : ""}`}>
+            <RoleSeal role={p.role} />
+            <span className={s.resultName}>{name(p.seat)}</span>
+            <span className={s.resultHero}>{heroName(p.hero)}</span>
+            <span className={s.resultState}>{p.alive ? t("over.alive") : t("over.fallen")}</span>
+          </li>
+        ))}
+      </ul>
+      <div className={s.actions}>
+        {isHost ? (
+          <Button variant="primary" onClick={() => send({ type: "start" })}>
+            {t("lobby.rematch")}
+          </Button>
+        ) : (
+          <span className={s.wait}>{t("over.waitRematch")}</span>
+        )}
+        <Button onClick={onClose}>{t("over.look")}</Button>
       </div>
-    </div>
+    </Modal>
   );
 }
 

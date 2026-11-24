@@ -4,6 +4,7 @@ import { useContent } from "../content";
 import { LangToggle } from "../components/LangToggle";
 import { Table } from "../components/Table";
 import { useLang } from "../i18n";
+import { ComponentsShowcase } from "./Components";
 import { FIXTURES, fixtureNet } from "./fixtures";
 import s from "./Gallery.module.css";
 
@@ -85,6 +86,8 @@ function GalleryIndex() {
             </div>
           </div>
         </section>
+
+        <ComponentsShowcase />
 
         <section className={s.section} aria-labelledby="fixtures">
           <span id="fixtures" className={s.label}>Game moments ({FIXTURES.length})</span>

@@ -1,0 +1,101 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ik-space-2);
+  min-height: 40px;
+  padding: 0 18px;
+  box-sizing: border-box;
+  border-radius: var(--ik-radius-md);
+  border: 1px solid var(--ik-gold-line-strong);
+  background: rgba(36, 19, 15, 0.92);
+  color: var(--ik-text-strong);
+  font: 600 var(--ik-text-md) var(--ik-font-body);
+  cursor: pointer;
+  transition: background var(--ik-dur-fast) var(--ik-ease-out), border-color var(--ik-dur-fast) var(--ik-ease-out),
+    transform var(--ik-dur-fast) var(--ik-ease-out), box-shadow var(--ik-dur-fast) var(--ik-ease-out);
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--ik-gold);
+  background: var(--ik-panel-raised);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--ik-gold);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.42;
+  cursor: default;
+}
+
+/* lacquered vermilion: the one main action */
+.primary {
+  border-color: var(--ik-vermilion-bright);
+  background: linear-gradient(180deg, #c2402f, var(--ik-vermilion-deep));
+  color: #fff6e8;
+  box-shadow: 0 4px 12px rgba(184, 53, 42, 0.35);
+}
+
+.primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #d04a37, #9c2e22);
+  border-color: #f07a62;
+}
+
+.ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ik-text-muted);
+}
+
+.ghost:hover:not(:disabled) {
+  background: rgba(239, 230, 210, 0.06);
+  color: var(--ik-text-strong);
+}
+
+.pill {
+  min-height: 30px;
+  padding: 0 14px;
+  border-radius: var(--ik-radius-pill);
+  font-size: var(--ik-text-sm);
+}
+
+.small {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: var(--ik-text-sm);
+}
+
+/* skill seal button: a brush character in a vermilion seal + the skill's name */
+.sealBtn {
+  padding: 0 12px 0 5px;
+  gap: var(--ik-space-2);
+}
+
+.sealChar {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--ik-radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ik-vermilion);
+  color: var(--ik-on-vermilion);
+  font: 18px / 1 var(--ik-font-brush);
+}
+
+.active {
+  border-color: var(--ik-gold);
+  background: rgba(217, 179, 108, 0.16);
+  box-shadow: 0 0 0 2px rgba(217, 179, 108, 0.3);
+}
+
+.active .sealChar {
+  box-shadow: 0 0 0 2px var(--ik-gold);
+}
