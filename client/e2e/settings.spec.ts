@@ -67,6 +67,78 @@ test("interface size: Auto makes a big monitor's table bigger", async ({ page })
   await checkFits(page, 1400);
 });
 
+test("host chooses the heroes in the draft; guests see it; the hero pick only offers those", async ({ browser }) => {
+  const errors: string[] = [];
+  const host = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
+  collectErrors(host, errors);
+  await host.goto("/?lang=en");
+  await host.getByPlaceholder("e.g. Jason").fill("Alice");
+  await host.getByRole("button", { name: "Create a room" }).click();
+  const heading = host.getByRole("heading", { name: /^Room [A-Z]{5}$/ });
+  await heading.waitFor();
+  const code = ((await heading.textContent()) ?? "").slice(5);
+  const guest = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
+  collectErrors(guest, errors);
+  await guest.goto(`/?room=${code}&lang=en`);
+  await guest.getByPlaceholder("e.g. Jason").fill("Bob");
+  await guest.getByRole("button", { name: "Join" }).click();
+
+  const heroes = host.locator(".hero-pool button.pool-hero");
+  await expect(heroes).toHaveCount(14);
+  await expect(host.locator(".hero-pool button.pool-hero[aria-pressed=false]")).toHaveCount(0);
+  const ids = await heroes.evaluateAll((els) => els.map((el) => el.getAttribute("data-hero")!));
+
+  // hovering a hero shows its skills, with their rules
+  await heroes.first().hover();
+  const tip = host.getByRole("tooltip");
+  await expect(tip).toBeVisible();
+  expect(((await tip.textContent()) ?? "").length).toBeGreaterThan(30);
+
+  // Leave out all but four (the minimum): one click each, waiting for the room to agree.
+  const off = ids.slice(0, 10);
+  for (const id of off) {
+    const card = host.locator(`.hero-pool [data-hero="${id}"]`);
+    await card.click();
+    await expect(card).toHaveAttribute("aria-pressed", "false");
+  }
+  await expect(host.locator(".hero-pool")).toContainText("At least 4 heroes must stay in the draft.");
+  const last = host.locator(`.hero-pool [data-hero="${ids[13]}"]`);
+  await expect(last).toHaveAttribute("aria-disabled", "true");
+  await last.click({ force: true }); // can't go below four (force: it's marked disabled)
+  await host.waitForTimeout(300);
+  await expect(last).toHaveAttribute("aria-pressed", "true");
+
+  // The guest sees the same pool, read-only.
+  await expect(guest.locator(".hero-pool .is-off")).toHaveCount(10);
+  await expect(guest.locator(".hero-pool button")).toHaveCount(0);
+  await expect(guest.locator(".hero-pool")).toContainText("The host chooses which heroes can be picked.");
+
+  // Six heroes for five players: start, and every hero offered is one of the six.
+  await host.getByRole("button", { name: "Enable all" }).click();
+  await expect(host.locator(".hero-pool .is-off")).toHaveCount(0);
+  for (const id of ids.slice(0, 8)) {
+    const card = host.locator(`.hero-pool [data-hero="${id}"]`);
+    await card.click();
+    await expect(card).toHaveAttribute("aria-pressed", "false");
+  }
+  const allowed = new Set(ids.slice(8));
+  for (let i = 0; i < 3; i++) await host.getByRole("button", { name: "Add bot" }).click();
+  await host.locator(".members li").nth(4).waitFor();
+  await host.getByRole("button", { name: "Start game" }).click();
+  const offered = new Set<string>();
+  await expect(async () => {
+    for (const page of [host, guest]) {
+      for (const id of await page.locator(".hero-card").evaluateAll((els) => els.map((el) => el.getAttribute("data-hero")!))) offered.add(id);
+    }
+    await step(guest, EN); // the guest picks when asked (the host may be asked first)
+    expect(await host.locator(".hero-card").count()).toBeGreaterThan(0);
+  }).toPass({ timeout: 60_000, intervals: [100] });
+  for (const id of await host.locator(".hero-card").evaluateAll((els) => els.map((el) => el.getAttribute("data-hero")!))) offered.add(id);
+  expect(offered.size).toBeGreaterThan(0);
+  for (const id of offered) expect(allowed, `${id} was offered`).toContain(id);
+  expect(errors).toEqual([]);
+});
+
 test("host sets the game's timers; everyone sees them; the game uses them", async ({ browser }) => {
   const errors: string[] = [];
   const host = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();

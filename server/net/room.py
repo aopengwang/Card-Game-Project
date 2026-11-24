@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 from bots import BOT_LEVELS, make_bot
+from content.heroes import HERO_MAP
 from content.standard import new_game
 from engine import Game, Request
 from engine.view import log_for, view_for
@@ -145,6 +146,9 @@ class Room:
         self.code = code
         self.settings = settings
         self.options = RoomOptions.from_settings(settings)
+        # Heroes the host has taken out of the draft (stored this way round so heroes
+        # added to the game later start enabled).
+        self.disabled_heroes: set[str] = set()
         self.members: list[Member] = []
         self.host_token: str | None = None
         self.status = "lobby"  # lobby | playing | finished
@@ -195,6 +199,21 @@ class Room:
         self.members.pop(seat)
         return m
 
+    def set_disabled_heroes(self, disabled: Any) -> None:
+        """Replace the disabled list; at least MIN_PLAYERS heroes must stay enabled."""
+        if not isinstance(disabled, list) or not all(isinstance(h, str) for h in disabled):
+            raise RoomError("disabled heroes must be a list of hero ids")
+        unknown = set(disabled) - set(HERO_MAP)
+        if unknown:
+            raise RoomError(f"unknown hero {sorted(unknown)[0]!r}")
+        if len(HERO_MAP) - len(set(disabled)) < MIN_PLAYERS:
+            raise RoomError(f"at least {MIN_PLAYERS} heroes must stay enabled")
+        self.disabled_heroes = set(disabled)
+
+    @property
+    def hero_pool(self) -> list[str]:
+        return sorted(set(HERO_MAP) - self.disabled_heroes)
+
     def by_token(self, token: str) -> Member | None:
         return next((m for m in self.members if secrets.compare_digest(m.token, token)), None)
 
@@ -221,6 +240,7 @@ class Room:
             "max_players": MAX_PLAYERS,
             "options": self.options.to_dict(),
             "option_limits": {k: list(v) for k, v in OPTION_LIMITS.items()},
+            "disabled_heroes": sorted(self.disabled_heroes),
         }
 
     # ------------------------------------------------------------ connections
@@ -278,6 +298,11 @@ class Room:
             self._need(self.status != "playing", "settings can't change during a game")
             self.options.update(msg.get("settings"))
             await self.broadcast_room()
+        elif t == "heroes":
+            self._need(host, "only the host can choose the heroes")
+            self._need(self.status != "playing", "settings can't change during a game")
+            self.set_disabled_heroes(msg.get("disabled"))
+            await self.broadcast_room()
         elif t == "start":
             self._need(host, "only the host can start the game")
             await self.start()
@@ -311,9 +336,13 @@ class Room:
             raise RoomError("the game is already running")
         if not MIN_PLAYERS <= len(self.members) <= MAX_PLAYERS:
             raise RoomError(f"need {MIN_PLAYERS}-{MAX_PLAYERS} players")
-        seed = secrets.randbits(32) if seed is None else seed
         n = len(self.members)
-        self.game = new_game(n, seed, draft=True)
+        pool = self.hero_pool
+        if len(pool) < n:
+            raise RoomError(f"enable at least {n} heroes for {n} players")
+        seed = secrets.randbits(32) if seed is None else seed
+        # (no pool when every hero is enabled: the draft deals exactly as it always has)
+        self.game = new_game(n, seed, draft=True, hero_pool=pool if self.disabled_heroes else None)
         self.bots = [make_bot(m.bot_level, seed + i) for i, m in enumerate(self.members)]
         for m in self.members:
             for c in m.conns:

@@ -1,0 +1,81 @@
+/* The lobby's hero pool: a full-width panel under the room and its settings. */
+.pool {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ik-space-2);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ik-space-3);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 110px));
+  gap: var(--ik-space-3);
+  margin: var(--ik-space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* one small hero card */
+.hero {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: var(--ik-radius-lg);
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  transition: transform var(--ik-dur-fast) var(--ik-ease-out), filter var(--ik-dur-fast) var(--ik-ease-out),
+    opacity var(--ik-dur-fast) var(--ik-ease-out);
+}
+
+button.hero {
+  cursor: pointer;
+}
+
+button.hero:hover,
+button.hero:focus-visible {
+  transform: translateY(-3px);
+}
+
+.hero:focus-visible {
+  outline: 3px solid var(--ik-gold);
+  outline-offset: 2px;
+}
+
+button.hero[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+/* left out of the draft: faded ink, dashed edge */
+.off {
+  filter: grayscale(1) brightness(0.55);
+  opacity: 0.55;
+}
+
+.off :global(.hero-face) {
+  border-style: dashed;
+}
+
+button.off:hover,
+button.off:focus-visible {
+  opacity: 0.8;
+}
+
+.warn {
+  color: var(--ik-vermilion-bright);
+}
+
+@media (max-width: 760px) {
+  .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

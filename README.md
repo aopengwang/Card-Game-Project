@@ -110,7 +110,10 @@ To let friends outside your network join, either:
 Defaults (env vars, seconds): `SGS_PLAY_TIMEOUT` (90), `SGS_RESPONSE_TIMEOUT` (20),
 `SGS_BOT_DELAY` (0.6). Each room starts from these and the host can change the turn
 time, response time, hero-pick/discard time and bot speed in the lobby (within
-`OPTION_LIMITS` in `net/room.py`). Rooms live in memory; restarting the server ends all games.
+`OPTION_LIMITS` in `net/room.py`). The lobby's "Heroes in the draft" panel shows every
+hero as a small card (hover for its skills); the host clicks one to leave it out of the
+hero pick or put it back. At least 4 must stay in, and at least one per player to start.
+Rooms live in memory; restarting the server ends all games.
 
 **Card art**: every card has a built-in ink illustration (`client/src/ui/CardArt.tsx`).
 Drop `client/public/art/cards/<id>.png|webp|jpg` to replace one, then refresh; no rebuild

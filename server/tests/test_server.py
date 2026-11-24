@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from bots import SimpleBot
+from content.heroes import HERO_MAP
 from engine import HAND, Convert, Play, PlayOption, PlayRequest, RespondRequest
 from net.app import create_app
 from net.protocol import ProtocolError, parse_answer, request_to_dict
@@ -191,6 +192,48 @@ def test_host_changes_game_settings():
         req = g.of("request")[0]
         expected = {"play": 120, "choose_hero": 5, "discard": 5}.get(req["request"]["kind"], 10)
         assert expected - 1 < req["timeout"] <= expected
+        await room.close()
+
+    run(main())
+
+
+def test_host_chooses_which_heroes_can_be_picked():
+    async def main():
+        room, (host, guest) = await room_with(2, 3)  # 5 players
+        h = await FakeClient(room, host).connect()
+        g = await FakeClient(room, guest).connect()
+        assert h.of("room")[-1]["disabled_heroes"] == []
+
+        off = sorted(HERO_MAP)[:9]  # 14 heroes: 5 left on
+        await room.handle(host, h.conn, {"type": "heroes", "disabled": off})
+        assert g.of("room")[-1]["disabled_heroes"] == off  # everyone sees it
+
+        with pytest.raises(RoomError, match="only the host"):
+            await room.handle(guest, g.conn, {"type": "heroes", "disabled": []})
+        for bad, why in [
+            (sorted(HERO_MAP)[:11], "at least 4 heroes"),
+            (["nobody"], "unknown hero"),
+            ("cao_cao", "list of hero ids"),
+        ]:
+            with pytest.raises(RoomError, match=why):
+                await room.handle(host, h.conn, {"type": "heroes", "disabled": bad})
+        assert room.disabled_heroes == set(off)  # a bad list changes nothing
+
+        # 5 players need 5 heroes: with one more off, the game can't start
+        await room.handle(host, h.conn, {"type": "heroes", "disabled": sorted(HERO_MAP)[:10]})
+        with pytest.raises(RoomError, match="enable at least 5 heroes"):
+            await room.start(seed=3)
+        await room.handle(host, h.conn, {"type": "heroes", "disabled": off})
+
+        # every hero offered in the draft is an enabled one
+        await room.start(seed=3)
+        with pytest.raises(RoomError, match="during a game"):
+            await room.handle(host, h.conn, {"type": "heroes", "disabled": []})
+        for _ in range(1000):
+            if room.status == "finished" or any(e["type"] == "heroes_revealed" for e in room.game.log):
+                break
+            await asyncio.sleep(0.01)
+        assert {p.hero for p in room.game.players} == set(HERO_MAP) - set(off)
         await room.close()
 
     run(main())

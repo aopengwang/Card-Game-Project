@@ -4,6 +4,8 @@
 """
 from __future__ import annotations
 
+from typing import Collection
+
 from engine import Card, CardDef, Game, Role, Ruleset, Suit
 
 from .basic import BASIC_DEFS
@@ -94,7 +96,8 @@ def new_game(
     roles: list[Role] | None = None,
     heroes: list[str] | None = None,
     draft: bool = False,
+    hero_pool: Collection[str] | None = None,
 ) -> Game:
-    """`draft=True` for real games (players pick heroes); `heroes` fixes them by seat
-    (tests); neither gives skill-less 4 HP heroes."""
-    return Game(STANDARD, num_players, seed, roles, heroes=heroes, draft=draft)
+    """`draft=True` for real games (players pick heroes, from `hero_pool` if given);
+    `heroes` fixes them by seat (tests); neither gives skill-less 4 HP heroes."""
+    return Game(STANDARD, num_players, seed, roles, heroes=heroes, draft=draft, hero_pool=hero_pool)

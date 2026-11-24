@@ -7,6 +7,7 @@ import { RoleSeal } from "../ui/Bits";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { GameSettings } from "./GameSettings";
+import { HeroPool } from "./HeroPool";
 import { LangToggle } from "./LangToggle";
 import { SettingsButton } from "./Settings";
 import s from "./Screens.module.css";
@@ -263,6 +264,8 @@ export function Lobby({ net }: { net: NetState }) {
             {t("lobby.leave")}
           </Button>
         </aside>
+
+        <HeroPool room={room} />
       </div>
     </div>
   );

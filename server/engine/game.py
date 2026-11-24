@@ -12,7 +12,7 @@ from __future__ import annotations
 import random
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Collection, Iterable
 
 from .equipment import EquipDef
 from .events import ActiveSkill, Event, Skill, SkillBase, ViewAs
@@ -111,11 +111,20 @@ class Game:
         roles: list[Role] | None = None,
         heroes: list[str | None] | None = None,
         draft: bool = False,
+        hero_pool: Collection[str] | None = None,
     ):
         """`heroes` assigns fixed heroes by seat (None = blank); `draft=True` lets players pick
-        heroes at the start of run(). With neither, everyone is a skill-less 4 HP "blank" hero."""
+        heroes at the start of run(), from `hero_pool` if given (else every hero). With
+        neither, everyone is a skill-less 4 HP "blank" hero."""
         if num_players not in ROLE_TABLE:
             raise ValueError(f"unsupported player count: {num_players}")
+        if hero_pool is not None:
+            unknown = set(hero_pool) - set(ruleset.heroes)
+            if unknown:
+                raise ValueError(f"unknown heroes: {', '.join(sorted(unknown))}")
+            if len(set(hero_pool)) < num_players:
+                raise ValueError("the hero pool needs at least one hero per player")
+        self.hero_pool = sorted(set(hero_pool)) if hero_pool is not None else None
         self.ruleset = ruleset
         self.seed = seed
         self.rng = random.Random(seed)
@@ -177,13 +186,14 @@ class Game:
             self._apply_lord_bonus()
 
     def choose_heroes(self, options_each: int = 3) -> Gen:
-        """The Lord picks first (from every lord hero plus 2 others) and is revealed; then
-        everyone else picks from `options_each` random heroes nobody has taken."""
-        pool = sorted(self.ruleset.heroes)
+        """The Lord picks first (from every lord hero in the pool plus 2 others, at least
+        `options_each` in all) and is revealed; then everyone else picks from `options_each`
+        random heroes nobody has taken."""
+        pool = self.hero_pool if self.hero_pool is not None else sorted(self.ruleset.heroes)
         lords = [h for h in pool if self.ruleset.heroes[h].has_lord_skill]
         others = [h for h in pool if h not in lords]
         self.rng.shuffle(others)
-        lord_opts = lords + others[:2]
+        lord_opts = lords + others[: max(2, options_each - len(lords))]
         pick = yield from self.ask(ChooseHeroRequest(seat=self.lord_seat, options=lord_opts))
         self.assign_hero(self.lord_seat, pick)
         self._log("hero_chosen", seat=self.lord_seat, hero=pick)

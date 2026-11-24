@@ -75,6 +75,28 @@ def test_draft_lord_picks_first_then_others_from_untaken():
     assert any(e["type"] == "heroes_revealed" for e in g.log)
 
 
+def test_draft_deals_only_from_the_hero_pool():
+    pool = ["guan_yu", "zhuge_liang", "lu_xun", "zhou_yu", "cao_cao"]  # one lord hero
+    for seed in range(20):
+        g = new_game(5, seed=seed, draft=True, hero_pool=pool)
+        gen = g.run()
+        req = next(gen)
+        # the lord sees the pool's lord hero plus enough others for a real choice
+        assert "cao_cao" in req.options and len(req.options) == 3 and set(req.options) <= set(pool)
+        while isinstance(req, ChooseHeroRequest):
+            assert req.options and set(req.options) <= set(pool)
+            req = gen.send(req.options[0])
+        assert sorted(p.hero for p in g.players) == sorted(pool)  # 5 players, 5 heroes: all used
+
+    # no lord heroes in the pool: the lord still gets a choice of 3
+    req = next(new_game(4, seed=0, draft=True, hero_pool=["guan_yu", "zhuge_liang", "lu_xun", "zhou_yu"]).run())
+    assert len(req.options) == 3
+    with pytest.raises(ValueError, match="one hero per player"):
+        new_game(5, seed=0, draft=True, hero_pool=pool[:4])
+    with pytest.raises(ValueError, match="unknown heroes"):
+        new_game(4, seed=0, draft=True, hero_pool=[*pool, "nobody"])
+
+
 def test_lord_skills_only_work_for_the_lord():
     g = heroes("guan_yu", "cao_cao", None, None)
     assert "northern_levy" not in skill_names(g, 1)

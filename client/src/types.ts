@@ -76,6 +76,8 @@ export interface RoomInfo {
   options?: GameOptions;
   /** Allowed [min, max] per option, from the server. */
   option_limits?: Record<keyof GameOptions, [number, number]>;
+  /** Heroes the host has left out of the draft (ids). */
+  disabled_heroes?: string[];
 }
 
 export interface GameOptions {

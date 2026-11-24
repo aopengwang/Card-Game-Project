@@ -30,7 +30,7 @@ export function HeroCard({ id, onClick }: { id: string; onClick?: () => void }) 
   const h = heroInfo(id);
   if (!h) return null;
   return (
-    <button type="button" className={`${s.heroCard} hero-card`} onClick={onClick}>
+    <button type="button" className={`${s.heroCard} hero-card`} data-hero={id} onClick={onClick}>
       {/* the same hero card as at the table; here the skills are listed underneath */}
       <HeroFace hero={id} kingdom={h.kingdom} title={h.name} />
       <span className={s.heroBody}>
