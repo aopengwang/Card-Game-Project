@@ -33,9 +33,38 @@ export const LAYOUT = {
   plaqueMinW: 128,
   plaqueMaxW: 176,
   centerH: 126,
-  centerMaxW: 520,
+  centerMaxW: 600,
   centerMinW: 300,
 } as const;
+
+export interface SizeTier {
+  name: "compact" | "roomy" | "large";
+  /** hand card size */
+  handW: number;
+  handH: number;
+  /** dock height: prompt bar (108) + hand row (card + 20 for the lift) + padding */
+  dockH: number;
+  /** battlefield height and the size of the cards played on it */
+  centerH: number;
+  playSize: "sm" | "md";
+  playW: number;
+}
+
+const TIERS: SizeTier[] = [
+  { name: "compact", handW: 88, handH: 124, dockH: 280, centerH: 126, playSize: "sm", playW: 64 },
+  { name: "roomy", handW: 110, handH: 154, dockH: 310, centerH: 160, playSize: "md", playW: 88 },
+  { name: "large", handW: 126, handH: 176, dockH: 332, centerH: 160, playSize: "md", playW: 88 },
+];
+
+/**
+ * Card sizes for a window. Picked from the window size alone (never from what's on the
+ * table), so they only change when you resize the window, not while you play. Phones
+ * (<= 760 wide) keep the compact size; their page scrolls instead.
+ */
+export function sizeTier(windowW: number, windowH: number): SizeTier {
+  if (windowW <= 760 || windowH < 820) return TIERS[0];
+  return windowH < 1000 ? TIERS[1] : TIERS[2];
+}
 
 /**
  * Lay the table out in pixels for an arena of `w` x `h`. Pure and size-only: what's on
@@ -43,12 +72,12 @@ export const LAYOUT = {
  * ones level at the top and the outer ones curving down the sides like a table edge;
  * the battlefield sits under the middle seats, as wide as the curved seats allow.
  */
-export function tableLayout(count: number, w: number, h: number): TableLayout | null {
+export function tableLayout(count: number, w: number, h: number, centerH: number = LAYOUT.centerH): TableLayout | null {
   const L = LAYOUT;
   const plaqueHeight = h < L.shortBelow ? L.plaqueShort : L.plaqueTall;
   // Too narrow or short for one row of seats over the battlefield: the caller stacks them.
   if (count * L.plaqueMinW + (count + 1) * L.pad > w) return null;
-  if (L.pad + plaqueHeight + L.gap + L.centerH > h) return null;
+  if (L.pad + plaqueHeight + L.gap + centerH > h) return null;
   const pw = Math.max(L.plaqueMinW, Math.min(L.plaqueMaxW, (w - L.pad * (count + 1)) / Math.max(count, 1)));
 
   // How far the outermost seats may drop: down to the bottom of the table.
@@ -64,7 +93,6 @@ export function tableLayout(count: number, w: number, h: number): TableLayout | 
 
   // Battlefield: centred in the space under the level seats, as wide as the seats that
   // curve down beside it allow; if that's too narrow, tucked up right under the top row.
-  const centerH = L.centerH;
   const highest = L.pad + plaqueHeight + L.gap;
   const widthAt = (top: number) => {
     let half = L.centerMaxW / 2;

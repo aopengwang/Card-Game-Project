@@ -2,13 +2,13 @@ import { useState, type CSSProperties } from "react";
 import { useContent } from "../content";
 import { recentPlays } from "../describe";
 import { memberName, t, tMaybe, useLang } from "../i18n";
-import { handFan, opponentOrder, tableLayout } from "../layout";
+import { handFan, opponentOrder, sizeTier, tableLayout } from "../layout";
 import { leave, type NetState } from "../net";
 import { EMPTY, cardClickable, clickCard, clickSeat, seatClickable, type Selection } from "../selection";
 import { Button } from "../ui/Button";
 import { Card, CardBack } from "../ui/Card";
 import { Plaque } from "../ui/Plaque";
-import { useSize } from "../useSize";
+import { useSize, useWindowSize } from "../useSize";
 import { ActionBar } from "./ActionBar";
 import { Effects } from "./Effects";
 import { useShortcuts } from "./shortcuts";
@@ -58,6 +58,8 @@ export function Table({ net }: { net: NetState }) {
   const [hideResultFor, setHideResultFor] = useState<number | null>(null);
   const [arenaRef, arena] = useSize<HTMLDivElement>();
   const [handRef, hand] = useSize<HTMLDivElement>();
+  const win = useWindowSize();
+  const tier = sizeTier(win.width, win.height);
   useShortcuts();
   if (!room || !view) return null;
 
@@ -71,8 +73,8 @@ export function Table({ net }: { net: NetState }) {
   const opponents = opponentOrder(view.you, n);
   // Null until measured, and when the table is too small for the seats-in-a-row layout:
   // then the stylesheet stacks the seats (as on phones) and the table scrolls inside.
-  const layout = arena.width > 0 ? tableLayout(opponents.length, arena.width, arena.height) : null;
-  const fan = handFan(view.hand.length, hand.width);
+  const layout = arena.width > 0 ? tableLayout(opponents.length, arena.width, arena.height, tier.centerH) : null;
+  const fan = handFan(view.hand.length, hand.width, tier.handW);
   const me = view.players[view.you];
   const lordSeat = view.players.find((p) => p.role === "lord")?.seat;
 
@@ -92,12 +94,15 @@ export function Table({ net }: { net: NetState }) {
       : t("table.waitingOthers");
 
   // As many of the latest plays as fit beside the piles (one row; older ones are in the log).
-  const playRoom = layout ? Math.max(1, Math.floor((layout.center.width - 210) / 72)) : 4;
+  const playRoom = layout ? Math.max(1, Math.floor((layout.center.width - 210) / (tier.playW + 8))) : 4;
   const plays = recentPlays(log).slice(-playRoom);
   const resultKey = view.result ? log.length : null;
 
   return (
-    <div className="table-screen">
+    <div
+      className="table-screen"
+      style={{ "--dock-h": `${tier.dockH}px`, "--hand-w": `${tier.handW}px`, "--hand-h": `${tier.handH}px` } as CSSProperties}
+    >
       <header className="topbar">
         <span className="brand">{t("app.title")}</span>
         <span className="pill">{t("table.room", { code: room.code })}</span>
@@ -147,7 +152,7 @@ export function Table({ net }: { net: NetState }) {
               )}
               {plays.map((p) => (
                 <div key={p.key} className="play-slot" data-play-key={p.key}>
-                  <Card card={p.card} size="sm" />
+                  <Card card={p.card} size={tier.playSize} />
                   <span className="play-by">{p.seat != null ? name(p.seat) : ""}</span>
                 </div>
               ))}
@@ -178,10 +183,11 @@ export function Table({ net }: { net: NetState }) {
                 <span
                   key={c.id}
                   className={`hand-slot ${selected ? "is-selected" : ""}`}
-                  style={{ marginLeft: i === 0 ? 0 : fan.step - 88, transform: `translateY(${Math.abs(tilt) * 0.6}px) rotate(${tilt}deg)` }}
+                  style={{ marginLeft: i === 0 ? 0 : fan.step - tier.handW, transform: `translateY(${Math.abs(tilt) * 0.6}px) rotate(${tilt}deg)` }}
                 >
                   <Card
                     card={c}
+                    size={tier.name === "large" ? "lg" : "md"}
                     clickable={clickable}
                     selected={selected}
                     dim={!!req && !clickable && req.kind !== "choose_hero"}
@@ -194,7 +200,7 @@ export function Table({ net }: { net: NetState }) {
         </div>
       </footer>
 
-      <Effects log={log} you={view.you} aim={sel.targets} />
+      <Effects log={log} you={view.you} aim={sel.targets} playSize={tier.playSize} />
       {req?.kind === "choose_hero" && <HeroPick req={req} isLordPick={lordSeat === view.you} />}
       {view.result && hideResultFor !== resultKey && (
         <GameOver view={view} room={room} name={nameOf} onClose={() => setHideResultFor(resultKey)} />

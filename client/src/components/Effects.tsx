@@ -52,7 +52,7 @@ function strokePath(from: Pt, to: Pt): string {
  * @param aim seats you have selected as targets right now: a dashed ink line runs from
  *            your plaque to each, until you play or cancel.
  */
-export function Effects({ log, you, aim }: { log: LogEntry[]; you: number; aim: number[] }) {
+export function Effects({ log, you, aim, playSize = "sm" }: { log: LogEntry[]; you: number; aim: number[]; playSize?: "sm" | "md" }) {
   const layer = useRef<HTMLDivElement>(null);
   const seen = useRef(log.length); // entries already on the table when we mounted
   const nextId = useRef(1);
@@ -148,7 +148,7 @@ export function Effects({ log, you, aim }: { log: LogEntry[]; you: number; aim: 
           } as CSSProperties;
           return (
             <span key={f.id} className={s.flight} style={style}>
-              <Card card={f.card} size="sm" tip={false} />
+              <Card card={f.card} size={playSize} tip={false} />
             </span>
           );
         }

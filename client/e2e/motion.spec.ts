@@ -40,14 +40,61 @@ test("effects play as the game happens, and keys drive your turn", async ({ brow
   await page.keyboard.press("e");
   await expect(endPhase).toBeHidden();
 
-  // Play the game out; by then every kind of effect has shown.
+  // Enter confirms even though the card you clicked still has keyboard focus (it used to
+  // "press" the focused card again instead). Tried on each of our turns until one has a
+  // playable card; the game is then played out.
+  let enterUsed = false;
+  const use = page.getByRole("button", { name: EN.use, exact: true });
   await expect(async () => {
+    if (!enterUsed && (await endPhase.isVisible().catch(() => false))) {
+      const card = page.locator(".hand .card.clickable").first();
+      if (await card.isVisible().catch(() => false)) {
+        const before = await page.locator(".hand .card").count();
+        await card.click(); // focus is now on this card
+        const seat = page.locator(".seat.clickable").first();
+        if (await seat.isVisible().catch(() => false)) {
+          await seat.click();
+          await card.focus(); // the case that broke: focus on the card, not the button
+        }
+        if (await use.isEnabled().catch(() => false)) {
+          await page.keyboard.press("Enter");
+          await expect(use).toBeHidden({ timeout: 3000 });
+          expect(await page.locator(".hand .card").count()).toBeLessThan(before);
+          enterUsed = true;
+        } else await page.keyboard.press("Escape");
+      }
+    }
     await step(page, EN);
     await expect(page.locator(".game-over")).toBeVisible({ timeout: 200 });
   }).toPass({ timeout: 150_000, intervals: [100] });
+  // (whether a turn with a playable card comes up is down to the deal; the next test
+  // checks Enter deterministically)
+  test.info().annotations.push({ type: "enter-in-game", description: String(enterUsed) });
+
+  // By the end of the game every kind of effect has shown.
   const seen = await page.evaluate(() => [...(window as unknown as { __fx: Set<string> }).__fx]);
   for (const kind of ["banner", "flight", "line", "number"]) expect(seen, `saw a ${kind} effect`).toContain(kind);
   expect(errors).toEqual([]);
+});
+
+test("Enter confirms while the card you clicked still has focus", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/?gallery=play_strike&lang=en"); // a real play-phase moment, nothing random
+  await page.locator(".table-screen").waitFor();
+  // Record presses of the main-action button (the gallery has no server to answer).
+  await page.evaluate(() => {
+    const w = window as unknown as { __main: number };
+    w.__main = 0;
+    document.addEventListener("click", (e) => (e.target as Element).closest('[data-shortcut="Enter"]') && w.__main++, true);
+  });
+  const strike = page.locator(".hand .card.clickable", { hasText: "Strike" }).first();
+  await strike.click();
+  await page.locator(".seat.clickable").first().click();
+  await expect(page.getByRole("button", { name: "Use", exact: true })).toBeEnabled();
+  await strike.focus();
+  await page.keyboard.press("Enter");
+  expect(await page.evaluate(() => (window as unknown as { __main: number }).__main)).toBe(1);
+  await expect(strike).toHaveClass(/selected/); // the card wasn't "pressed" again
 });
 
 test("reduced motion: no effects at all", async ({ browser }) => {

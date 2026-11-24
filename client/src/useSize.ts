@@ -1,4 +1,19 @@
-import { useCallback, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+
+/** The window's inner size, updated on resize. */
+export function useWindowSize() {
+  const read = () => ({ width: window.innerWidth, height: window.innerHeight });
+  const [size, setSize] = useState(read);
+  useEffect(() => {
+    const onResize = () => setSize((s) => {
+      const n = read();
+      return s.width === n.width && s.height === n.height ? s : n;
+    });
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return size;
+}
 
 /**
  * An element's inner size (clientWidth/Height), kept current with a ResizeObserver;

@@ -85,7 +85,7 @@ select:focus-visible {
   min-height: 600px;
   overflow: clip;
   display: grid;
-  grid-template-rows: 48px minmax(0, 1fr) 280px;
+  grid-template-rows: 48px minmax(0, 1fr) var(--dock-h, 280px); /* sizes: layout.ts sizeTier */
   background: var(--ik-table-bg);
 }
 .topbar {
@@ -240,11 +240,11 @@ select:focus-visible {
   border-top: 1px solid var(--ik-gold-line);
   background: rgba(12, 6, 5, 0.5);
 }
-.dock-self { --plaque-h: 258px; }
-.dock-main { display: grid; grid-template-rows: 108px 144px; gap: 8px; min-width: 0; }
+.dock-self { --plaque-h: calc(var(--dock-h, 280px) - 22px); }
+.dock-main { display: grid; grid-template-rows: 108px calc(var(--hand-h, 124px) + 20px); gap: 8px; min-width: 0; }
 .hand {
   box-sizing: border-box;
-  height: 144px;
+  height: calc(var(--hand-h, 124px) + 20px);
   display: flex;
   align-items: flex-start;
   padding: 16px 8px 0;
@@ -259,6 +259,8 @@ select:focus-visible {
   transition: transform var(--ik-dur-fast) var(--ik-ease-out), margin var(--ik-dur-fast) var(--ik-ease-out);
 }
 /* the card you point at or picked comes to the front of the fan */
+/* hand cards take the window's size tier (the Card's own size class has lower specificity) */
+.hand .hand-slot .card { --w: var(--hand-w, 88px); --h: var(--hand-h, 124px); }
 .hand-slot:hover,
 .hand-slot:focus-within,
 .hand-slot.is-selected { z-index: 2; }

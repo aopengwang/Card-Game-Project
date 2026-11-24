@@ -2,7 +2,7 @@ import { beforeEach, describe as group, expect, it } from "vitest";
 import { setContent } from "./content";
 import { _setLangForTests } from "./i18n";
 import { describe, recentPlays } from "./describe";
-import { handFan, opponentOrder, overlaps, tableLayout } from "./layout";
+import { handFan, opponentOrder, overlaps, sizeTier, tableLayout } from "./layout";
 import { _reset, getState, onMessage } from "./net";
 import {
   EMPTY,
@@ -128,10 +128,12 @@ group("layout", () => {
   it("seats and the battlefield never overlap and stay on the table", () => {
     for (let count = 1; count <= 7; count++) {
       for (const [w, h] of SIZES) {
-        const layout = tableLayout(count, w, h);
-        const where = `${count} opponents at ${w}x${h}`;
-        // Only very narrow tables with many players fall back to the stacked layout.
-        if (w >= 1000 || count <= 5) expect(layout, where).not.toBeNull();
+       for (const centerH of [126, 160]) {
+        const layout = tableLayout(count, w, h, centerH);
+        const where = `${count} opponents at ${w}x${h}, battlefield ${centerH}`;
+        // Only very narrow tables with many players fall back to the stacked layout. (The
+        // big battlefield is only used on tall windows: tables 460+ high.)
+        if ((w >= 1000 || count <= 5) && (centerH === 126 || h >= 420)) expect(layout, where).not.toBeNull();
         if (!layout) continue;
         const { seats, center } = layout;
         const boxes = [...seats, center];
@@ -143,7 +145,20 @@ group("layout", () => {
         }
         for (let i = 0; i < boxes.length; i++)
           for (let j = i + 1; j < boxes.length; j++) expect(overlaps(boxes[i], boxes[j]), `${where}: ${i} vs ${j}`).toBe(false);
+       }
       }
+    }
+  });
+
+  it("card sizes depend on the window only, and fit the table they leave", () => {
+    expect(sizeTier(1440, 700).name).toBe("compact");
+    expect(sizeTier(1440, 900).name).toBe("roomy");
+    expect(sizeTier(1920, 1080).name).toBe("large");
+    expect(sizeTier(390, 844).name).toBe("compact"); // phones
+    // the bigger tiers still leave room for seats over the big battlefield (48px top bar)
+    for (const [w, h] of [[1280, 820], [1440, 900], [1920, 1000], [1920, 1080]]) {
+      const tier = sizeTier(w, h);
+      expect(tableLayout(5, w - 300, h - 48 - tier.dockH, tier.centerH), `${w}x${h}`).not.toBeNull();
     }
   });
 

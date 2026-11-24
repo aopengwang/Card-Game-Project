@@ -30,10 +30,16 @@ export function useShortcuts() {
       // Typing somewhere, or a dialog is open (hero pick, game over): not ours.
       if (el?.closest?.("input, textarea, select, [contenteditable=true]")) return;
       if (document.querySelector("[role=dialog]")) return;
-      // Enter on a focused button already presses that button.
-      if (e.key === "Enter" && el?.closest?.("button")) return;
+      // Enter on a focused prompt button presses that button (the browser does it). But a
+      // card or seat you just clicked keeps focus, and Enter there must still confirm,
+      // not click the card again: that's ours (preventDefault stops the card's click).
+      if (e.key === "Enter" && el?.closest?.(".action-bar button, .lang-toggle, .log-toggle")) return;
       const target = shortcutTarget(e.key);
-      if (!target) return;
+      if (!target) {
+        // Nothing to confirm yet: still don't let Enter re-click the focused card or seat.
+        if (e.key === "Enter" && el?.closest?.(".hand .card, .seat")) e.preventDefault();
+        return;
+      }
       e.preventDefault();
       target.click();
     };
