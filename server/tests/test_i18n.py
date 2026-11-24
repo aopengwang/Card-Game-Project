@@ -47,10 +47,11 @@ def test_content_info_in_both_languages():
     assert en["cards"].keys() == zh["cards"].keys()
     wei = {h["id"]: h for h in zh["heroes"]}["wei_lie"]
     assert wei["name"] == "魏烈" and wei["skills"][0]["title"] == "战利"
-    assert en["skills"]["seize_power"]["text"] and zh["skills"]["seize_power"]["title"] == "夺权"
+    assert en["skills"]["star_chart"]["text"] and zh["skills"]["star_chart"]["title"] == "星图"
+    assert en["skills"]["heavens_will"]["title"] == "Heaven's Will"  # nicer than title-casing the id
     assert content_info(STANDARD, "klingon")["lang"] == "en"
     # Chinese names travel in both languages (seal / brush characters in the UI).
-    assert en["cards"]["indulgence"]["zh"] == "乐不思蜀" and en["skills"]["iron_edict"]["zh"] == "铁令"
+    assert en["cards"]["indulgence"]["zh"] == "乐不思蜀" and en["skills"]["bend_fate"]["zh"] == "改命"
     assert {h["id"]: h for h in en["heroes"]}["cao_cao"]["zh"] == "曹操"
     # role table for the lobby: one Lord, one Spy, the rest split
     assert en["roles"]["5"] == ["lord", "loyalist", "rebel", "rebel", "spy"]

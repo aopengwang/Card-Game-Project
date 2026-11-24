@@ -178,6 +178,10 @@ class ChooseCardRequest(Request):
     options: list[int]
     hidden_count: int = 0
     optional: bool = False  # may answer None to choose nothing
+    # Faces of cards only the asked player may see (e.g. looked at from the top of the
+    # deck): the request is the only place their client learns what they are.
+    shown: list[dict[str, Any]] = field(default_factory=list)
+    context: dict[str, Any] = field(default_factory=dict)
 
     def validate(self, answer: Any) -> str | None:
         if answer in self.options or (answer == HAND and self.hidden_count > 0):
@@ -226,12 +230,40 @@ class ChoosePlayerRequest(Request):
     reason: str
     about: int | None = None
     options: list[int]
+    optional: bool = False  # may answer None to choose nobody
 
     def validate(self, answer: Any) -> str | None:
+        if answer is None and self.optional:
+            return None
         return None if answer in self.options else "invalid player"
 
     def default(self) -> Any:
-        return self.options[0]
+        return None if self.optional else self.options[0]
+
+
+@dataclass(kw_only=True)
+class ArrangeRequest(Request):
+    """Look at `cards` (in order, first = top of the deck) and put each back on the top
+    (in the order given) or, if `allow_bottom`, on the bottom. Answer: (top, bottom)."""
+
+    kind: ClassVar[str] = "arrange"
+    reason: str
+    options: list[int]
+    cards: list[dict[str, Any]] = field(default_factory=list)  # faces: only the asked player sees them
+    allow_bottom: bool = True
+
+    def validate(self, answer: Any) -> str | None:
+        if not isinstance(answer, tuple) or len(answer) != 2:
+            return "expected (top, bottom)"
+        top, bottom = (list(x) for x in answer)
+        if sorted(top + bottom) != sorted(self.options):
+            return "place every card exactly once"
+        if bottom and not self.allow_bottom:
+            return "cards can only go back on top"
+        return None
+
+    def default(self) -> Any:
+        return (tuple(self.options), ())
 
 
 @dataclass(kw_only=True)

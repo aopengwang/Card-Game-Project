@@ -237,3 +237,66 @@
   color: var(--ik-text-muted);
   font-size: var(--ik-text-sm);
 }
+
+/* ---------------------------------------------------------------- arrange (top of the deck) */
+.arrangeRow {
+  margin-bottom: var(--ik-space-4);
+}
+
+.arrangeLabel {
+  margin: 0 0 var(--ik-space-2);
+  font: 700 var(--ik-text-md) var(--ik-font-display);
+  color: var(--ik-gold);
+}
+
+.arrangeCards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ik-space-3);
+  min-height: 150px;
+  margin: 0;
+  padding: var(--ik-space-3);
+  list-style: none;
+  border: 1px dashed var(--ik-gold-line);
+  border-radius: var(--ik-radius-lg);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.arrangeSlot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ik-space-1);
+}
+
+.arrangeOrder {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  z-index: 1;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--ik-gold);
+  color: #1c0d0a;
+  font: 700 12px var(--ik-font-body);
+}
+
+.arrangeTools {
+  display: flex;
+  gap: 2px;
+}
+
+.arrangeEmpty {
+  align-self: center;
+  color: var(--ik-text-muted);
+  font-size: var(--ik-text-sm);
+}
+
+.arrangeActions {
+  display: flex;
+  justify-content: flex-end;
+}

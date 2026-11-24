@@ -35,8 +35,11 @@ PLAY_ORDER = [
     "indulgence", "borrowed_sword", "duel", "barbarians", "arrows", "strike", "lightning",
 ]
 DECLINE = {"frost_blade"}  # optional effects the bot never uses (it prefers dealing damage)
-GOOD_JUDGMENTS = {"eight_trigrams", "five_animals"}  # judgments where a hit is good for the judged player
+GOOD_JUDGMENTS = {"eight_trigrams", "rippling_steps", "blood_for_blood", "headlong_charge"}  # a hit is good for the judged player
 PICK_ORDER = ["peach", "nullify", "ex_nihilo", "dodge", "snatch", "duel", "strike"]
+ASK_FOR_LORD = {"shield_wall", "guard_the_throne", "call_to_arms"}  # the Lord asks others to play a card for them
+# Active skills this bot leaves alone: they need judgment it doesn't have.
+SKIP_SKILLS = {"open_hand", "weigh_options"}
 
 
 class SimpleBot:
@@ -60,8 +63,13 @@ class SimpleBot:
         if isinstance(req, ChooseHeroRequest):
             return self.rng.choice(req.options)
         if isinstance(req, ChoosePlayerRequest):
+            if req.reason == "final_stratagem":
+                return me.seat if me.seat in req.options else req.options[0]
             others = [s for s in req.options if s != me.seat] or req.options
-            return self.rng.choice(self._enemies(game, me, others) or others)
+            enemies = self._enemies(game, me, others)
+            if req.optional:
+                return self.rng.choice(enemies) if enemies else None
+            return self.rng.choice(enemies or others)
         return req.default()
 
     # ------------------------------------------------------------ helpers
@@ -98,13 +106,15 @@ class SimpleBot:
     def _skill_play(self, game: Game, me: Player, req: PlayRequest) -> Play | None:
         """Try active skills and play-phase conversions with random legal picks."""
         for opt in req.skills:
+            if opt.skill in SKIP_SKILLS or (opt.skill == "bitter_gambit" and me.hp < 3):
+                continue
             cands = list(opt.candidates)
             harmful = getattr(game.find_skill(me, opt.skill), "harmful", True)
             pool = self._enemies(game, me, cands) if harmful else [c for c in cands if self._is_friend(game, me, c)]
-            if opt.min_targets and not pool:
+            if len(pool) < opt.min_targets:
                 continue
             for _ in range(10):
-                n = min(len(pool), opt.target_count) if harmful else opt.min_targets
+                n = max(opt.min_targets, min(len(pool), opt.target_count)) if harmful else opt.min_targets
                 targets = tuple(self.rng.sample(pool, n))
                 cards = tuple(self.rng.sample(opt.cards, opt.min_cards))
                 if game.check_skill_use(me, opt.skill, list(cards), list(targets)) is None:
@@ -152,9 +162,9 @@ class SimpleBot:
                 options=[-1], context=req.context,
             ))
             return Convert(conv.skill, conv.cards[: conv.count]) if pick is not None else None
-        if req.reason == "shield_wall":  # spend a Dodge for the Lord only if we're on their side
+        if req.reason in ASK_FOR_LORD:  # spend a card for the Lord only if we're on their side
             return req.options[0] if self._is_friend(game, me, req.about) else None
-        if req.card_name == "strike" and req.reason in ("borrowed_sword", "dragon_glaive", "allure"):
+        if req.card_name == "strike" and req.reason in ("borrowed_sword", "dragon_glaive"):
             return req.options[0] if not self._is_friend(game, me, req.about) else None
         if req.card_name == "peach":
             dying = req.about
@@ -174,6 +184,8 @@ class SimpleBot:
         return req.options[0]
 
     def _choose(self, game: Game, req: ChooseCardRequest) -> Any:
+        if req.optional and req.about == req.seat:  # e.g. replacing a judgment card: don't bother
+            return None
         if req.about is None:  # harvest: pick the best revealed card
             names = {cid: game.cards[cid].name for cid in req.options}
             return min(req.options, key=lambda c: PICK_ORDER.index(names[c]) if names[c] in PICK_ORDER else 99)

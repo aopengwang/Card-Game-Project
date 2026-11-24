@@ -16,6 +16,11 @@ export async function step(page: Page, labels: Labels, { holdPlay = false } = {}
     await page.locator(".hero-card").first().click();
     return;
   }
+  if (await page.locator(".arrange-card").first().isVisible().catch(() => false)) {
+    // looking at the top of the deck: put it all back as it was
+    await page.getByRole("dialog").getByRole("button", { name: labels.confirm, exact: true }).click();
+    return;
+  }
   if (!(await bar.isVisible().catch(() => false))) return;
   const endPhase = page.getByRole("button", { name: labels.endPhase, exact: true });
   if (holdPlay && (await page.locator(".action-bar.active .end-phase").count())) return;
@@ -44,7 +49,7 @@ export async function step(page: Page, labels: Labels, { holdPlay = false } = {}
   }
   const confirm = page.getByRole("button", { name: labels.confirm, exact: true });
   if (await confirm.isVisible().catch(() => false)) {
-    const cards = page.locator(".hand .card.clickable");
+    const cards = page.locator(".hand .card.clickable, .equip-pick"); // (your equipment counts too)
     for (let i = 0; i < (await cards.count()) && !(await confirm.isEnabled()); i++) await cards.nth(i).click();
     const seat = page.locator(".seat.clickable").first();
     if (!(await confirm.isEnabled()) && (await seat.isVisible().catch(() => false))) await seat.click();

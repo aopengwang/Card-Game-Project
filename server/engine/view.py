@@ -39,7 +39,7 @@ def view_for(game: Game, seat: int) -> dict[str, Any]:
                 "alive": p.alive,
                 "hand_count": len(p.hand),
                 "equips": [c.to_dict() for c in p.equips],
-                "judge": [c.to_dict() for c in p.judge],
+                "judge": [game.judge_view(c) for c in p.judge],
                 "role": str(p.role) if role_visible(game, seat, p) else None,
             }
             for p in game.players

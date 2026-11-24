@@ -9,6 +9,8 @@ export interface Card {
   rank: number;
   virtual?: boolean;
   color?: "red" | "black" | "none";
+  /** In a judgment area: the card's own name when it sits there *as* `name` (e.g. a Diamond as Indulgence). */
+  real?: string;
 }
 
 export interface SkillInfo {
@@ -152,6 +154,18 @@ export interface ChooseCardReq extends Base {
   options: number[];
   hidden_count: number;
   optional: boolean;
+  /** Faces of cards only you are being shown (e.g. from the top of the deck). */
+  shown?: Card[];
+  context?: Record<string, unknown>;
+}
+
+export interface ArrangeReq extends Base {
+  kind: "arrange";
+  reason: string;
+  /** Card ids, top of the deck first. */
+  options: number[];
+  cards: Card[];
+  allow_bottom: boolean;
 }
 
 export interface ConfirmReq extends Base {
@@ -166,6 +180,8 @@ export interface ChoosePlayerReq extends Base {
   reason: string;
   about: number | null;
   options: number[];
+  /** May choose nobody (answer null). */
+  optional?: boolean;
 }
 
 export interface ChooseOptionReq extends Base {
@@ -188,7 +204,8 @@ export type GameRequest =
   | ConfirmReq
   | ChoosePlayerReq
   | ChooseOptionReq
-  | ChooseHeroReq;
+  | ChooseHeroReq
+  | ArrangeReq;
 
 export interface ActiveRequest {
   id: number;

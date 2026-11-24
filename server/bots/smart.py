@@ -26,6 +26,7 @@ from typing import Any
 from engine import (
     HAND,
     ROLE_TABLE,
+    ArrangeRequest,
     ChooseCardRequest,
     ChooseHeroRequest,
     ChooseOptionRequest,
@@ -57,9 +58,11 @@ EQUIP_VALUE = {
     "twin_swords": 3, "halberd": 3, "kirin_bow": 3,
 }
 HERO_TIER = {
-    "wei_lie": 9, "zhuge_liang": 8, "cao_cao": 8, "lu_xun": 8, "sima_yi": 7, "liu_bei": 7,
-    "sun_quan": 7, "zhou_yu": 7, "lu_bu": 7, "diaochan": 7, "hua_tuo": 6, "zhang_liao": 6,
-    "guan_yu": 6, "yu_ji": 6,
+    "guo_jia": 9, "liu_bei": 8, "sun_quan": 8, "zhang_liao": 8, "hua_tuo": 8, "diaochan": 8, "wei_lie": 8,
+    "cao_cao": 7, "sima_yi": 7, "zhuge_liang": 7, "zhao_yun": 7, "huang_yueying": 7, "zhou_yu": 7,
+    "lu_xun": 7, "sun_shangxiang": 7, "da_qiao": 7, "zhen_ji": 7, "huang_gai": 7, "lu_bu": 7,
+    "xiahou_dun": 6, "zhang_fei": 6, "ma_chao": 6, "gan_ning": 6, "lu_meng": 6, "guan_yu": 6,
+    "xu_chu": 5, "yu_ji": 6,
 }
 # How strongly a public action reveals allegiance (weight of "acting against X").
 HOSTILE_WEIGHT = {
@@ -67,10 +70,20 @@ HOSTILE_WEIGHT = {
 }
 HARMFUL_TRICKS = {"dismantle", "snatch", "duel", "barbarians", "arrows", "indulgence", "lightning", "borrowed_sword"}
 HELPFUL_TRICKS = {"ex_nihilo", "peach_garden", "harvest"}
-HARMFUL_SKILLS = {"iron_edict", "east_wind", "seize_power", "allure"}
-FRIENDLY_SKILLS = {"gather_the_righteous"}
-GOOD_JUDGMENTS = {"eight_trigrams", "five_animals"}
-SKILL_MIN_HAND = {"iron_edict": 2, "seize_power": 3, "allure": 2, "gather_the_righteous": 2}
+HARMFUL_SKILLS = {"false_letter", "call_to_arms"}
+FRIENDLY_SKILLS = {"open_hand", "wedding_vow", "healing_herbs"}
+# Judgments where a hit is good for the judged player (others: a hit is bad for them).
+GOOD_JUDGMENTS = {"eight_trigrams", "rippling_steps", "blood_for_blood", "headlong_charge"}
+# The rule behind each judgment, so the bot can tell what a replacement card would do.
+JUDGE_RULES = {
+    "indulgence": lambda c: c["suit"] != "heart",
+    "lightning": lambda c: c["suit"] == "spade" and 2 <= c["rank"] <= 9,
+    "eight_trigrams": lambda c: c["suit"] in ("heart", "diamond"),
+    "headlong_charge": lambda c: c["suit"] in ("heart", "diamond"),
+    "rippling_steps": lambda c: c["suit"] in ("spade", "club"),
+    "blood_for_blood": lambda c: c["suit"] != "heart",
+}
+ASK_FOR_LORD = {"shield_wall", "guard_the_throne", "call_to_arms"}  # play a card for the Lord
 
 FRIEND, ENEMY = 0.3, -0.3  # relation thresholds
 
@@ -105,6 +118,8 @@ class SmartBot:
             return self._choose_option(game, me, req)
         if isinstance(req, ChooseHeroRequest):
             return self._choose_hero(game, me, req)
+        if isinstance(req, ArrangeRequest):
+            return self._arrange(game, me, req)
         return req.default()
 
     # ================================================================ public knowledge
@@ -164,6 +179,8 @@ class SmartBot:
             if w:
                 for target in e["targets"]:
                     self._shift(game, me, e["seat"], target, -w)
+        elif t == "skill" and e["skill"] == "rivalry" and len(e.get("targets") or []) == 2:
+            self._shift(game, me, e["seat"], e["targets"][1], -1.0)  # set the first on the second
         elif t == "skill" and e.get("targets"):
             if e["skill"] in HARMFUL_SKILLS:
                 for target in e["targets"]:
@@ -188,8 +205,10 @@ class SmartBot:
                 self._shift(game, me, e["seat"], e["target"], 1.0 if e["cancelled"] else -1.0)
             elif name in HELPFUL_TRICKS:
                 self._shift(game, me, e["seat"], e["target"], -1.0 if e["cancelled"] else 1.0)
-        elif t == "respond" and e.get("reason") == "shield_wall":
+        elif t == "respond" and e.get("reason") in ASK_FOR_LORD:
             self._shift(game, me, e["seat"], game.lord_seat, 1.5)
+        elif t == "redirect":
+            self._shift(game, me, e["seat"], e["target"], -1.0)  # passed a Strike on to them
         elif t == "give":
             self._shift(game, me, e["seat"], e["target"], 0.4)
 
@@ -395,7 +414,9 @@ class SmartBot:
             return Play(o.card_id)
         if (o := first("lightning")) and p.hp >= 4 and sum(self.rel(game, me, s) for s in self._alive(game) if s != me) < -1:
             return Play(o.card_id)
-        return None
+
+        # 10. Trade in what's left over.
+        return self._weigh(game, me, req)
 
     def _aoe_worth(self, game: Game, me: int) -> float:
         total = 0.0
@@ -458,29 +479,107 @@ class SmartBot:
     def _skill_play(self, game: Game, me: int, req: PlayRequest) -> Play | None:
         p = game.players[me]
         for opt in req.skills:
-            if len(p.hand) < SKILL_MIN_HAND.get(opt.skill, 0):
-                continue
-            friendly = opt.skill in FRIENDLY_SKILLS
-            pool = self._friends(game, me, [c for c in opt.candidates if c != me]) if friendly else self._enemies(game, me, opt.candidates)
-            if opt.skill == "east_wind" and not (len(pool) >= 2 or any(game.players[s].hp <= 1 for s in pool)):
-                continue
-            if opt.min_targets and not pool:
-                continue
-            n = min(len(pool), opt.target_count) if not friendly else opt.min_targets
-            targets = tuple(pool[:n])
-            cards = tuple(self._lowest(game, me, opt.cards, opt.min_cards))
-            if game.check_skill_use(game.players[me], opt.skill, list(cards), list(targets)) is None:
-                return Play(skill=opt.skill, cards=cards, targets=targets)
+            play = self._active(game, me, opt)
+            if play is not None and game.check_skill_use(p, opt.skill, list(play.cards), list(play.targets)) is None:
+                return play
         for conv in req.conversions:
-            if conv.as_name in ("barbarians", "arrows") and self._aoe_worth(game, me):
+            play = self._convert_play(game, me, conv)
+            if play is not None:
+                return play
+        return None
+
+    def _active(self, game: Game, me: int, opt) -> Play | None:
+        """When and how to use each active skill (weigh_options is saved for last: _weigh)."""
+        p = game.players[me]
+        s = opt.skill
+
+        def cheap(n: int) -> tuple[int, ...]:
+            return tuple(self._lowest(game, me, opt.cards, n))
+
+        def weakest(seats) -> int:
+            return min(seats, key=lambda t: (game.players[t].hp, self._hand_count(game, t)))
+
+        if s == "open_hand":  # give spare cards to a friend; give 2 once to heal
+            friends = self._friends(game, me, [c for c in opt.candidates if c != me])
+            if not friends:
+                return None
+            given = p.turn_usage.get("_given", 0)
+            n = max(0, len(p.hand) - game.hand_limit(p))
+            if p.is_wounded and given < 2 and not p.turn_usage.get("_open_hand_healed"):
+                n = max(n, 2 - given)
+            n = min(n, len(opt.cards))
+            if n <= 0:
+                return None
+            to = min(friends, key=lambda t: (self._hand_count(game, t), game.players[t].hp))
+            return Play(skill=s, cards=cheap(n), targets=(to,))
+        if s == "call_to_arms":  # our own Strikes first
+            if any(c.name == "strike" for c in p.hand):
+                return None
+            es = self._enemies(game, me, opt.candidates)
+            return Play(skill=s, targets=(es[0],)) if es else None
+        if s == "bitter_gambit":
+            peaches = sum(1 for c in p.hand if c.name == "peach")
+            return Play(skill=s) if p.hp >= 3 or (p.hp == 2 and peaches) else None
+        if s == "false_letter":
+            es = self._enemies(game, me, opt.candidates)
+            return Play(skill=s, targets=(weakest(es),)) if es and len(p.hand) >= 2 else None
+        if s == "wedding_vow":
+            pool = self._friends(game, me, opt.candidates)
+            if not pool and p.is_wounded:
+                pool = [t for t in opt.candidates if self.rel(game, me, t) > ENEMY]
+            if not pool or (not p.is_wounded and len(p.hand) < 4):
+                return None
+            return Play(skill=s, cards=cheap(2), targets=(weakest(pool),))
+        if s == "healing_herbs":
+            pool = [t for t in opt.candidates if t == me or self.rel(game, me, t) >= FRIEND]
+            return Play(skill=s, cards=cheap(1), targets=(weakest(pool),)) if pool else None
+        if s == "rivalry":  # set someone on our weakest male enemy (ideally another enemy)
+            es = self._enemies(game, me, opt.candidates)
+            if not es:
+                return None
+            victim = weakest(es)
+            attackers = [t for t in opt.candidates if t != victim]
+            if not attackers:
+                return None
+            attacker = max(attackers, key=lambda t: (self.rel(game, me, t) <= ENEMY, self._hand_count(game, t)))
+            return Play(skill=s, cards=cheap(1), targets=(attacker, victim))
+        return None
+
+    def _weigh(self, game: Game, me: int, req: PlayRequest) -> Play | None:
+        """Swap junk for fresh cards at the end of the play phase."""
+        opt = next((o for o in req.skills if o.skill == "weigh_options"), None)
+        if opt is None:
+            return None
+        hand = {c.id for c in game.players[me].hand}
+        junk = [c for c in opt.cards if c in hand and self._value(game, me, c) <= 3]
+        return Play(skill="weigh_options", cards=tuple(junk)) if junk else None
+
+    def _convert_play(self, game: Game, me: int, conv) -> Play | None:
+        p = game.players[me]
+        if conv.as_name in ("barbarians", "arrows") and self._aoe_worth(game, me):
+            cards = self._conversion_cards(game, me, conv)
+            return Play(skill=conv.skill, cards=cards) if cards is not None else None
+        # one-card conversions: spend a card that's worth less than what it becomes
+        single = self._lowest(game, me, conv.cards, 1) if conv.count == 1 else []
+        if single and self._value(game, me, single[0]) >= 7:
+            single = []
+        if conv.as_name == "strike" and not any(c.name == "strike" for c in p.hand):
+            es = self._enemies(game, me, conv.candidates)
+            if not es:
+                return None
+            if single:
+                return Play(skill=conv.skill, cards=tuple(single), targets=(es[0],))
+            if conv.count == 2 and len(p.hand) >= 4:
                 cards = self._conversion_cards(game, me, conv)
-                if cards is not None:
-                    return Play(skill=conv.skill, cards=cards)
-            if conv.as_name == "strike" and len(p.hand) >= 4 and not any(c.name == "strike" for c in p.hand):
-                es = self._enemies(game, me, conv.candidates)
-                cards = self._conversion_cards(game, me, conv)
-                if es and cards is not None:
-                    return Play(skill=conv.skill, cards=cards, targets=(es[0],))
+                return Play(skill=conv.skill, cards=cards, targets=(es[0],)) if cards is not None else None
+        if conv.as_name == "dismantle" and single:
+            target = self._dismantle_target(game, me, conv.candidates)
+            return Play(skill=conv.skill, cards=tuple(single), targets=(target,)) if target is not None else None
+        if conv.as_name == "indulgence" and single:
+            es = self._enemies(game, me, conv.candidates)
+            if es:
+                best = max(es, key=lambda s: (self._focus(game, me, s), self._hand_count(game, s), -self.rel(game, me, s)))
+                return Play(skill=conv.skill, cards=tuple(single), targets=(best,))
         return None
 
     def _conversion_cards(self, game: Game, me: int, conv) -> tuple[int, ...] | None:
@@ -503,8 +602,10 @@ class SmartBot:
             return None
         if req.options:
             return self._lowest(game, me, req.options, 1)[0]
-        for conv in req.conversions:  # only a conversion is possible: worth spending 2 cards?
-            if game.players[me].hp <= 2 or req.card_name == "nullify":
+        for conv in req.conversions:
+            if conv.count == 1:  # e.g. a black card as a Dodge: as good as the real thing
+                return Convert(conv.skill, tuple(self._lowest(game, me, conv.cards, 1)))
+            if game.players[me].hp <= 2 or req.card_name == "nullify":  # worth spending 2 cards?
                 cards = self._conversion_cards(game, me, conv)
                 if cards is not None:
                     return Convert(conv.skill, cards)
@@ -513,9 +614,9 @@ class SmartBot:
     def _want_response(self, game: Game, me: int, req: RespondRequest) -> bool:
         name, reason = req.card_name, req.reason
         p = game.players[me]
+        if reason in ASK_FOR_LORD:  # play it for the Lord?
+            return self.rel(game, me, req.about) >= FRIEND
         if name == "dodge":
-            if reason == "shield_wall":
-                return self.rel(game, me, req.about) >= FRIEND
             return True
         if name == "peach":
             dying = req.about
@@ -525,7 +626,7 @@ class SmartBot:
                 return True
             return self.rel(game, me, dying) >= 0.5
         if name == "strike":
-            if reason in ("borrowed_sword", "allure"):
+            if reason == "borrowed_sword":
                 return self.rel(game, me, req.about) < FRIEND
             if reason == "dragon_glaive":
                 return self.rel(game, me, req.about) <= ENEMY
@@ -560,7 +661,39 @@ class SmartBot:
     def _discard(self, game: Game, me: int, req: DiscardRequest) -> list[int]:
         return self._lowest(game, me, req.options, req.count)
 
+    def _bend_fate(self, game: Game, me: int, req: ChooseCardRequest) -> int | None:
+        """Replace a judgment card when it turns the outcome our way."""
+        ctx = req.context
+        rule = JUDGE_RULES.get(ctx.get("judge_reason", ""))
+        r = self.rel(game, me, ctx.get("seat"))
+        if rule is None or -FRIEND < r < FRIEND:
+            return None
+        good_hit = ctx["judge_reason"] in GOOD_JUDGMENTS
+        want_hit = good_hit if r >= FRIEND else not good_hit
+        if ctx["would_hit"] == want_hit:
+            return None
+        fits = [cid for cid in req.options if rule(game.cards[cid].to_dict()) == want_hit]
+        return self._lowest(game, me, fits, 1)[0] if fits else None
+
+    def _arrange(self, game: Game, me: int, req: ArrangeRequest) -> tuple:
+        """Stack the deck: first cards that defuse our pending judgments, then what we'd like
+        to draw; the rest goes to the bottom."""
+        faces = {c["id"]: c for c in req.cards}
+        left, top = list(req.options), []
+        for jc in reversed(game.players[me].judge):  # resolved last-placed first
+            rule = JUDGE_RULES.get(game.judge_name(jc))
+            pick = next((i for i in left if rule is not None and not rule(faces[i])), None)
+            if pick is None:
+                break
+            top.append(pick)
+            left.remove(pick)
+        left.sort(key=lambda i: -self._value(game, me, i))
+        keep = [i for i in left if self._value(game, me, i) >= 4]
+        return (tuple(top + keep), tuple(i for i in left if i not in keep))
+
     def _choose_card(self, game: Game, me: int, req: ChooseCardRequest) -> Any:
+        if req.reason == "bend_fate":
+            return self._bend_fate(game, me, req)
         if req.about is None:  # harvest-style pick from revealed cards
             return max(req.options, key=lambda i: (self._value(game, me, i), -i))
         if req.about == me:  # giving away one of our own cards
@@ -603,21 +736,36 @@ class SmartBot:
         if req.reason == "stone_axe":
             t = game.players[req.about]
             return r <= ENEMY and (t.hp <= 2 or len(game.players[me].hand) >= 4)
-        return True  # eight_trigrams, shield_wall
+        if req.reason in ("tit_for_tat", "blood_for_blood", "headlong_charge"):
+            return r < FRIEND  # aimed at the other player: not at a friend
+        if req.reason == "reckless_fury":
+            return any(c.name in ("strike", "duel") for c in game.players[me].hand)
+        return True  # eight_trigrams, guard the throne, profit from loss, rippling steps...
 
-    def _choose_player(self, game: Game, me: int, req: ChoosePlayerRequest) -> int:
+    def _choose_player(self, game: Game, me: int, req: ChoosePlayerRequest) -> int | None:
+        if req.reason == "final_stratagem":  # the cards we were shown: keep them
+            return me
         others = [s for s in req.options if s != me] or req.options
         es = self._enemies(game, me, others)
+        if req.reason == "night_raid":  # rob whoever holds the most, never a friend
+            pool = es or [s for s in others if self.rel(game, me, s) < FRIEND]
+            return max(pool, key=lambda s: self._hand_count(game, s)) if pool else None
+        if req.reason == "deflect":  # pass the Strike to an enemy, the weaker the better
+            return min(es, key=lambda s: game.players[s].hp) if es else None
         if es:
             return es[0]
+        if req.optional:
+            return None
         return min(others, key=lambda s: self.rel(game, me, s))
 
     def _choose_option(self, game: Game, me: int, req: ChooseOptionRequest) -> str:
         p = game.players[me]
         r = self.rel(game, me, req.about)
-        if req.reason == "iron_edict" and "give_card" in req.choices:
-            cheap = min((self._value(game, me, c.id) for c in p.hand), default=99)
-            return "give_card" if p.hp <= 2 or cheap <= 4 else "take_damage"
+        if req.reason == "blood_for_blood" and "discard_two" in req.choices:
+            two = sum(sorted(self._value(game, me, c.id) for c in p.hand)[:2])
+            return "discard_two" if p.hp <= 2 or two <= 8 else "take_damage"
+        if req.reason == "false_letter":
+            return self.rng.choice(req.choices)  # it can't see the cards: any suit is a guess
         if req.reason == "twin_swords" and "discard" in req.choices:
             cheap = min((self._value(game, me, c.id) for c in p.hand), default=99)
             return "let_draw" if r >= FRIEND or cheap > 3 else "discard"

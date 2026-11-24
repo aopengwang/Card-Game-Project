@@ -26,18 +26,31 @@ class Strike(CardDef):
     def on_use(self, game: Game, use: CardUse) -> Gen:
         if not use.data.get("free"):  # extra strikes (borrowed sword, glaive) don't count
             game.players[use.source].strikes_used += 1
-        for target in use.targets:
+        for target in list(use.targets):
             if not game.players[target].alive:
                 continue
+            target = yield from game.become_target(use, target)  # may be handed on
             yield from game.trigger(Event.TARGET_CONFIRMED, (use, target))
             if target in use.cancelled:
                 continue
-            dodge = yield from game.respond(target, "dodge", reason="strike", about=use.source, use=use)
-            if dodge is not None:
+            if target not in use.data.get("undodgeable", ()) and (yield from self._dodged(game, use, target)):
                 yield from game.trigger(Event.STRIKE_DODGED, (use, target))
                 if target not in use.data.get("forced", ()):
                     continue
             yield from game.damage(use.source, target, 1 + use.damage_bonus, card=use.card)
+
+    @staticmethod
+    def _dodged(game: Game, use: CardUse, target: int) -> Gen:
+        """Ask for the Dodge(s): two in a row against a Strike from someone who demands double."""
+        need = 2 if game.doubled(use.source) else 1
+        for i in range(need):
+            dodge = yield from game.respond(
+                target, "dodge", reason="strike", about=use.source, use=use,
+                context={"need": need, "got": i} if need > 1 else None,
+            )
+            if dodge is None:
+                return False
+        return True
 
 
 class Dodge(CardDef):

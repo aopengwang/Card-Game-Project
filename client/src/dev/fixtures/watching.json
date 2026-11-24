@@ -65,37 +65,73 @@
   "turn": 6,
   "current": 5,
   "phase": "play",
-  "draw_pile": 61,
-  "discard_pile": 18,
+  "draw_pile": 52,
+  "discard_pile": 23,
   "processing": [],
-  "attack_range": 2,
+  "attack_range": 1,
   "players": [
    {
     "seat": 0,
-    "hero": "wei_lie",
-    "kingdom": "wei",
+    "hero": "liu_bei",
+    "kingdom": "shu",
     "gender": "male",
     "skills": [
      {
-      "id": "spoils_of_war",
-      "tags": [
-       "locked"
-      ],
-      "text": "Locked. Whenever you take damage, put the physical card(s) that dealt it into your hand\n(all of them, if they were converted into one card). If there are none, draw 1 card."
+      "id": "open_hand",
+      "tags": [],
+      "text": "In your play phase, any number of times: give any number of hand cards to another\nplayer. The first time in a turn that you've given away 2 or more cards in all, recover\n1 HP."
      },
      {
-      "id": "shield_wall",
+      "id": "call_to_arms",
       "tags": [
        "lord"
       ],
-      "text": "Lord. Whenever you need to play a Dodge, you may ask the other Wei characters, in seat\norder, to play one for you (their armor may help them do it)."
+      "text": "Lord. When you need to use or play a Strike, you may ask the other Shu characters, in\nseat order, to play one for you (in your play phase: pick the target first)."
      }
     ],
     "spent": [],
     "skill_uses": {},
     "distance": 1,
-    "hp": 4,
+    "hp": 5,
     "max_hp": 5,
+    "alive": true,
+    "hand_count": 4,
+    "equips": [],
+    "judge": [
+     {
+      "id": 27,
+      "name": "indulgence",
+      "suit": "diamond",
+      "rank": 9,
+      "real": "strike"
+     }
+    ],
+    "role": "lord"
+   },
+   {
+    "seat": 1,
+    "hero": "zhuge_liang",
+    "kingdom": "shu",
+    "gender": "male",
+    "skills": [
+     {
+      "id": "star_chart",
+      "tags": [],
+      "text": "At the start of your start phase, look at the top X cards of the deck (X = living\nplayers, at most 5). Put any of them back on top in any order, and the rest on the bottom."
+     },
+     {
+      "id": "nothing_to_hide",
+      "tags": [
+       "locked"
+      ],
+      "text": "Locked. While you have no hand cards, you can't be targeted by Strike or Duel."
+     }
+    ],
+    "spent": [],
+    "skill_uses": {},
+    "distance": 2,
+    "hp": 3,
+    "max_hp": 3,
     "alive": true,
     "hand_count": 3,
     "equips": [
@@ -107,96 +143,54 @@
      }
     ],
     "judge": [],
-    "role": "lord"
-   },
-   {
-    "seat": 1,
-    "hero": "cao_cao",
-    "kingdom": "wei",
-    "gender": "male",
-    "skills": [
-     {
-      "id": "iron_edict",
-      "tags": [],
-      "text": "Once per turn: discard a hand card and choose another player. They must give you a\nhand card of their choice, or take 1 damage from you."
-     }
-    ],
-    "spent": [],
-    "skill_uses": {},
-    "distance": 2,
-    "hp": 3,
-    "max_hp": 4,
-    "alive": true,
-    "hand_count": 0,
-    "equips": [
-     {
-      "id": 98,
-      "name": "kirin_bow",
-      "suit": "heart",
-      "rank": 5
-     }
-    ],
-    "judge": [],
     "role": null
    },
    {
     "seat": 2,
-    "hero": "zhuge_liang",
+    "hero": "zhao_yun",
     "kingdom": "shu",
     "gender": "male",
     "skills": [
      {
-      "id": "east_wind",
-      "tags": [
-       "limited"
-      ],
-      "text": "Limited (once per game). Deal 1 fire damage to each of up to 2 other players."
-     },
-     {
-      "id": "strategist",
-      "tags": [
-       "locked"
-      ],
-      "text": "Locked. Whenever another player's trick card targets you, draw 1 card."
+      "id": "unwavering_spear",
+      "tags": [],
+      "text": "You may use or play a Strike as a Dodge, and a Dodge as a Strike."
      }
     ],
     "spent": [],
     "skill_uses": {},
-    "distance": 4,
+    "distance": 3,
     "hp": 3,
-    "max_hp": 3,
+    "max_hp": 4,
     "alive": true,
     "hand_count": 3,
-    "equips": [
+    "equips": [],
+    "judge": [
      {
-      "id": 103,
-      "name": "plus_horse",
-      "suit": "club",
-      "rank": 5
+      "id": 36,
+      "name": "indulgence",
+      "suit": "diamond",
+      "rank": 4,
+      "real": "dodge"
      }
     ],
-    "judge": [],
     "role": null
    },
    {
     "seat": 3,
-    "hero": "lu_xun",
+    "hero": "da_qiao",
     "kingdom": "wu",
-    "gender": "male",
+    "gender": "female",
     "skills": [
      {
-      "id": "humble",
-      "tags": [
-       "locked"
-      ],
-      "text": "Locked. You cannot be the target of Duel or Borrowed Sword."
+      "id": "captivate",
+      "tags": [],
+      "text": "You may use any Diamond card (hand or equipment) as an Indulgence."
      },
      {
-      "id": "endurance",
-      "tags": [
-       "locked"
-      ],
-      "text": "Locked. Whenever you take damage, draw 1 card for each point of damage."
+      "id": "deflect",
+      "tags": [],
+      "text": "When you become the target of a Strike, you may discard a card (hand or equipment) to\npass the Strike to another player in your attack range (not the one who used it)."
      }
     ],
     "spent": [],
@@ -206,38 +200,7 @@
     "max_hp": 3,
     "alive": true,
     "hand_count": 3,
-    "equips": [],
-    "judge": [],
-    "role": null
-   },
-   {
-    "seat": 4,
-    "hero": "sun_quan",
-    "kingdom": "wu",
-    "gender": "male",
-    "skills": [
-     {
-      "id": "steady_hand",
-      "tags": [
-       "locked"
-      ],
-      "text": "Locked. At the start of your end phase, if you took no damage this turn, draw 1 card."
-     }
-    ],
-    "spent": [],
-    "skill_uses": {},
-    "distance": 2,
-    "hp": 4,
-    "max_hp": 4,
-    "alive": true,
-    "hand_count": 5,
     "equips": [
-     {
-      "id": 93,
-      "name": "frost_blade",
-      "suit": "spade",
-      "rank": 2
-     },
      {
       "id": 100,
       "name": "eight_trigrams",
@@ -249,17 +212,50 @@
     "role": null
    },
    {
+    "seat": 4,
+    "hero": "zhen_ji",
+    "kingdom": "wei",
+    "gender": "female",
+    "skills": [
+     {
+      "id": "graceful_evasion",
+      "tags": [],
+      "text": "You may play any black hand card as a Dodge."
+     },
+     {
+      "id": "rippling_steps",
+      "tags": [],
+      "text": "At the start of your start phase, you may judge again and again: each black judgment\ncard goes into your hand; the first red one ends it (and you may stop at any time)."
+     }
+    ],
+    "spent": [],
+    "skill_uses": {},
+    "distance": 2,
+    "hp": 3,
+    "max_hp": 3,
+    "alive": true,
+    "hand_count": 3,
+    "equips": [
+     {
+      "id": 93,
+      "name": "frost_blade",
+      "suit": "spade",
+      "rank": 2
+     }
+    ],
+    "judge": [],
+    "role": null
+   },
+   {
     "seat": 5,
-    "hero": "guan_yu",
-    "kingdom": "shu",
+    "hero": "cao_cao",
+    "kingdom": "wei",
     "gender": "male",
     "skills": [
      {
-      "id": "steadfast_blade",
-      "tags": [
-       "locked"
-      ],
-      "text": "Locked. Whenever a Strike you use is dodged, draw 1 card."
+      "id": "profit_from_loss",
+      "tags": [],
+      "text": "After you take damage, you may take the card(s) that dealt it into your hand."
      }
     ],
     "spent": [],
@@ -268,32 +264,37 @@
     "hp": 4,
     "max_hp": 4,
     "alive": true,
-    "hand_count": 6,
+    "hand_count": 7,
     "equips": [],
     "judge": [],
     "role": null
    },
    {
     "seat": 6,
-    "hero": "lu_bu",
-    "kingdom": "qun",
-    "gender": "male",
+    "hero": "huang_yueying",
+    "kingdom": "shu",
+    "gender": "female",
     "skills": [
      {
-      "id": "sky_piercer",
+      "id": "ingenuity",
+      "tags": [],
+      "text": "Whenever you use a trick that isn't delayed, draw 1 card."
+     },
+     {
+      "id": "boundless_wit",
       "tags": [
        "locked"
       ],
-      "text": "Locked. Your attack range is +1. Whenever you kill a player, recover 1 HP."
+      "text": "Locked. Your tricks have no distance limit."
      }
     ],
     "spent": [],
     "skill_uses": {},
     "distance": null,
-    "hp": 4,
-    "max_hp": 4,
+    "hp": 3,
+    "max_hp": 3,
     "alive": true,
-    "hand_count": 4,
+    "hand_count": 5,
     "equips": [],
     "judge": [],
     "role": "spy"
@@ -323,6 +324,12 @@
     "name": "dismantle",
     "suit": "club",
     "rank": 3
+   },
+   {
+    "id": 72,
+    "name": "barbarians",
+    "suit": "spade",
+    "rank": 13
    }
   ],
   "result": null
@@ -331,18 +338,18 @@
   {
    "type": "hero_chosen",
    "seat": 0,
-   "hero": "wei_lie"
+   "hero": "liu_bei"
   },
   {
    "type": "heroes_revealed",
    "heroes": [
-    "wei_lie",
-    "cao_cao",
+    "liu_bei",
     "zhuge_liang",
-    "lu_xun",
-    "sun_quan",
-    "guan_yu",
-    "lu_bu"
+    "zhao_yun",
+    "da_qiao",
+    "zhen_ji",
+    "cao_cao",
+    "huang_yueying"
    ]
   },
   {
@@ -351,13 +358,13 @@
    "lord": 0,
    "lord_hp": 5,
    "heroes": [
-    "wei_lie",
-    "cao_cao",
+    "liu_bei",
     "zhuge_liang",
-    "lu_xun",
-    "sun_quan",
-    "guan_yu",
-    "lu_bu"
+    "zhao_yun",
+    "da_qiao",
+    "zhen_ji",
+    "cao_cao",
+    "huang_yueying"
    ]
   },
   {
@@ -575,6 +582,18 @@
    "phase": "start"
   },
   {
+   "type": "skill",
+   "seat": 1,
+   "skill": "star_chart"
+  },
+  {
+   "type": "arrange",
+   "seat": 1,
+   "top": 4,
+   "bottom": 1,
+   "reason": "star_chart"
+  },
+  {
    "type": "phase",
    "seat": 1,
    "phase": "judge"
@@ -599,9 +618,28 @@
    "type": "use",
    "seat": 1,
    "card": {
-    "id": 98,
-    "name": "kirin_bow",
+    "id": 56,
+    "name": "ex_nihilo",
     "suit": "heart",
+    "rank": 11
+   },
+   "targets": [
+    1
+   ]
+  },
+  {
+   "type": "draw",
+   "seat": 1,
+   "count": 2,
+   "reason": "ex_nihilo"
+  },
+  {
+   "type": "use",
+   "seat": 1,
+   "card": {
+    "id": 103,
+    "name": "plus_horse",
+    "suit": "club",
     "rank": 5
    },
    "targets": []
@@ -610,49 +648,21 @@
    "type": "equip",
    "seat": 1,
    "card": {
-    "id": 98,
-    "name": "kirin_bow",
-    "suit": "heart",
+    "id": 103,
+    "name": "plus_horse",
+    "suit": "club",
     "rank": 5
    },
-   "slot": "weapon"
-  },
-  {
-   "type": "skill",
-   "seat": 1,
-   "skill": "iron_edict",
-   "targets": [
-    0
-   ],
-   "cards": 1
-  },
-  {
-   "type": "discard",
-   "seat": 1,
-   "cards": [
-    {
-     "id": 62,
-     "name": "dismantle",
-     "suit": "heart",
-     "rank": 12
-    }
-   ],
-   "reason": "iron_edict"
-  },
-  {
-   "type": "give",
-   "seat": 0,
-   "target": 1,
-   "reason": "iron_edict"
+   "slot": "plus_horse"
   },
   {
    "type": "use",
    "seat": 1,
    "card": {
-    "id": 65,
-    "name": "snatch",
-    "suit": "spade",
-    "rank": 11
+    "id": 62,
+    "name": "dismantle",
+    "suit": "heart",
+    "rank": 12
    },
    "targets": [
     0
@@ -673,10 +683,10 @@
    "type": "nullify",
    "seat": 0,
    "card": {
-    "id": 65,
-    "name": "snatch",
-    "suit": "spade",
-    "rank": 11
+    "id": 62,
+    "name": "dismantle",
+    "suit": "heart",
+    "rank": 12
    },
    "target": 0,
    "cancelled": true
@@ -685,34 +695,76 @@
    "type": "use",
    "seat": 1,
    "card": {
-    "id": 70,
-    "name": "duel",
-    "suit": "diamond",
-    "rank": 1
+    "id": 65,
+    "name": "snatch",
+    "suit": "spade",
+    "rank": 11
    },
    "targets": [
     0
    ]
   },
   {
-   "type": "damage",
-   "source": 1,
+   "type": "take",
+   "seat": 1,
    "target": 0,
-   "amount": 1,
-   "nature": "normal",
-   "hp": 4
+   "zone": "equip",
+   "card": {
+    "id": 106,
+    "name": "minus_horse",
+    "suit": "spade",
+    "rank": 13
+   }
   },
   {
-   "type": "skill",
-   "seat": 0,
-   "skill": "spoils_of_war"
+   "type": "use",
+   "seat": 1,
+   "card": {
+    "id": 106,
+    "name": "minus_horse",
+    "suit": "spade",
+    "rank": 13
+   },
+   "targets": []
+  },
+  {
+   "type": "equip",
+   "seat": 1,
+   "card": {
+    "id": 106,
+    "name": "minus_horse",
+    "suit": "spade",
+    "rank": 13
+   },
+   "slot": "minus_horse"
+  },
+  {
+   "type": "use",
+   "seat": 1,
+   "card": {
+    "id": 66,
+    "name": "snatch",
+    "suit": "diamond",
+    "rank": 3
+   },
+   "targets": [
+    0
+   ]
   },
   {
    "type": "take",
-   "seat": 0,
-   "target": null,
-   "zone": "processing",
-   "reason": "spoils_of_war",
+   "seat": 1,
+   "target": 0,
+   "zone": "hand"
+  },
+  {
+   "type": "phase",
+   "seat": 1,
+   "phase": "discard"
+  },
+  {
+   "type": "discard",
+   "seat": 1,
    "cards": [
     {
      "id": 70,
@@ -720,36 +772,8 @@
      "suit": "diamond",
      "rank": 1
     }
-   ]
-  },
-  {
-   "type": "use",
-   "seat": 1,
-   "card": {
-    "id": 5,
-    "name": "strike",
-    "suit": "spade",
-    "rank": 10
-   },
-   "targets": [
-    0
-   ]
-  },
-  {
-   "type": "respond",
-   "seat": 0,
-   "card": {
-    "id": 40,
-    "name": "dodge",
-    "suit": "diamond",
-    "rank": 8
-   },
-   "reason": "strike"
-  },
-  {
-   "type": "phase",
-   "seat": 1,
-   "phase": "discard"
+   ],
+   "reason": "discard_phase"
   },
   {
    "type": "phase",
@@ -791,47 +815,6 @@
    "type": "use",
    "seat": 2,
    "card": {
-    "id": 56,
-    "name": "ex_nihilo",
-    "suit": "heart",
-    "rank": 11
-   },
-   "targets": [
-    2
-   ]
-  },
-  {
-   "type": "draw",
-   "seat": 2,
-   "count": 2,
-   "reason": "ex_nihilo"
-  },
-  {
-   "type": "use",
-   "seat": 2,
-   "card": {
-    "id": 103,
-    "name": "plus_horse",
-    "suit": "club",
-    "rank": 5
-   },
-   "targets": []
-  },
-  {
-   "type": "equip",
-   "seat": 2,
-   "card": {
-    "id": 103,
-    "name": "plus_horse",
-    "suit": "club",
-    "rank": 5
-   },
-   "slot": "plus_horse"
-  },
-  {
-   "type": "use",
-   "seat": 2,
-   "card": {
     "id": 61,
     "name": "dismantle",
     "suit": "club",
@@ -846,32 +829,13 @@
    "seat": 1,
    "cards": [
     {
-     "id": 33,
-     "name": "dodge",
-     "suit": "diamond",
-     "rank": 2
+     "id": 103,
+     "name": "plus_horse",
+     "suit": "club",
+     "rank": 5
     }
    ],
    "reason": "dismantle"
-  },
-  {
-   "type": "use",
-   "seat": 2,
-   "card": {
-    "id": 66,
-    "name": "snatch",
-    "suit": "diamond",
-    "rank": 3
-   },
-   "targets": [
-    1
-   ]
-  },
-  {
-   "type": "take",
-   "seat": 2,
-   "target": 1,
-   "zone": "hand"
   },
   {
    "type": "use",
@@ -887,30 +851,20 @@
    ]
   },
   {
-   "type": "damage",
-   "source": 2,
-   "target": 1,
-   "amount": 1,
-   "nature": "normal",
-   "hp": 3
+   "type": "respond",
+   "seat": 1,
+   "card": {
+    "id": 33,
+    "name": "dodge",
+    "suit": "diamond",
+    "rank": 2
+   },
+   "reason": "strike"
   },
   {
    "type": "phase",
    "seat": 2,
    "phase": "discard"
-  },
-  {
-   "type": "discard",
-   "seat": 2,
-   "cards": [
-    {
-     "id": 74,
-     "name": "arrows",
-     "suit": "heart",
-     "rank": 1
-    }
-   ],
-   "reason": "discard_phase"
   },
   {
    "type": "phase",
@@ -949,34 +903,120 @@
    "phase": "play"
   },
   {
+   "type": "use",
+   "seat": 3,
+   "card": {
+    "id": 100,
+    "name": "eight_trigrams",
+    "suit": "club",
+    "rank": 2
+   },
+   "targets": []
+  },
+  {
+   "type": "equip",
+   "seat": 3,
+   "card": {
+    "id": 100,
+    "name": "eight_trigrams",
+    "suit": "club",
+    "rank": 2
+   },
+   "slot": "armor"
+  },
+  {
+   "type": "use",
+   "seat": 3,
+   "card": {
+    "id": -1,
+    "name": "indulgence",
+    "suit": "diamond",
+    "rank": 9,
+    "virtual": true,
+    "color": "red"
+   },
+   "targets": [
+    0
+   ],
+   "subcards": [
+    {
+     "id": 27,
+     "name": "strike",
+     "suit": "diamond",
+     "rank": 9
+    }
+   ]
+  },
+  {
+   "type": "use",
+   "seat": 3,
+   "card": {
+    "id": -2,
+    "name": "indulgence",
+    "suit": "diamond",
+    "rank": 4,
+    "virtual": true,
+    "color": "red"
+   },
+   "targets": [
+    2
+   ],
+   "subcards": [
+    {
+     "id": 36,
+     "name": "dodge",
+     "suit": "diamond",
+     "rank": 4
+    }
+   ]
+  },
+  {
+   "type": "use",
+   "seat": 3,
+   "card": {
+    "id": 64,
+    "name": "snatch",
+    "suit": "spade",
+    "rank": 4
+   },
+   "targets": [
+    2
+   ]
+  },
+  {
+   "type": "take",
+   "seat": 3,
+   "target": 2,
+   "zone": "hand"
+  },
+  {
+   "type": "use",
+   "seat": 3,
+   "card": {
+    "id": 17,
+    "name": "strike",
+    "suit": "club",
+    "rank": 10
+   },
+   "targets": [
+    2
+   ]
+  },
+  {
+   "type": "respond",
+   "seat": 2,
+   "card": {
+    "id": 38,
+    "name": "dodge",
+    "suit": "diamond",
+    "rank": 6
+   },
+   "reason": "strike"
+  },
+  {
    "type": "phase",
    "seat": 3,
    "phase": "discard"
-  },
-  {
-   "type": "discard",
-   "seat": 3,
-   "cards": [
-    {
-     "id": 1,
-     "name": "strike",
-     "suit": "spade",
-     "rank": 8
-    },
-    {
-     "id": 11,
-     "name": "strike",
-     "suit": "club",
-     "rank": 6
-    },
-    {
-     "id": 17,
-     "name": "strike",
-     "suit": "club",
-     "rank": 10
-    }
-   ],
-   "reason": "discard_phase"
   },
   {
    "type": "phase",
@@ -992,6 +1032,110 @@
    "type": "phase",
    "seat": 4,
    "phase": "start"
+  },
+  {
+   "type": "skill",
+   "seat": 4,
+   "skill": "rippling_steps"
+  },
+  {
+   "type": "judge",
+   "seat": 4,
+   "reason": "rippling_steps",
+   "card": {
+    "id": 0,
+    "name": "strike",
+    "suit": "spade",
+    "rank": 7
+   }
+  },
+  {
+   "type": "judge_result",
+   "seat": 4,
+   "reason": "rippling_steps",
+   "card": {
+    "id": 0,
+    "name": "strike",
+    "suit": "spade",
+    "rank": 7
+   },
+   "hit": true
+  },
+  {
+   "type": "take",
+   "seat": 4,
+   "target": null,
+   "zone": "discard_pile",
+   "reason": "rippling_steps",
+   "cards": [
+    {
+     "id": 0,
+     "name": "strike",
+     "suit": "spade",
+     "rank": 7
+    }
+   ]
+  },
+  {
+   "type": "judge",
+   "seat": 4,
+   "reason": "rippling_steps",
+   "card": {
+    "id": 63,
+    "name": "snatch",
+    "suit": "spade",
+    "rank": 3
+   }
+  },
+  {
+   "type": "judge_result",
+   "seat": 4,
+   "reason": "rippling_steps",
+   "card": {
+    "id": 63,
+    "name": "snatch",
+    "suit": "spade",
+    "rank": 3
+   },
+   "hit": true
+  },
+  {
+   "type": "take",
+   "seat": 4,
+   "target": null,
+   "zone": "discard_pile",
+   "reason": "rippling_steps",
+   "cards": [
+    {
+     "id": 63,
+     "name": "snatch",
+     "suit": "spade",
+     "rank": 3
+    }
+   ]
+  },
+  {
+   "type": "judge",
+   "seat": 4,
+   "reason": "rippling_steps",
+   "card": {
+    "id": 52,
+    "name": "peach",
+    "suit": "diamond",
+    "rank": 12
+   }
+  },
+  {
+   "type": "judge_result",
+   "seat": 4,
+   "reason": "rippling_steps",
+   "card": {
+    "id": 52,
+    "name": "peach",
+    "suit": "diamond",
+    "rank": 12
+   },
+   "hit": false
   },
   {
    "type": "phase",
@@ -1040,28 +1184,6 @@
    "type": "use",
    "seat": 4,
    "card": {
-    "id": 100,
-    "name": "eight_trigrams",
-    "suit": "club",
-    "rank": 2
-   },
-   "targets": []
-  },
-  {
-   "type": "equip",
-   "seat": 4,
-   "card": {
-    "id": 100,
-    "name": "eight_trigrams",
-    "suit": "club",
-    "rank": 2
-   },
-   "slot": "armor"
-  },
-  {
-   "type": "use",
-   "seat": 4,
-   "card": {
     "id": 79,
     "name": "borrowed_sword",
     "suit": "club",
@@ -1090,25 +1212,197 @@
    }
   },
   {
+   "type": "use",
+   "seat": 4,
+   "card": {
+    "id": 12,
+    "name": "strike",
+    "suit": "club",
+    "rank": 7
+   },
+   "targets": [
+    2
+   ]
+  },
+  {
+   "type": "damage",
+   "source": 4,
+   "target": 2,
+   "amount": 1,
+   "nature": "normal",
+   "hp": 3
+  },
+  {
+   "type": "use",
+   "seat": 4,
+   "card": {
+    "id": 76,
+    "name": "harvest",
+    "suit": "heart",
+    "rank": 3
+   },
+   "targets": [
+    4,
+    5,
+    6,
+    0,
+    1,
+    2,
+    3
+   ]
+  },
+  {
+   "type": "reveal",
+   "reason": "harvest",
+   "cards": [
+    {
+     "id": 15,
+     "name": "strike",
+     "suit": "club",
+     "rank": 9
+    },
+    {
+     "id": 46,
+     "name": "peach",
+     "suit": "heart",
+     "rank": 4
+    },
+    {
+     "id": 20,
+     "name": "strike",
+     "suit": "club",
+     "rank": 11
+    },
+    {
+     "id": 86,
+     "name": "indulgence",
+     "suit": "heart",
+     "rank": 6
+    },
+    {
+     "id": 72,
+     "name": "barbarians",
+     "suit": "spade",
+     "rank": 13
+    },
+    {
+     "id": 4,
+     "name": "strike",
+     "suit": "spade",
+     "rank": 9
+    },
+    {
+     "id": 78,
+     "name": "borrowed_sword",
+     "suit": "club",
+     "rank": 12
+    }
+   ]
+  },
+  {
+   "type": "pick",
+   "seat": 4,
+   "card": {
+    "id": 46,
+    "name": "peach",
+    "suit": "heart",
+    "rank": 4
+   }
+  },
+  {
+   "type": "pick",
+   "seat": 5,
+   "card": {
+    "id": 86,
+    "name": "indulgence",
+    "suit": "heart",
+    "rank": 6
+   }
+  },
+  {
+   "type": "pick",
+   "seat": 6,
+   "card": {
+    "id": 72,
+    "name": "barbarians",
+    "suit": "spade",
+    "rank": 13
+   }
+  },
+  {
+   "type": "pick",
+   "seat": 0,
+   "card": {
+    "id": 78,
+    "name": "borrowed_sword",
+    "suit": "club",
+    "rank": 12
+   }
+  },
+  {
+   "type": "pick",
+   "seat": 1,
+   "card": {
+    "id": 4,
+    "name": "strike",
+    "suit": "spade",
+    "rank": 9
+   }
+  },
+  {
+   "type": "pick",
+   "seat": 2,
+   "card": {
+    "id": 15,
+    "name": "strike",
+    "suit": "club",
+    "rank": 9
+   }
+  },
+  {
+   "type": "pick",
+   "seat": 3,
+   "card": {
+    "id": 20,
+    "name": "strike",
+    "suit": "club",
+    "rank": 11
+   }
+  },
+  {
    "type": "phase",
    "seat": 4,
    "phase": "discard"
   },
   {
+   "type": "discard",
+   "seat": 4,
+   "cards": [
+    {
+     "id": 97,
+     "name": "halberd",
+     "suit": "diamond",
+     "rank": 12
+    },
+    {
+     "id": 21,
+     "name": "strike",
+     "suit": "heart",
+     "rank": 10
+    },
+    {
+     "id": 0,
+     "name": "strike",
+     "suit": "spade",
+     "rank": 7
+    }
+   ],
+   "reason": "discard_phase"
+  },
+  {
    "type": "phase",
    "seat": 4,
    "phase": "end"
-  },
-  {
-   "type": "skill",
-   "seat": 4,
-   "skill": "steady_hand"
-  },
-  {
-   "type": "draw",
-   "seat": 4,
-   "count": 1,
-   "reason": "steady_hand"
   },
   {
    "type": "turn_start",

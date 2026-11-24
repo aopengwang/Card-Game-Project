@@ -92,7 +92,7 @@ def test_a_silent_player_cannot_stall_hard_bots(n, seed):
 
 
 def test_hard_bots_beat_easy_bots():
-    games = 60
+    games = 100  # (60 was too few: with the standard heroes easy Rebels already win often)
     base = run({"lord": "easy", "rebel": "easy", "spy": "easy"}, games, 5)
     hard_lord = run({"lord": "hard", "rebel": "easy", "spy": "easy"}, games, 5)
     hard_rebels = run({"lord": "easy", "rebel": "hard", "spy": "easy"}, games, 5)

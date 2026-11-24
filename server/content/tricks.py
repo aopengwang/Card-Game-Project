@@ -3,6 +3,8 @@
 """
 from __future__ import annotations
 
+import dataclasses
+
 from engine import (
     HAND,
     Card,
@@ -66,7 +68,7 @@ class InstantTrick(CardDef):
             yield from game.trigger(Event.TARGET_CONFIRMED, (use, t))
             if t in use.cancelled:
                 continue
-            if (yield from game.nullified(use.card, use.source, t)):
+            if not use.data.get("unnullifiable") and (yield from game.nullified(use.card, use.source, t)):
                 continue
             yield from self.effect(game, use, t)
         yield from self.after(game, use)
@@ -146,10 +148,14 @@ class Duel(InstantTrick):
         while True:
             if not game.players[turn].alive or not game.players[other].alive:
                 return
-            strike = yield from game.respond(turn, "strike", reason="duel", about=other)
-            if strike is None:
-                yield from game.damage(other, turn, 1 + use.damage_bonus, card=use.card)
-                return
+            need = 2 if game.doubled(other) else 1  # facing someone who demands double
+            for i in range(need):
+                strike = yield from game.respond(
+                    turn, "strike", reason="duel", about=other, context={"need": need, "got": i} if need > 1 else None
+                )
+                if strike is None:
+                    yield from game.damage(other, turn, 1 + use.damage_bonus, card=use.card)
+                    return
             turn, other = other, turn
 
 
@@ -287,7 +293,7 @@ class DelayedTrick(CardDef):
 
     def on_use(self, game, use):
         owner = use.targets[0] if use.targets else use.source
-        yield from game.move_cards([use.card.id], Zone.JUDGE, owner, reason="place")
+        yield from game.place_delayed(use.card, use.subcards, owner)
 
     def on_hit(self, game: Game, owner: Player, card: Card) -> Gen:
         yield from ()
@@ -297,9 +303,10 @@ class DelayedTrick(CardDef):
         yield from ()
 
     def resolve_delayed(self, game: Game, owner: Player, card: Card) -> Gen:
+        shown = dataclasses.replace(card, name=self.name)  # a converted card acts as this trick
         yield from game.move_cards([card.id], Zone.PROCESSING, reason="resolve_delayed")
-        game._log("delayed", seat=owner.seat, card=card.to_dict())
-        if (yield from game.nullified(card, None, owner.seat)):
+        game._log("delayed", seat=owner.seat, card=shown.to_dict())
+        if (yield from game.nullified(shown, None, owner.seat)):
             yield from self.on_miss(game, owner, card)
         else:
             j = yield from game.judge(owner.seat, self.name, self.hits)
@@ -349,6 +356,8 @@ class Lightning(DelayedTrick):
         yield from game.damage(None, owner.seat, 3, nature="thunder")
 
     def on_miss(self, game, owner, card):
+        if card.name != self.name:
+            game.judge_as[card.id] = self.name  # a converted Lightning stays one as it moves on
         for s in game.seats_from(owner.seat)[1:]:
             p = game.players[s]
             if p.alive and not game.has_in_judge(p, self.name):

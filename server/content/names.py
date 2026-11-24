@@ -27,8 +27,18 @@ CARD_NAMES: dict[str, str] = {
 }
 
 
+# English skill titles that title-casing the id gets wrong (small words, apostrophes).
+SKILL_NAMES: dict[str, str] = {
+    "profit_from_loss": "Profit from Loss", "guard_the_throne": "Guard the Throne",
+    "tit_for_tat": "Tit for Tat", "blood_for_blood": "Blood for Blood",
+    "heavens_will": "Heaven's Will", "call_to_arms": "Call to Arms",
+    "nothing_to_hide": "Nothing to Hide", "pirates_raid": "Pirate's Raid",
+    "spoils_of_war": "Spoils of War",
+}
+
+
 def skill_title(skill_id: str) -> str:
-    return skill_id.replace("_", " ").title()
+    return SKILL_NAMES.get(skill_id) or skill_id.replace("_", " ").title()
 
 
 def _clean(text: str) -> str:

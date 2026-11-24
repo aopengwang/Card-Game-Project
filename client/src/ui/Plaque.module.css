@@ -222,6 +222,29 @@
   color: var(--ik-text-strong);
 }
 
+/* your equipment, when a skill can spend it (e.g. a red weapon as a Strike) */
+button.slot {
+  padding: 0;
+  font: 600 10px var(--ik-font-body);
+  cursor: pointer;
+}
+
+.slotPick {
+  border: 1px dashed rgba(227, 98, 75, 0.9);
+}
+
+.slotPick:hover,
+.slotPick:focus-visible {
+  outline: none;
+  background: rgba(227, 98, 75, 0.22);
+}
+
+.slotPicked {
+  border: 1px solid var(--ik-vermilion-bright);
+  background: rgba(227, 98, 75, 0.35);
+  box-shadow: 0 0 8px rgba(227, 98, 75, 0.6);
+}
+
 /* skills on hover: several rule blocks stacked in one tooltip */
 .skillsTip {
   display: flex;

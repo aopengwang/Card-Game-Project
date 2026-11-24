@@ -13,6 +13,7 @@ import { useUiScale } from "../uiScale";
 import { play } from "../sound";
 import { MuteButton, SettingsButton } from "./Settings";
 import { ActionBar } from "./ActionBar";
+import { Arrange } from "./Arrange";
 import { Effects } from "./Effects";
 import { useShortcuts } from "./shortcuts";
 import { LangToggle } from "./LangToggle";
@@ -173,7 +174,27 @@ export function Table({ net }: { net: NetState }) {
 
       <footer className="dock">
         <div className="dock-self" data-seat={view.you}>
-          <Plaque player={me} name={nameOf(view.you)} variant="self" isYou {...seatProps(view.you)} offline={false} range={view.attack_range} />
+          <Plaque
+            player={me}
+            name={nameOf(view.you)}
+            variant="self"
+            isYou
+            {...seatProps(view.you)}
+            offline={false}
+            range={view.attack_range}
+            equipPick={
+              req
+                ? {
+                    clickable: (id) => cardClickable(req, sel, id),
+                    selected: (id) => sel.cards.includes(id),
+                    onClick: (id) => {
+                      play("select");
+                      setSel(clickCard(req, sel, id));
+                    },
+                  }
+                : undefined
+            }
+          />
         </div>
         <div className="dock-main">
           <ActionBar request={request} view={view} sel={sel} setSel={setSel} name={name} waitingText={waitingText} />
@@ -211,6 +232,7 @@ export function Table({ net }: { net: NetState }) {
 
       <Effects log={log} you={view.you} aim={sel.targets} playSize={tier.playSize} />
       {req?.kind === "choose_hero" && <HeroPick req={req} isLordPick={lordSeat === view.you} />}
+      {req?.kind === "arrange" && <Arrange key={request!.id} req={req} />}
       {view.result && hideResultFor !== resultKey && (
         <GameOver view={view} room={room} name={nameOf} onClose={() => setHideResultFor(resultKey)} />
       )}

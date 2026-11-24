@@ -28,6 +28,9 @@ class Event(StrEnum):
     PHASE_END = "phase_end"
     DRAW_PHASE = "draw_phase"  # data: DrawCount (mutable .count)
     CARD_USED = "card_used"  # data: CardUse
+    # data: (CardUse, target_seat), as a Strike picks its target. A skill may hand the
+    # Strike on by setting use.data["redirect"] to another seat (game.become_target).
+    BECOME_TARGET = "become_target"
     TARGET_CONFIRMED = "target_confirmed"  # data: (CardUse, target_seat)
     CARD_FINISHED = "card_finished"  # data: CardUse
     CARD_RESPONDED = "card_responded"  # data: (seat, Card)
@@ -75,6 +78,19 @@ class SkillBase:
         """False forbids `user` from choosing the owner as a target of `card_name`."""
         return True
 
+    def unlimited_trick_reach(self, game: Game, owner: Player) -> bool:
+        """True: the owner's tricks (Snatch...) ignore distance."""
+        return False
+
+    def demands_double(self, game: Game, owner: Player) -> bool:
+        """True: the owner's Strikes need 2 Dodges to cancel, and in a Duel with the owner the
+        other side must play 2 Strikes each time."""
+        return False
+
+    def save_bonus(self, game: Game, owner: Player, helper: int) -> int:
+        """Extra HP the owner recovers when `helper`'s Peach saves them from dying."""
+        return 0
+
     # ---- response assists: provide a card (e.g. a Dodge) without playing one from hand
 
     assists: frozenset[str] = frozenset()  # card names `assist` can provide
@@ -104,13 +120,21 @@ class ViewAs(SkillBase):
     """
 
     as_name: str = ""
+    as_names: tuple[str, ...] = ()  # several targets (e.g. Strike <-> Dodge); else just as_name
     count: int = 1
     in_play: bool = True  # usable during your play phase
     in_response: bool = True  # usable when asked to play `as_name`
 
+    def names(self) -> tuple[str, ...]:
+        return self.as_names or (self.as_name,)
+
     def cards(self, game: Game, owner: Player) -> list[int]:
         """Card ids that may be spent on this conversion."""
         return [c.id for c in owner.hand]
+
+    def cards_as(self, game: Game, owner: Player, as_name: str) -> list[int]:
+        """Card ids that may become `as_name` (for skills with several `as_names`)."""
+        return self.cards(game, owner)
 
     def enabled(self, game: Game, owner: Player) -> bool:
         return True

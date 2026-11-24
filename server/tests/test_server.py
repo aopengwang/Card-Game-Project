@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from bots import SimpleBot
 from content.heroes import HERO_MAP
-from engine import HAND, Convert, Play, PlayOption, PlayRequest, RespondRequest
+from engine import HAND, ArrangeRequest, ChoosePlayerRequest, Convert, Play, PlayOption, PlayRequest, RespondRequest
 from net.app import create_app
 from net.protocol import ProtocolError, parse_answer, request_to_dict
 from net.room import RoomError, RoomManager, Settings
@@ -29,6 +29,8 @@ def json_default(r: dict):
             return HAND if r["hidden_count"] else r["options"][0]
         case "confirm":
             return False
+        case "arrange":
+            return {"top": r["options"], "bottom": []}
         case _:
             return None  # play: end phase; respond: pass
 
@@ -38,6 +40,8 @@ def to_json(a):
         return {"card_id": a.card_id, "targets": list(a.targets), "skill": a.skill, "cards": list(a.cards)}
     if isinstance(a, Convert):
         return {"skill": a.skill, "cards": list(a.cards)}
+    if isinstance(a, tuple) and len(a) == 2 and all(isinstance(x, tuple) for x in a):  # arrange: (top, bottom)
+        return {"top": list(a[0]), "bottom": list(a[1])}
     return list(a) if isinstance(a, tuple) else a
 
 
@@ -103,13 +107,22 @@ def test_parse_answer_types_and_errors():
     play = PlayRequest(seat=0, options={})
     assert parse_answer(play, None) is None
     assert parse_answer(play, {"card_id": 3, "targets": [1]}) == Play(3, (1,))
-    assert parse_answer(play, {"skill": "allure", "cards": [4], "targets": [2]}) == Play(None, (2,), "allure", (4,))
+    assert parse_answer(play, {"skill": "rivalry", "cards": [4], "targets": [2, 3]}) == Play(None, (2, 3), "rivalry", (4,))
     resp = RespondRequest(seat=0, card_name="dodge", reason="strike", options=[1])
     assert parse_answer(resp, 1) == 1
     assert parse_answer(resp, {"skill": "serpent_spear", "cards": [1, 2]}) == Convert("serpent_spear", (1, 2))
     for bad in [{"card_id": [1]}, {"card_id": True}, "x", {"targets": "1"}]:
         with pytest.raises(ProtocolError):
             parse_answer(play, bad)
+    # optional player picks may answer null; arranging the deck sends top and bottom
+    pick = ChoosePlayerRequest(seat=0, reason="night_raid", options=[1, 2], optional=True)
+    assert parse_answer(pick, None) is None and pick.validate(None) is None and pick.default() is None
+    arrange = ArrangeRequest(seat=0, reason="star_chart", options=[5, 6, 7])
+    answer = parse_answer(arrange, {"top": [7, 5], "bottom": [6]})
+    assert answer == ((7, 5), (6,)) and arrange.validate(answer) is None
+    assert arrange.validate(((7,), (6,))) == "place every card exactly once"
+    with pytest.raises(ProtocolError):
+        parse_answer(arrange, [7, 5, 6])
 
 
 # ---------------------------------------------------------------- lobby
@@ -204,14 +217,15 @@ def test_host_chooses_which_heroes_can_be_picked():
         g = await FakeClient(room, guest).connect()
         assert h.of("room")[-1]["disabled_heroes"] == []
 
-        off = sorted(HERO_MAP)[:9]  # 14 heroes: 5 left on
+        total = len(HERO_MAP)
+        off = sorted(HERO_MAP)[: total - 5]  # 5 left on
         await room.handle(host, h.conn, {"type": "heroes", "disabled": off})
         assert g.of("room")[-1]["disabled_heroes"] == off  # everyone sees it
 
         with pytest.raises(RoomError, match="only the host"):
             await room.handle(guest, g.conn, {"type": "heroes", "disabled": []})
         for bad, why in [
-            (sorted(HERO_MAP)[:11], "at least 4 heroes"),
+            (sorted(HERO_MAP)[: total - 3], "at least 4 heroes"),
             (["nobody"], "unknown hero"),
             ("cao_cao", "list of hero ids"),
         ]:
@@ -220,7 +234,7 @@ def test_host_chooses_which_heroes_can_be_picked():
         assert room.disabled_heroes == set(off)  # a bad list changes nothing
 
         # 5 players need 5 heroes: with one more off, the game can't start
-        await room.handle(host, h.conn, {"type": "heroes", "disabled": sorted(HERO_MAP)[:10]})
+        await room.handle(host, h.conn, {"type": "heroes", "disabled": sorted(HERO_MAP)[: total - 4]})
         with pytest.raises(RoomError, match="enable at least 5 heroes"):
             await room.start(seed=3)
         await room.handle(host, h.conn, {"type": "heroes", "disabled": off})

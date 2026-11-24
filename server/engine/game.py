@@ -100,6 +100,11 @@ class CardsMoved:
     to: Zone
     owner: int | None
     reason: str
+    sources: list[tuple[Zone, int | None]] = field(default_factory=list)  # where each card was
+
+    def left(self, zone: Zone, seat: int) -> list[int]:
+        """Cards of this move that came out of `seat`'s `zone`."""
+        return [c for c, src in zip(self.card_ids, self.sources) if src == (zone, seat) and (self.to, self.owner) != src]
 
 
 class Game:
@@ -155,6 +160,9 @@ class Game:
         self.log: list[dict[str, Any]] = []
         self._virtual_seq = 0
         self._virtual_subcards: dict[int, list[int]] = {}
+        # A physical card placed in a judgment area *as* a delayed trick (e.g. a Diamond used
+        # as Indulgence) acts as that trick while it stays there: card id -> trick name.
+        self.judge_as: dict[int, str] = {}
         self.draft = draft
 
         if heroes is not None:
@@ -316,10 +324,43 @@ class Game:
         return 1 + sum(s.extra_strikes(self, p) for s in self.skills_of(p))
 
     def trick_reach(self, p: Player) -> int:
-        return 1  # distance limit for snatch-like tricks
+        """Distance limit for Snatch-like tricks."""
+        if any(s.unlimited_trick_reach(self, p) for s in self.skills_of(p)):
+            return sys.maxsize
+        return 1
+
+    def doubled(self, seat: int) -> bool:
+        """Does `seat` demand double responses (2 Dodges per Strike, 2 Strikes per Duel round)?"""
+        p = self.players[seat]
+        return any(s.demands_double(self, p) for s in self.skills_of(p))
+
+    # judgment areas (a card may sit there *as* a delayed trick)
+
+    def judge_name(self, card: Card) -> str:
+        return self.judge_as.get(card.id, card.name)
+
+    def judge_def(self, card: Card) -> CardDef:
+        return self.ruleset.card_defs[self.judge_name(card)]
+
+    def judge_view(self, card: Card) -> dict[str, Any]:
+        """How a judgment-area card shows: as the trick it acts as."""
+        d = card.to_dict()
+        if card.id in self.judge_as:
+            d["name"], d["real"] = self.judge_as[card.id], card.name
+        return d
 
     def has_in_judge(self, p: Player, name: str) -> bool:
-        return any(c.name == name for c in p.judge)
+        return any(self.judge_name(c) == name for c in p.judge)
+
+    def place_delayed(self, card: Card, subcards: list[int], owner: int, reason: str = "place") -> Gen:
+        """Put a delayed trick into `owner`'s judgment area (a converted one goes in as its
+        physical card, remembered as the trick)."""
+        if card.is_virtual:
+            (cid,) = subcards
+            self.judge_as[cid] = card.name
+        else:
+            cid = card.id
+        yield from self.move_cards([cid], Zone.JUDGE, owner, reason=reason)
 
     def hand_limit(self, p: Player) -> int:
         return max(p.hp, 0) + sum(s.hand_limit_bonus(self, p) for s in self.skills_of(p))
@@ -357,21 +398,27 @@ class Game:
         out = []
         hand_ids = {c.id for c in p.hand}
         for v in self.conversions(p):
-            cards = v.cards(self, p)
-            if not v.in_play or len(cards) < v.count:
+            if not v.in_play:
                 continue
-            whole_hand = v.count == len(hand_ids) and set(cards) == hand_ids
-            spec = self._target_spec(p, self.ruleset.card_defs[v.as_name], whole_hand)
-            if spec is not None:
-                out.append(ConvertOption(v.name, v.as_name, v.count, tuple(cards), spec[0], spec[2], spec[1]))
+            for as_name in v.names():
+                cards = v.cards_as(self, p, as_name)
+                if len(cards) < v.count:
+                    continue
+                whole_hand = v.count == len(hand_ids) and set(cards) == hand_ids
+                spec = self._target_spec(p, self.ruleset.card_defs[as_name], whole_hand)
+                if spec is not None:
+                    out.append(ConvertOption(v.name, as_name, v.count, tuple(cards), spec[0], spec[2], spec[1]))
+                    break  # one play-phase option per skill
         return out
 
     def response_conversions(self, p: Player, card_name: str) -> list[ConvertOption]:
         out = []
         for v in self.conversions(p):
-            cards = v.cards(self, p)
-            if v.in_response and v.as_name == card_name and len(cards) >= v.count:
-                out.append(ConvertOption(v.name, v.as_name, v.count, tuple(cards)))
+            if not v.in_response or card_name not in v.names():
+                continue
+            cards = v.cards_as(self, p, card_name)
+            if len(cards) >= v.count:
+                out.append(ConvertOption(v.name, card_name, v.count, tuple(cards)))
         return out
 
     def active_options(self, p: Player) -> list[SkillOption]:
@@ -384,7 +431,10 @@ class Game:
             if len(cards) < s.min_cards or len(cands) < s.min_targets:
                 continue
             out.append(
-                SkillOption(s.name, s.min_cards, s.max_cards, cards, s.min_targets, min(s.max_targets, len(cands)), cands)
+                SkillOption(
+                    s.name, s.min_cards, min(s.max_cards, len(cards)), cards,
+                    s.min_targets, min(s.max_targets, len(cands)), cands,
+                )
             )
         return out
 
@@ -459,14 +509,17 @@ class Game:
         self._zone_list(frm, frm_owner).remove(card)
         self._zone_list(to, owner).append(card)
         self.location[card_id] = (to, owner if to in OWNED_ZONES else None)
+        if frm == Zone.JUDGE and to != Zone.JUDGE:
+            self.judge_as.pop(card_id, None)  # out of the judgment area: an ordinary card again
 
     def move_cards(self, card_ids: Iterable[int], to: Zone, owner: int | None = None, reason: str = "") -> Gen:
         ids = list(card_ids)
         if not ids:
             return
+        sources = [self.location[cid] for cid in ids]
         for cid in ids:
             self._raw_move(cid, to, owner)
-        yield from self.trigger(Event.CARDS_MOVED, CardsMoved(ids, to, owner, reason))
+        yield from self.trigger(Event.CARDS_MOVED, CardsMoved(ids, to, owner, reason, sources))
 
     def _take_from_pile(self, n: int) -> list[int]:
         if len(self.draw_pile) < n:
@@ -556,6 +609,8 @@ class Game:
         use = CardUse(card=card, source=seat, targets=list(targets), subcards=list(subcards), data=dict(data or {}))
         usage = self.players[seat].turn_usage
         usage["_cards_used"] = usage.get("_cards_used", 0) + 1
+        if card.name == "strike":
+            usage["_strikes"] = usage.get("_strikes", 0) + 1  # used or played, this turn
         extra = {"subcards": [self.cards[i].to_dict() for i in subcards]} if card.is_virtual else {}
         self._log("use", seat=seat, card=card.to_dict(), targets=list(targets), **extra)
         yield from self.move_cards(subcards, Zone.PROCESSING, reason="use")
@@ -564,6 +619,17 @@ class Game:
         yield from self._flush_processing(*(self.cards[i] for i in subcards))
         yield from self.trigger(Event.CARD_FINISHED, use)
         return use
+
+    def become_target(self, use: CardUse, target: int) -> Gen:
+        """`target` is about to be confirmed as a target of `use`; a skill may hand it on to
+        someone else. Returns the seat that ends up as the target."""
+        yield from self.trigger(Event.BECOME_TARGET, (use, target))
+        new = use.data.pop("redirect", None)
+        if new is None or new == target:
+            return target
+        self._log("redirect", seat=target, target=new, source=use.source, card=use.card.to_dict())
+        use.targets = [new if t == target else t for t in use.targets]
+        return new
 
     def use_strike(self, seat: int, target: int, reason: str, context: dict[str, Any] | None = None) -> Gen:
         """Ask `seat` to use a Strike on `target` outside their play phase (doesn't count
@@ -623,10 +689,11 @@ class Game:
         reason: str,
         include_judge: bool = True,
         optional: bool = False,
+        include_equips: bool = True,
     ) -> Gen:
         """`chooser` picks one of `target`'s cards (hand cards face down). Returns card id or None."""
         t = self.players[target]
-        visible = [c.id for c in [*t.equips, *(t.judge if include_judge else [])]]
+        visible = [c.id for c in [*(t.equips if include_equips else []), *(t.judge if include_judge else [])]]
         if not visible and not t.hand:
             return None
         ans = yield from self.ask(
@@ -716,6 +783,8 @@ class Game:
         if picked is None:
             return None
         card, subs = picked
+        if card.name == "strike":
+            p.turn_usage["_strikes"] = p.turn_usage.get("_strikes", 0) + 1
         extra = {"subcards": [self.cards[i].to_dict() for i in subs]} if card.is_virtual else {}
         self._log("respond", seat=seat, card=card.to_dict(), reason=reason, **extra)
         yield from self.move_cards(subs, Zone.PROCESSING, reason="respond")
@@ -749,6 +818,16 @@ class Game:
         if t.alive:
             yield from self.trigger(Event.DAMAGED, dmg)
 
+    def lose_hp(self, seat: int, amount: int, reason: str = "") -> Gen:
+        """Lose HP directly: not damage, so nothing that reacts to damage fires."""
+        p = self.players[seat]
+        if not p.alive or amount <= 0:
+            return
+        p.hp -= amount
+        self._log("lose_hp", seat=seat, amount=amount, hp=p.hp, reason=reason)
+        if p.hp <= 0:
+            yield from self.dying(seat, None)
+
     def recover(self, seat: int, amount: int, source: int | None = None) -> Gen:
         p = self.players[seat]
         healed = min(amount, p.max_hp - p.hp)
@@ -771,7 +850,8 @@ class Game:
                 peach = yield from self.respond(helper, "peach", reason="save", about=seat)
                 if peach is None:
                     break
-                yield from self.recover(seat, 1, source=helper)
+                bonus = sum(s.save_bonus(self, p, helper) for s in self.skills_of(p))
+                yield from self.recover(seat, 1 + bonus, source=helper)
         if p.hp <= 0:
             yield from self.die(seat, cause)
 
@@ -874,7 +954,7 @@ class Game:
             if not p.alive or self.turn_over:
                 return
             if card in p.judge:
-                yield from self.card_def(card).resolve_delayed(self, p, card)  # type: ignore[attr-defined]
+                yield from self.judge_def(card).resolve_delayed(self, p, card)  # type: ignore[attr-defined]
 
     def phase_draw(self, p: Player) -> Gen:
         data = DrawCount(p.seat, DRAW_PER_TURN)

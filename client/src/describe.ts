@@ -104,8 +104,14 @@ export function describe(e: LogEntry, name: (seat: number | null | undefined) =>
       return line(t("log.prevented", { reason: reasonTitle(e.reason) }));
     case "borrowed_sword":
       return line(t("log.borrowed", { wielder: name(e.wielder), victim: name(e.victim) }));
-    case "allure":
-      return line(t("log.allure", { target: name(e.target), victim: name(e.victim) }));
+    case "lose_hp":
+      return line(t("log.loseHp", { name: name(e.seat), n: e.amount, hp: e.hp }), "damage");
+    case "redirect":
+      return line(t("log.redirect", { name: name(e.seat), card: cardText(e.card), target: name(e.target) }), "skill");
+    case "arrange":
+      return line(t("log.arrange", { name: name(e.seat), top: e.top, bottom: e.bottom }));
+    case "named_suit":
+      return line(t("log.namedSuit", { name: name(e.seat), suit: tMaybe(`opt.${e.suit}`) ?? e.suit }));
     case "reshuffle":
       return line(t("log.reshuffle"));
     case "game_over":

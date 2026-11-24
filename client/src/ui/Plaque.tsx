@@ -21,6 +21,8 @@ interface Props {
   onClick?: () => void;
   /** Your attack range (shown on your own plaque). */
   range?: number;
+  /** Your own equipment as pickable cards (your seat only). */
+  equipPick?: EquipPick;
 }
 
 /** True for a moment after HP drops (drives the shake). */
@@ -47,7 +49,14 @@ const SLOT_ICON: Record<(typeof SLOT_ORDER)[number], ReactElement> = {
   minus_horse: <path d="M4 8h8" />,
 };
 
-function EquipSlots({ equips }: { equips: CardData[] }) {
+/** Lets you pick your own equipment as a card (when a skill can spend it). */
+export interface EquipPick {
+  clickable: (cardId: number) => boolean;
+  selected: (cardId: number) => boolean;
+  onClick: (cardId: number) => void;
+}
+
+function EquipSlots({ equips, pick }: { equips: CardData[]; pick?: EquipPick }) {
   const bySlot = new Map(equips.map((c) => [cardInfo(c.name)?.slot ?? "", c]));
   return (
     <div className={s.slots}>
@@ -67,11 +76,33 @@ function EquipSlots({ equips }: { equips: CardData[] }) {
           );
         }
         const range = cardInfo(card.name)?.range;
+        const label = `${slotName}: ${cardTitle(card.name)}`;
+        const inner = (
+          <>
+            {icon}
+            {slot === "weapon" && range ? <span>{range}</span> : null}
+          </>
+        );
+        if (pick?.clickable(card.id)) {
+          const on = pick.selected(card.id);
+          return (
+            <Tip key={slot} content={<CardTip name={card.name} />}>
+              <button
+                type="button"
+                className={`${s.slot} ${s.slotFull} ${on ? s.slotPicked : s.slotPick} equip-pick`}
+                aria-pressed={on}
+                aria-label={label}
+                onClick={() => pick.onClick(card.id)}
+              >
+                {inner}
+              </button>
+            </Tip>
+          );
+        }
         return (
           <Tip key={slot} content={<CardTip name={card.name} />}>
-            <span className={`${s.slot} ${s.slotFull}`} role="img" aria-label={`${slotName}: ${cardTitle(card.name)}`}>
-              {icon}
-              {slot === "weapon" && range ? <span>{range}</span> : null}
+            <span className={`${s.slot} ${s.slotFull}`} role="img" aria-label={label}>
+              {inner}
             </span>
           </Tip>
         );
@@ -166,7 +197,7 @@ export function HeroFace({
  * under the card have a fixed height (PLAQUE_INFO_H), so a seat is always card + rows
  * tall: nothing a player gains makes it grow, and seats never shift.
  */
-export function Plaque({ player: p, name, variant = "seat", isYou, isCurrent, isWaitedOn, offline, clickable, selected, onClick, range }: Props) {
+export function Plaque({ player: p, name, variant = "seat", isYou, isCurrent, isWaitedOn, offline, clickable, selected, onClick, range, equipPick }: Props) {
   useContent();
   const hero = heroInfo(p.hero);
   const hit = useHit(p.hp);
@@ -250,7 +281,8 @@ export function Plaque({ player: p, name, variant = "seat", isYou, isCurrent, is
             </span>
           )}
         </div>
-        <EquipSlots equips={p.equips} />
+        {/* (no buttons inside a seat that is itself a button) */}
+        <EquipSlots equips={p.equips} pick={clickable && onClick ? undefined : equipPick} />
       </div>
     </>
   );

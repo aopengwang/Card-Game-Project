@@ -53,30 +53,28 @@
   "turn": 2,
   "current": 1,
   "phase": "discard",
-  "draw_pile": 74,
+  "draw_pile": 75,
   "discard_pile": 4,
   "processing": [],
   "attack_range": 1,
   "players": [
    {
     "seat": 0,
-    "hero": "wei_lie",
-    "kingdom": "wei",
+    "hero": "liu_bei",
+    "kingdom": "shu",
     "gender": "male",
     "skills": [
      {
-      "id": "spoils_of_war",
-      "tags": [
-       "locked"
-      ],
-      "text": "Locked. Whenever you take damage, put the physical card(s) that dealt it into your hand\n(all of them, if they were converted into one card). If there are none, draw 1 card."
+      "id": "open_hand",
+      "tags": [],
+      "text": "In your play phase, any number of times: give any number of hand cards to another\nplayer. The first time in a turn that you've given away 2 or more cards in all, recover\n1 HP."
      },
      {
-      "id": "shield_wall",
+      "id": "call_to_arms",
       "tags": [
        "lord"
       ],
-      "text": "Lord. Whenever you need to play a Dodge, you may ask the other Wei characters, in seat\norder, to play one for you (their armor may help them do it)."
+      "text": "Lord. When you need to use or play a Strike, you may ask the other Shu characters, in\nseat order, to play one for you (in your play phase: pick the target first)."
      }
     ],
     "spent": [],
@@ -99,21 +97,28 @@
    },
    {
     "seat": 1,
-    "hero": "cao_cao",
-    "kingdom": "wei",
+    "hero": "zhuge_liang",
+    "kingdom": "shu",
     "gender": "male",
     "skills": [
      {
-      "id": "iron_edict",
+      "id": "star_chart",
       "tags": [],
-      "text": "Once per turn: discard a hand card and choose another player. They must give you a\nhand card of their choice, or take 1 damage from you."
+      "text": "At the start of your start phase, look at the top X cards of the deck (X = living\nplayers, at most 5). Put any of them back on top in any order, and the rest on the bottom."
+     },
+     {
+      "id": "nothing_to_hide",
+      "tags": [
+       "locked"
+      ],
+      "text": "Locked. While you have no hand cards, you can't be targeted by Strike or Duel."
      }
     ],
     "spent": [],
     "skill_uses": {},
     "distance": null,
-    "hp": 4,
-    "max_hp": 4,
+    "hp": 3,
+    "max_hp": 3,
     "alive": true,
     "hand_count": 6,
     "equips": [
@@ -135,55 +140,42 @@
    },
    {
     "seat": 2,
-    "hero": "zhuge_liang",
+    "hero": "zhao_yun",
     "kingdom": "shu",
     "gender": "male",
     "skills": [
      {
-      "id": "east_wind",
-      "tags": [
-       "limited"
-      ],
-      "text": "Limited (once per game). Deal 1 fire damage to each of up to 2 other players."
-     },
-     {
-      "id": "strategist",
-      "tags": [
-       "locked"
-      ],
-      "text": "Locked. Whenever another player's trick card targets you, draw 1 card."
+      "id": "unwavering_spear",
+      "tags": [],
+      "text": "You may use or play a Strike as a Dodge, and a Dodge as a Strike."
      }
     ],
     "spent": [],
     "skill_uses": {},
     "distance": 1,
-    "hp": 3,
-    "max_hp": 3,
+    "hp": 4,
+    "max_hp": 4,
     "alive": true,
-    "hand_count": 6,
+    "hand_count": 5,
     "equips": [],
     "judge": [],
     "role": null
    },
    {
     "seat": 3,
-    "hero": "lu_xun",
+    "hero": "da_qiao",
     "kingdom": "wu",
-    "gender": "male",
+    "gender": "female",
     "skills": [
      {
-      "id": "humble",
-      "tags": [
-       "locked"
-      ],
-      "text": "Locked. You cannot be the target of Duel or Borrowed Sword."
+      "id": "captivate",
+      "tags": [],
+      "text": "You may use any Diamond card (hand or equipment) as an Indulgence."
      },
      {
-      "id": "endurance",
-      "tags": [
-       "locked"
-      ],
-      "text": "Locked. Whenever you take damage, draw 1 card for each point of damage."
+      "id": "deflect",
+      "tags": [],
+      "text": "When you become the target of a Strike, you may discard a card (hand or equipment) to\npass the Strike to another player in your attack range (not the one who used it)."
      }
     ],
     "spent": [],
@@ -199,23 +191,26 @@
    },
    {
     "seat": 4,
-    "hero": "sun_quan",
-    "kingdom": "wu",
-    "gender": "male",
+    "hero": "zhen_ji",
+    "kingdom": "wei",
+    "gender": "female",
     "skills": [
      {
-      "id": "steady_hand",
-      "tags": [
-       "locked"
-      ],
-      "text": "Locked. At the start of your end phase, if you took no damage this turn, draw 1 card."
+      "id": "graceful_evasion",
+      "tags": [],
+      "text": "You may play any black hand card as a Dodge."
+     },
+     {
+      "id": "rippling_steps",
+      "tags": [],
+      "text": "At the start of your start phase, you may judge again and again: each black judgment\ncard goes into your hand; the first red one ends it (and you may stop at any time)."
      }
     ],
     "spent": [],
     "skill_uses": {},
     "distance": 1,
-    "hp": 4,
-    "max_hp": 4,
+    "hp": 3,
+    "max_hp": 3,
     "alive": true,
     "hand_count": 5,
     "equips": [],
@@ -249,14 +244,14 @@
     "rank": 12
    },
    {
-    "id": 40,
-    "name": "dodge",
+    "id": 83,
+    "name": "nullify",
     "suit": "diamond",
-    "rank": 8
+    "rank": 12
    },
    {
-    "id": 26,
-    "name": "strike",
+    "id": 40,
+    "name": "dodge",
     "suit": "diamond",
     "rank": 8
    }
@@ -267,16 +262,16 @@
   {
    "type": "hero_chosen",
    "seat": 0,
-   "hero": "wei_lie"
+   "hero": "liu_bei"
   },
   {
    "type": "heroes_revealed",
    "heroes": [
-    "wei_lie",
-    "cao_cao",
+    "liu_bei",
     "zhuge_liang",
-    "lu_xun",
-    "sun_quan"
+    "zhao_yun",
+    "da_qiao",
+    "zhen_ji"
    ]
   },
   {
@@ -285,11 +280,11 @@
    "lord": 0,
    "lord_hp": 5,
    "heroes": [
-    "wei_lie",
-    "cao_cao",
+    "liu_bei",
     "zhuge_liang",
-    "lu_xun",
-    "sun_quan"
+    "zhao_yun",
+    "da_qiao",
+    "zhen_ji"
    ]
   },
   {
@@ -494,17 +489,6 @@
    }
   },
   {
-   "type": "skill",
-   "seat": 2,
-   "skill": "strategist"
-  },
-  {
-   "type": "draw",
-   "seat": 2,
-   "count": 1,
-   "reason": "strategist"
-  },
-  {
    "type": "pick",
    "seat": 2,
    "card": {
@@ -568,6 +552,18 @@
    "phase": "start"
   },
   {
+   "type": "skill",
+   "seat": 1,
+   "skill": "star_chart"
+  },
+  {
+   "type": "arrange",
+   "seat": 1,
+   "top": 5,
+   "bottom": 0,
+   "reason": "star_chart"
+  },
+  {
    "type": "phase",
    "seat": 1,
    "phase": "judge"
@@ -584,10 +580,10 @@
    "reason": "draw",
    "cards": [
     {
-     "id": 106,
-     "name": "minus_horse",
-     "suit": "spade",
-     "rank": 13
+     "id": 83,
+     "name": "nullify",
+     "suit": "diamond",
+     "rank": 12
     },
     {
      "id": 55,
@@ -628,6 +624,39 @@
    "type": "use",
    "seat": 1,
    "card": {
+    "id": 55,
+    "name": "ex_nihilo",
+    "suit": "heart",
+    "rank": 9
+   },
+   "targets": [
+    1
+   ]
+  },
+  {
+   "type": "draw",
+   "seat": 1,
+   "count": 2,
+   "reason": "ex_nihilo",
+   "cards": [
+    {
+     "id": 106,
+     "name": "minus_horse",
+     "suit": "spade",
+     "rank": 13
+    },
+    {
+     "id": 40,
+     "name": "dodge",
+     "suit": "diamond",
+     "rank": 8
+    }
+   ]
+  },
+  {
+   "type": "use",
+   "seat": 1,
+   "card": {
     "id": 106,
     "name": "minus_horse",
     "suit": "spade",
@@ -647,39 +676,6 @@
    "slot": "minus_horse"
   },
   {
-   "type": "use",
-   "seat": 1,
-   "card": {
-    "id": 55,
-    "name": "ex_nihilo",
-    "suit": "heart",
-    "rank": 9
-   },
-   "targets": [
-    1
-   ]
-  },
-  {
-   "type": "draw",
-   "seat": 1,
-   "count": 2,
-   "reason": "ex_nihilo",
-   "cards": [
-    {
-     "id": 40,
-     "name": "dodge",
-     "suit": "diamond",
-     "rank": 8
-    },
-    {
-     "id": 26,
-     "name": "strike",
-     "suit": "diamond",
-     "rank": 8
-    }
-   ]
-  },
-  {
    "type": "phase",
    "seat": 1,
    "phase": "discard"
@@ -692,14 +688,14 @@
    "kind": "discard",
    "seat": 1,
    "error": null,
-   "count": 2,
+   "count": 3,
    "options": [
     33,
     65,
     62,
     51,
-    40,
-    26
+    83,
+    40
    ],
    "reason": "discard_phase"
   },

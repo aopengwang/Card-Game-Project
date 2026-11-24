@@ -140,9 +140,16 @@ Volume and mute are in Settings, and there's a speaker button in the table's top
   virtual card (negative id) and moves the physical `subcards`.
 - Heroes (`content/heroes.py`) are a name, kingdom, HP, gender and a tuple of skills.
   Skill kinds: `Skill` (triggered), `ViewAs` (conversion), `ActiveSkill` (play phase),
-  all sharing `SkillBase` modifiers (range, distance, hand limit, targeting) and flags
-  (`locked`, `lord`, `limited`, `awakening`, `per_turn`). A skill's docstring is its
-  rules text shown to players. Heroes use historical figures with our own skill designs.
+  all sharing `SkillBase` modifiers (range, distance, hand limit, targeting, double
+  responses, trick reach, Peach-save bonus) and flags (`locked`, `lord`, `limited`,
+  `awakening`, `per_turn`). A skill's docstring is its rules text shown to players.
+- The roster is the **25 heroes of the standard set** (Wei 7, Shu 7, Wu 8, Qun 3), each
+  skill playing like its classic counterpart under our own name and rules text (e.g. Zhuge
+  Liang's *Star Chart* rearranges the top of the deck), plus two heroes of our own (Wei
+  Lie, Yu Ji). Engine support they rely on: arranging the deck (`ArrangeRequest`),
+  optional player picks, redirecting a Strike (`Event.BECOME_TARGET`), losing HP
+  (`lose_hp`), a card placed in a judgment area *as* a delayed trick (`judge_as`), and
+  knowing which zone a moved card came from (`CardsMoved.left`).
 - `new_game(n, seed, draft=True)` for real games; tests pass `heroes=[...]` per seat.
 - `engine.view.view_for(game, seat)` / `log_for(...)` are the only things a client
   should ever see (hidden hands/roles are filtered out).
@@ -158,14 +165,15 @@ choice is remembered.
   is in `server/content/i18n.py`. `tests/test_i18n.py` fails if any card, hero or skill
   lacks a Chinese entry. The client fetches `/api/content?lang=en|zh`.
 - Server error messages are English; the client translates the known ones (`serverText`).
-- **Adding content or UI? Add both languages.** Skill names in Chinese are our own designs.
+- **Adding content or UI? Add both languages.** Skill names and rules text (English and
+  Chinese) are our own wording, never the official skill names.
 - The `/debug` test client and `sim.py` are English-only developer tools.
 
 ## Bots
 Two levels; the host picks one per bot in the lobby (humans who disconnect are covered by "hard").
 - **easy** (`bots/simple.py`): legal moves, only knows who the Lord is.
 - **hard** (`bots/smart.py`): infers allegiances from public actions (attacks, saves,
-  Nullifies, Shield Wall), plays its role (Rebels focus the Lord; the Spy keeps the sides
+  Nullifies, playing a card for the Lord, passing a Strike on), plays its role (Rebels focus the Lord; the Spy keeps the sides
   balanced, then turns on everyone, Lord last), values cards, picks targets by HP/armor,
   only uses area attacks when they favour its side. It only sees what a human in its seat
   could; `tests/test_smart_bot.py` re-deals the hidden cards mid-game and checks its
@@ -178,8 +186,8 @@ Compare levels: `python -m bots.arena --games 300 --players 5`. Watch one:
 1. [x] Engine core: zones, deck, phases, Strike/Dodge/Peach, roles, dying/death, win checks
 2. [x] Tricks (incl. Nullify chains), judgments, delayed tricks (Borrowed Sword waits for weapons)
 3. [x] Equipment + distance modifiers, conversions ("use X as a Strike"), full 108-card deck
-4. [x] Skill system + first original heroes (13 historical figures with original skills, hero draft)
+4. [x] Skill system + heroes: the standard 25 (classic mechanics, our own names) + 2 extras, hero draft
 5. [x] FastAPI WebSocket server: rooms, invite codes, timeouts, reconnect, AFK bot takeover
    (+ a plain-HTML test client at `/debug`)
 6. [x] React client: table layout, hero draft, targeting, timers, animations, art slots, mobile
-7. [ ] Better bots (hard level done), expansions, replays
+7. [ ] Better bots (hard level done), Kingdom Wars mode (60 heroes, dual heroes), expansions, replays

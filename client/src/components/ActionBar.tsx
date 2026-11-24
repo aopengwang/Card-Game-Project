@@ -15,22 +15,26 @@ type NameFn = (seat: number | null | undefined) => string;
 
 export function respondText(r: RespondReq, name: NameFn, you: number): string {
   const by = name(r.about);
-  const ctx = r.context as { card?: Card; target?: number; cancelled?: boolean; victim?: number; source?: number };
+  const ctx = r.context as {
+    card?: Card; target?: number; cancelled?: boolean; victim?: number; source?: number; need?: number; got?: number;
+  };
+  const nth = (ctx.got ?? 0) + 1; // against someone who demands two: which one this is
   switch (`${r.card_name}:${r.reason}`) {
     case "dodge:strike":
-      return t("resp.dodgeStrike", { name: by });
+      return ctx.need === 2 ? t("resp.dodgeStrikeDouble", { name: by, n: nth }) : t("resp.dodgeStrike", { name: by });
     case "dodge:arrows":
       return t("resp.dodgeArrows", { name: by });
     case "dodge:shield_wall":
-      return t("resp.dodgeShieldWall", { name: by });
+    case "dodge:guard_the_throne":
+      return t("resp.dodgeForLord", { name: by, skill: reasonTitle(r.reason) });
+    case "strike:call_to_arms":
+      return t("resp.strikeForLord", { name: by, skill: reasonTitle(r.reason) });
     case "strike:duel":
-      return t("resp.strikeDuel", { name: by });
+      return ctx.need === 2 ? t("resp.strikeDuelDouble", { name: by, n: nth }) : t("resp.strikeDuel", { name: by });
     case "strike:barbarians":
       return t("resp.strikeBarbarians", { name: by });
     case "strike:borrowed_sword":
       return t("resp.strikeBorrowed", { name: by, source: name(ctx.source) });
-    case "strike:allure":
-      return t("resp.strikeAllure", { name: by, source: name(ctx.source) });
     case "strike:dragon_glaive":
       return t("resp.strikeGlaive", { name: by });
     case "peach:save":
@@ -60,18 +64,37 @@ function title(r: GameRequest, name: NameFn, you: number): string {
         ? t("act.chooseTheirCard", { reason: reasonTitle(r.reason), name: name(r.about) })
         : t("act.chooseCard", { reason: reasonTitle(r.reason) });
     case "confirm":
+      if ((r.context as { again?: boolean }).again) return t("act.again", { reason: reasonTitle(r.reason) });
       return tMaybe(`confirm.${r.reason}`) ?? t("act.useConfirm", { reason: reasonTitle(r.reason) });
     case "choose_player":
-      return r.about != null
-        ? t("act.choosePlayerFor", { reason: reasonTitle(r.reason), name: name(r.about) })
-        : t("act.choosePlayer", { reason: reasonTitle(r.reason) });
+      return (
+        tMaybe(`choose.${r.reason}`, { name: name(r.about) }) ??
+        (r.about != null
+          ? t("act.choosePlayerFor", { reason: reasonTitle(r.reason), name: name(r.about) })
+          : t("act.choosePlayer", { reason: reasonTitle(r.reason) }))
+      );
     case "choose_option":
       return r.about != null
         ? t("act.chooseOptionFrom", { reason: reasonTitle(r.reason), name: name(r.about) })
         : t("act.chooseOption", { reason: reasonTitle(r.reason) });
     case "choose_hero":
       return t("act.chooseHero");
+    case "arrange":
+      return t("arrange.title", { reason: reasonTitle(r.reason) });
   }
+}
+
+/** The judgment a skill is about to change (Omen re-judges, Bend Fate replaces the card). */
+function judgmentHint(r: GameRequest, name: NameFn): string | null {
+  if ((r.kind !== "confirm" && r.kind !== "choose_card") || !r.context || !("judge_reason" in r.context)) return null;
+  const ctx = r.context as { judge_reason: string; card: Card; would_hit: boolean; seat?: number };
+  const params = {
+    reason: reasonTitle(ctx.judge_reason),
+    name: name(ctx.seat ?? r.about),
+    card: cardText(ctx.card),
+    result: t(ctx.would_hit ? "act.hit" : "act.miss"),
+  };
+  return t(r.kind === "confirm" ? "act.omen" : "act.bendFate", params);
 }
 
 /** Seal character for a skill or a converting card (Serpent Spear is a card, Burning Fleet a skill). */
@@ -111,8 +134,10 @@ export function ActionBar({ request, view, sel, setSel, name, waitingText }: Pro
     );
   }
   const r = request.req;
+  const shown = r.kind === "choose_card" ? r.shown ?? [] : [];
   const findCard = (id: number): Card | undefined =>
-    [...view.hand, ...view.processing, ...view.players.flatMap((p) => [...p.equips, ...p.judge])].find((c) => c.id === id);
+    [...shown, ...view.hand, ...view.processing, ...view.players.flatMap((p) => [...p.equips, ...p.judge])].find((c) => c.id === id);
+  const judgment = judgmentHint(r, name);
   const submit = () => answer(buildAnswer(r, sel));
   const ready = complete(r, sel);
   const skillOn = (skill: string) => sel.mode?.type === "skill" && sel.mode.skill === skill;
@@ -127,16 +152,7 @@ export function ActionBar({ request, view, sel, setSel, name, waitingText }: Pro
       <div className={s.text}>
         <div className={`${s.title} action-title`}>{title(r, name, view.you)}</div>
         {r.error && <div className={s.error}>{serverText(r.error)}</div>}
-        {r.kind === "confirm" && r.reason === "omen" && (
-          <div className={s.hint}>
-            {t("act.omen", {
-              reason: reasonTitle(String((r.context as { judge_reason?: string }).judge_reason ?? "")),
-              name: name(r.about),
-              card: cardText((r.context as { card?: Card }).card),
-              result: t((r.context as { would_hit?: boolean }).would_hit ? "act.hit" : "act.miss"),
-            })}
-          </div>
-        )}
+        {judgment && <div className={s.hint}>{judgment}</div>}
         {hintText && <div className={s.hint}>{hintText}</div>}
       </div>
 
@@ -200,6 +216,11 @@ export function ActionBar({ request, view, sel, setSel, name, waitingText }: Pro
         {(r.kind === "discard" || r.kind === "choose_player") && (
           <Button variant="primary" disabled={!ready} onClick={submit} shortcut={KEY.main}>
             {t("act.confirm")}
+          </Button>
+        )}
+        {r.kind === "choose_player" && r.optional && (
+          <Button onClick={() => answer(null)} shortcut={KEY.back}>
+            {tMaybe(`skip.${r.reason}`) ?? t("act.none")}
           </Button>
         )}
 

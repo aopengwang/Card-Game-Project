@@ -142,6 +142,24 @@ test("hero cards: 5:7 art, skills only on hover", async ({ page }) => {
   expect(await seat.locator(".seat").textContent()).not.toContain(firstSkill);
 });
 
+test("arranging the top of the deck: move cards to the bottom and reorder", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/?gallery=arrange_deck&lang=en");
+  const top = page.locator(".arrange-top .arrange-card");
+  const bottom = page.locator(".arrange-bottom .arrange-card");
+  const ids = async (loc: typeof top) => loc.evaluateAll((els) => els.map((el) => el.getAttribute("data-card")));
+  await expect(top).not.toHaveCount(0);
+  const before = await ids(top);
+  await top.first().getByRole("button", { name: "To bottom" }).click();
+  expect(await ids(bottom)).toEqual([before[0]]);
+  expect(await ids(top)).toEqual(before.slice(1));
+  await top.first().getByRole("button", { name: "Move later" }).click(); // swap the first two
+  expect(await ids(top)).toEqual([before[2], before[1], ...before.slice(3)]);
+  await bottom.first().getByRole("button", { name: "To top" }).click();
+  await expect(bottom).toHaveCount(0);
+  expect((await ids(top)).at(-1)).toBe(before[0]); // back on top, at the end
+});
+
 test("gallery index lists every fixture in both languages", async ({ page }) => {
   await page.goto("/?gallery");
   for (const id of FIXTURES) {

@@ -24,9 +24,13 @@ test("effects play as the game happens, and keys drive your turn", async ({ brow
   // Our play phase: the banner announced it, and the keys work.
   const endPhase = page.getByRole("button", { name: EN.endPhase, exact: true });
   await expect(async () => {
+    if (await page.locator(".game-over").isVisible().catch(() => false)) {
+      // The game was over before our turn came round (strong heroes can do that): rematch.
+      await page.getByRole("button", { name: "Rematch" }).click();
+    }
     await step(page, EN, { holdPlay: true }); // answer anything but our play phase
     await expect(endPhase).toBeVisible({ timeout: 200 });
-  }).toPass({ timeout: 90_000, intervals: [100] });
+  }).toPass({ timeout: 120_000, intervals: [100] });
   await expect(endPhase.locator("kbd")).toHaveText("E");
 
   const cards = page.locator(".hand .card");

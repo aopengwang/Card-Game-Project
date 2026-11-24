@@ -87,7 +87,11 @@ def parse_answer(req: Request, raw: Any) -> Any:
             raise ProtocolError("expected true or false")
         return raw
     if kind == "choose_player":
-        return _int(raw)
+        return None if raw is None else _int(raw)
+    if kind == "arrange":
+        if not isinstance(raw, dict):
+            raise ProtocolError("arrange answer must be {top: [...], bottom: [...]}")
+        return (_ints(raw.get("top", [])), _ints(raw.get("bottom", [])))
     if kind in ("choose_option", "choose_hero"):
         return _str(raw)
     raise ProtocolError(f"unknown request kind {kind!r}")

@@ -19,6 +19,7 @@ from .model import (
 )
 from .requests import (
     HAND,
+    ArrangeRequest,
     ChooseCardRequest,
     ChooseHeroRequest,
     ChooseOptionRequest,
@@ -37,7 +38,7 @@ from .requests import (
 from .ruleset import Ruleset
 
 __all__ = [
-    "HAND", "ActiveSkill", "Card", "CardDef", "CardType", "CardUse", "ChooseCardRequest",
+    "HAND", "ActiveSkill", "ArrangeRequest", "Card", "CardDef", "CardType", "CardUse", "ChooseCardRequest",
     "ChooseHeroRequest", "ChooseOptionRequest", "ChoosePlayerRequest", "ConfirmRequest", "Convert",
     "ConvertOption", "Damage", "DiscardRequest", "EquipDef", "EquipSlot", "Event", "Game", "GameOver",
     "GameResult", "Hero", "Judgment", "Kingdom", "Phase", "Play", "PlayOption", "PlayRequest", "Player",
