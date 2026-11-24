@@ -1,0 +1,169 @@
+{
+ "id": "hero_pick",
+ "title": "Lord picks a hero",
+ "seed": 0,
+ "players": 5,
+ "room": {
+  "type": "room",
+  "code": "DEMOS",
+  "status": "playing",
+  "you": 0,
+  "host": 0,
+  "members": [
+   {
+    "name": "Mei",
+    "bot": false,
+    "level": null,
+    "connected": true
+   },
+   {
+    "name": "Bot 1",
+    "bot": true,
+    "level": "hard",
+    "connected": true
+   },
+   {
+    "name": "Ana",
+    "bot": false,
+    "level": null,
+    "connected": true
+   },
+   {
+    "name": "Bot 2",
+    "bot": true,
+    "level": "hard",
+    "connected": true
+   },
+   {
+    "name": "Lin",
+    "bot": false,
+    "level": null,
+    "connected": true
+   }
+  ],
+  "min_players": 4,
+  "max_players": 8,
+  "bot_levels": [
+   "easy",
+   "hard"
+  ]
+ },
+ "view": {
+  "you": 0,
+  "turn": 0,
+  "current": 0,
+  "phase": null,
+  "draw_pile": 108,
+  "discard_pile": 0,
+  "processing": [],
+  "attack_range": 1,
+  "players": [
+   {
+    "seat": 0,
+    "hero": "blank",
+    "kingdom": "",
+    "gender": "male",
+    "skills": [],
+    "spent": [],
+    "skill_uses": {},
+    "distance": null,
+    "hp": 4,
+    "max_hp": 4,
+    "alive": true,
+    "hand_count": 0,
+    "equips": [],
+    "judge": [],
+    "role": "lord"
+   },
+   {
+    "seat": 1,
+    "hero": "blank",
+    "kingdom": "",
+    "gender": "male",
+    "skills": [],
+    "spent": [],
+    "skill_uses": {},
+    "distance": 1,
+    "hp": 4,
+    "max_hp": 4,
+    "alive": true,
+    "hand_count": 0,
+    "equips": [],
+    "judge": [],
+    "role": null
+   },
+   {
+    "seat": 2,
+    "hero": "blank",
+    "kingdom": "",
+    "gender": "male",
+    "skills": [],
+    "spent": [],
+    "skill_uses": {},
+    "distance": 2,
+    "hp": 4,
+    "max_hp": 4,
+    "alive": true,
+    "hand_count": 0,
+    "equips": [],
+    "judge": [],
+    "role": null
+   },
+   {
+    "seat": 3,
+    "hero": "blank",
+    "kingdom": "",
+    "gender": "male",
+    "skills": [],
+    "spent": [],
+    "skill_uses": {},
+    "distance": 2,
+    "hp": 4,
+    "max_hp": 4,
+    "alive": true,
+    "hand_count": 0,
+    "equips": [],
+    "judge": [],
+    "role": null
+   },
+   {
+    "seat": 4,
+    "hero": "blank",
+    "kingdom": "",
+    "gender": "male",
+    "skills": [],
+    "spent": [],
+    "skill_uses": {},
+    "distance": 1,
+    "hp": 4,
+    "max_hp": 4,
+    "alive": true,
+    "hand_count": 0,
+    "equips": [],
+    "judge": [],
+    "role": null
+   }
+  ],
+  "hand": [],
+  "result": null
+ },
+ "log": [],
+ "waiting": null,
+ "request": {
+  "id": 1,
+  "req": {
+   "kind": "choose_hero",
+   "seat": 0,
+   "error": null,
+   "options": [
+    "cao_cao",
+    "liu_bei",
+    "sun_quan",
+    "wei_lie",
+    "lu_bu",
+    "zhou_yu"
+   ]
+  },
+  "timeout": 30
+ }
+}

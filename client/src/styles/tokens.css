@@ -1,0 +1,124 @@
+/*
+ * Ink & Lacquer (墨与漆) design tokens. Single source of truth for color, type,
+ * spacing, shape, depth and motion. Components use these vars, never raw values.
+ * Mockup: https://claude.ai/artifact/9bMZ97pefhzbusSN9pQRAj
+ * Contrast of the text/background pairs is checked in tokens.test.ts.
+ */
+:root {
+  /* ---- surfaces (the lacquered table) */
+  --ik-lacquer: #130908;
+  --ik-ember: #3b1e17;
+  --ik-panel: #24130f;
+  --ik-panel-raised: #2e1813;
+  --ik-scrim: rgba(12, 6, 5, 0.6);
+
+  /* ---- rice paper (cards, portraits) */
+  --ik-paper: #efe6d2;
+  --ik-paper-shade: #e4d6b8;
+  --ik-paper-edge: #c9b48a;
+  --ik-ink: #1c1714;
+  --ik-ink-soft: #3a3029;
+  --ik-ink-muted: #6b5a43;
+
+  /* ---- text on lacquer */
+  --ik-text: #efe6d2;
+  --ik-text-strong: #f6ecd8;
+  --ik-text-muted: #c4b293;
+  --ik-text-faint: #a8977a;
+
+  /* ---- accents */
+  --ik-vermilion: #b8352a;
+  --ik-vermilion-bright: #e3624b;
+  --ik-vermilion-deep: #8f2a1f;
+  --ik-on-vermilion: #fbf3e2;
+  --ik-gold: #d9b36c;
+  --ik-gold-muted: #c9a35a;
+  --ik-gold-line: rgba(201, 163, 90, 0.28);
+  --ik-gold-line-strong: rgba(201, 163, 90, 0.55);
+  --ik-jade: #46a383;
+  --ik-jade-light: #c4f0da;
+  --ik-jade-deep: #245c48;
+  --ik-bead-empty: #806457;
+  --ik-danger-text: #f4b4a6;
+
+  /* ---- kingdoms (mineral pigments) */
+  --ik-wei: #5b7bbd;
+  --ik-shu: #c5503f;
+  --ik-wu: #4f9a80;
+  --ik-qun: #b88d45;
+
+  /* ---- card type bands */
+  --ik-band-basic: #b08a3e;
+  --ik-band-trick: #3f5a8c;
+  --ik-band-equipment: #8a5a2b;
+
+  /* ---- role seals */
+  --ik-role-lord: #b8352a;
+  --ik-role-loyalist: #8a5a2b;
+  --ik-role-rebel: #2e2a26;
+  --ik-role-spy: #3f4a7a;
+
+  /* ---- type: English pairing (Chinese overrides below) */
+  --ik-font-display: "Cormorant Garamond", "Noto Serif SC", Georgia, serif;
+  --ik-font-body: Inter, "Noto Sans SC", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ik-font-brush: "Ma Shan Zheng", "Noto Serif SC", serif; /* titles and banners only */
+  --ik-text-xs: 11px;
+  --ik-text-sm: 12px;
+  --ik-text-md: 14px;
+  --ik-text-lg: 17px;
+  --ik-text-xl: 22px;
+  --ik-text-2xl: 30px;
+  --ik-text-3xl: 44px;
+
+  /* ---- space (4px grid) */
+  --ik-space-1: 4px;
+  --ik-space-2: 8px;
+  --ik-space-3: 12px;
+  --ik-space-4: 16px;
+  --ik-space-5: 24px;
+  --ik-space-6: 32px;
+  --ik-space-7: 48px;
+
+  /* ---- shape */
+  --ik-radius-sm: 4px;
+  --ik-radius-md: 8px;
+  --ik-radius-lg: 12px;
+  --ik-radius-xl: 18px;
+  --ik-radius-pill: 999px;
+
+  /* ---- depth */
+  --ik-shadow-card: 0 8px 18px rgba(0, 0, 0, 0.5);
+  --ik-shadow-raised: 0 10px 24px rgba(0, 0, 0, 0.5);
+  --ik-shadow-modal: 0 18px 40px rgba(0, 0, 0, 0.55);
+  --ik-glow-turn: 0 0 0 4px rgba(217, 179, 108, 0.18), 0 0 28px rgba(217, 179, 108, 0.38);
+  --ik-glow-target: 0 0 0 4px rgba(217, 85, 63, 0.25), 0 0 28px rgba(217, 85, 63, 0.45);
+
+  /* ---- motion (mirrored in src/styles/motion.ts for JS animations) */
+  --ik-dur-fast: 150ms;
+  --ik-dur-card: 320ms;
+  --ik-dur-line: 250ms;
+  --ik-dur-hit: 400ms;
+  --ik-dur-stamp: 250ms;
+  --ik-dur-banner: 600ms;
+  --ik-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ik-ease-stamp: cubic-bezier(0.3, 1.6, 0.5, 1);
+
+  /* ---- table backdrop */
+  --ik-table-bg: radial-gradient(ellipse 70% 60% at 50% 44%, #3b1e17 0%, #26130f 50%, #130908 100%);
+}
+
+/* Chinese pages: Noto Serif SC headings, Noto Sans SC body (Latin falls back sensibly). */
+:root:lang(zh-CN) {
+  --ik-font-display: "Noto Serif SC", "Cormorant Garamond", serif;
+  --ik-font-body: "Noto Sans SC", Inter, system-ui, sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ik-dur-card: 1ms;
+    --ik-dur-line: 1ms;
+    --ik-dur-hit: 1ms;
+    --ik-dur-stamp: 1ms;
+    --ik-dur-banner: 1ms;
+  }
+}

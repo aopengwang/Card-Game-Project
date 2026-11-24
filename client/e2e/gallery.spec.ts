@@ -1,0 +1,74 @@
+// Every captured game moment, rendered by the real UI: layout checks + screenshot baselines.
+// Update baselines after an intended visual change: npm run e2e -- --update-snapshots
+import { readdirSync } from "node:fs";
+import { expect, test } from "@playwright/test";
+
+// A fixture renders in a second or two: fail fast rather than wait out the 3-minute
+// default meant for the full-game tests.
+test.describe.configure({ timeout: 60_000 });
+
+const FIXTURES = readdirSync(new URL("../src/dev/fixtures", import.meta.url))
+  .filter((f) => f.endsWith(".json"))
+  .map((f) => f.replace(/\.json$/, ""))
+  .sort();
+
+const VIEWS = [
+  { name: "desktop-en", lang: "en", size: { width: 1440, height: 900 } },
+  { name: "phone-zh", lang: "zh", size: { width: 390, height: 844 } },
+] as const;
+
+/** Clickable things whose centre is covered by something else (the "click swallowed" bug). */
+function blockedClickables(): string[] {
+  const overlay = document.querySelector(".overlay");
+  const scope: ParentNode = overlay ?? document;
+  const selector = ".card.clickable, .seat.clickable, .action-bar button, .hero-card, .lang-toggle";
+  const blocked: string[] = [];
+  for (const el of Array.from(scope.querySelectorAll<HTMLElement>(selector))) {
+    el.scrollIntoView({ block: "center", inline: "center" });
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) continue;
+    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    if (!hit || !(hit === el || el.contains(hit))) {
+      blocked.push(`${el.className.trim()} "${(el.textContent ?? "").trim().slice(0, 30)}" covered by ${hit?.className ?? "nothing"}`);
+    }
+  }
+  window.scrollTo(0, 0);
+  return blocked;
+}
+
+test("fixtures exist", () => {
+  expect(FIXTURES.length).toBeGreaterThanOrEqual(10);
+});
+
+for (const id of FIXTURES) {
+  for (const view of VIEWS) {
+    test(`${id} · ${view.name}`, async ({ page }) => {
+      const errors: string[] = [];
+      page.on("pageerror", (e) => errors.push(String(e)));
+      await page.setViewportSize(view.size);
+      await page.goto(`/?gallery=${id}&lang=${view.lang}`);
+      await page.locator(".table-screen").waitFor();
+      await page.waitForLoadState("networkidle");
+      await page.evaluate(() => document.fonts.ready);
+
+      expect(await page.evaluate(blockedClickables)).toEqual([]);
+      if (view.name.startsWith("phone")) {
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+        expect(overflow, "page scrolls sideways on a phone").toBeLessThanOrEqual(0);
+      }
+      await expect(page).toHaveScreenshot(`${id}-${view.name}.png`, {
+        fullPage: true,
+        mask: [page.locator(".timer")], // the countdown changes every frame
+      });
+      expect(errors).toEqual([]);
+    });
+  }
+}
+
+test("gallery index lists every fixture in both languages", async ({ page }) => {
+  await page.goto("/?gallery");
+  for (const id of FIXTURES) {
+    await expect(page.locator(`a[href="?gallery=${id}&lang=en"]`)).toHaveCount(1);
+    await expect(page.locator(`a[href="?gallery=${id}&lang=zh"]`)).toHaveCount(1);
+  }
+});

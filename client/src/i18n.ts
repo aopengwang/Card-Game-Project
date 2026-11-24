@@ -458,6 +458,11 @@ const STORAGE_KEY = "cardgame_lang";
 const listeners = new Set<() => void>();
 
 function initialLang(): Lang {
+  // ?lang=zh / ?lang=en forces a language for this page (handy for links and tests).
+  if (typeof location !== "undefined") {
+    const forced = new URLSearchParams(location.search).get("lang");
+    if (forced === "en" || forced === "zh") return forced;
+  }
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved === "en" || saved === "zh") return saved;

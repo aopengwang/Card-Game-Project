@@ -29,6 +29,21 @@ npm run dev       # live-reload dev server on :5173 (proxies to the Python serve
 ```
 Without a build, "/" falls back to the plain test client, which is always at `/debug`.
 
+### Design system, gallery, browser tests
+- **Ink & Lacquer tokens**: `client/src/styles/tokens.css` (colors, fonts per language,
+  spacing, shadows, motion). Components use `var(--ik-…)`, never raw values.
+  `tokens.test.ts` checks text contrast (WCAG AA) and that JS motion timings match.
+- **Gallery**: open `/?gallery` (add `&lang=zh` for Chinese). It shows the palette and
+  type, plus real game moments rendered by the live UI: hero pick, Nullify chain,
+  dying, 8 players, game over, and more. Regenerate the moments from seeded hard-bot
+  games with `cd server; python -m tools.dump_fixtures`.
+- **Browser tests** (Playwright, uses your installed Chrome): `cd client; npm run e2e`.
+  For every gallery moment (desktop English and phone Chinese) it checks that nothing
+  covers a clickable card/seat/button, that phones never scroll sideways, and compares a
+  screenshot. It also plays two full games through the UI (English, and Chinese with a
+  live switch to English). After an intended visual change, refresh the baselines with
+  `npm run e2e -- --update-snapshots` and look at the new images before committing.
+
 ## Dev
 ```powershell
 cd server

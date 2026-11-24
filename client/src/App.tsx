@@ -1,23 +1,36 @@
-import { useEffect } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { loadContent } from "./content";
 import { getLang, t, useLang } from "./i18n";
 import { resume, useNet } from "./net";
 import { Home, Lobby } from "./components/Lobby";
 import { Table, Toasts } from "./components/Table";
 
-const roomFromUrl = new URLSearchParams(location.search).get("room");
+const params = new URLSearchParams(location.search);
+const roomFromUrl = params.get("room");
+const galleryFixture = params.get("gallery"); // developer gallery: /?gallery[=fixture]
+
+// Loaded on demand so fixtures never ship in the game's main bundle.
+const Gallery = lazy(() => import("./dev/Gallery"));
 
 export function App() {
   const net = useNet();
   const lang = useLang();
   useEffect(() => {
     loadContent();
-    resume(roomFromUrl);
+    if (galleryFixture === null) resume(roomFromUrl);
   }, []);
   useEffect(() => {
     document.documentElement.lang = getLang() === "zh" ? "zh-CN" : "en";
     document.title = t("app.title");
   }, [lang]);
+
+  if (galleryFixture !== null) {
+    return (
+      <Suspense fallback={null}>
+        <Gallery fixture={galleryFixture} />
+      </Suspense>
+    );
+  }
 
   let screen: React.ReactNode;
   if (!net.session) {
