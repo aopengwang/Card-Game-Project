@@ -104,8 +104,11 @@ test("sounds play as the game happens, and the speaker button mutes them", async
   const heard = () => page.evaluate(() => [...((window as unknown as { __sgsSounds?: string[] }).__sgsSounds ?? [])]);
   await startBotGame(page, "Alice", 4); // the clicks also unlock audio (browser rule)
 
-  // Muted: a stretch of the game makes no sound.
+  // Muted: a stretch of the game makes no sound. (Pick the hero first: while the hero
+  // dialog is open the top bar can't be reached, and its countdown would tick unmuted.)
+  await page.locator(".hero-card").first().click();
   await page.getByRole("button", { name: "Mute sounds" }).click();
+  await page.evaluate(() => ((window as unknown as { __sgsSounds?: string[] }).__sgsSounds = []));
   for (let i = 0; i < 40; i++) {
     await step(page, EN);
     await page.waitForTimeout(100);
