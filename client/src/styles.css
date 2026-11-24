@@ -140,6 +140,7 @@ select:focus-visible {
    nothing on screen ever moves while you play. Containers use overflow: clip (not
    hidden) so the browser can't scroll them when something takes focus. */
 .table-screen {
+  position: relative; /* the effects layer (Effects.tsx) covers it */
   height: 100vh;
   height: 100dvh;
   min-height: 600px;
@@ -242,7 +243,11 @@ select:focus-visible {
   padding-left: var(--ik-space-4);
   border-left: 1px solid var(--ik-gold-line);
 }
-.play-slot { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; animation: slide-in var(--ik-dur-card) var(--ik-ease-out); }
+/* A new play shows once its card has flown in from the player's seat (Effects.tsx, 520ms). */
+.play-slot { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; animation: land 160ms ease-out 480ms both; }
+@keyframes land {
+  from { opacity: 0; }
+}
 .play-by { max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--ik-text-xs); color: var(--ik-text-muted); }
 .turn-note { align-self: center; color: var(--ik-text-muted); font-size: var(--ik-text-sm); }
 @keyframes slide-in {

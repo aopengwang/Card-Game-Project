@@ -7,6 +7,7 @@ import { TimerRing } from "../ui/Bits";
 import { Button, SealButton } from "../ui/Button";
 import { Card as CardFace } from "../ui/Card";
 import s from "./ActionBar.module.css";
+import { KEY } from "./shortcuts";
 
 type NameFn = (seat: number | null | undefined) => string;
 
@@ -145,13 +146,15 @@ export function ActionBar({ request, view, sel, setSel, name, waitingText }: Pro
             ))}
             {sel.mode && (
               <>
-                <Button variant="primary" disabled={!ready} onClick={submit}>
+                <Button variant="primary" disabled={!ready} onClick={submit} shortcut={KEY.main}>
                   {t("act.use")}
                 </Button>
-                <Button onClick={() => setSel(EMPTY)}>{t("act.cancel")}</Button>
+                <Button onClick={() => setSel(EMPTY)} shortcut={KEY.back}>
+                  {t("act.cancel")}
+                </Button>
               </>
             )}
-            <Button variant="ghost" className="end-phase" onClick={() => answer(null)}>
+            <Button variant="ghost" className="end-phase" onClick={() => answer(null)} shortcut={KEY.end}>
               {t("act.endPhase")}
             </Button>
           </>
@@ -168,31 +171,35 @@ export function ActionBar({ request, view, sel, setSel, name, waitingText }: Pro
                 onClick={() => setSel(chooseSkill(sel, c.skill))}
               />
             ))}
-            <Button variant="primary" disabled={!ready} onClick={submit}>
+            <Button variant="primary" disabled={!ready} onClick={submit} shortcut={KEY.main}>
               {t("act.play")}
             </Button>
-            <Button onClick={() => answer(null)}>{t("act.dontPlay")}</Button>
+            <Button onClick={() => answer(null)} shortcut={KEY.back}>
+              {t("act.dontPlay")}
+            </Button>
           </>
         )}
 
         {(r.kind === "discard" || r.kind === "choose_player") && (
-          <Button variant="primary" disabled={!ready} onClick={submit}>
+          <Button variant="primary" disabled={!ready} onClick={submit} shortcut={KEY.main}>
             {t("act.confirm")}
           </Button>
         )}
 
         {r.kind === "confirm" && (
           <>
-            <Button variant="primary" onClick={() => answer(true)}>
+            <Button variant="primary" onClick={() => answer(true)} shortcut={KEY.main}>
               {t("act.yes")}
             </Button>
-            <Button onClick={() => answer(false)}>{t("act.no")}</Button>
+            <Button onClick={() => answer(false)} shortcut={KEY.back}>
+              {t("act.no")}
+            </Button>
           </>
         )}
 
         {r.kind === "choose_option" &&
           r.choices.map((c, i) => (
-            <Button key={c} variant={i === 0 ? "primary" : "secondary"} onClick={() => answer(c)}>
+            <Button key={c} variant={i === 0 ? "primary" : "secondary"} onClick={() => answer(c)} shortcut={i === 0 ? KEY.main : undefined}>
               {tMaybe(`opt.${c}`) ?? c}
             </Button>
           ))}
@@ -206,7 +213,11 @@ export function ActionBar({ request, view, sel, setSel, name, waitingText }: Pro
               })}
             </div>
             {r.hidden_count > 0 && <Button onClick={() => answer("hand")}>{t("act.randomHand", { n: r.hidden_count })}</Button>}
-            {r.optional && <Button variant="ghost" onClick={() => answer(null)}>{t("act.none")}</Button>}
+            {r.optional && (
+              <Button variant="ghost" onClick={() => answer(null)} shortcut={KEY.back}>
+                {t("act.none")}
+              </Button>
+            )}
           </>
         )}
       </div>

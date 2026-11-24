@@ -10,6 +10,8 @@ import { Card, CardBack } from "../ui/Card";
 import { Plaque } from "../ui/Plaque";
 import { useSize } from "../useSize";
 import { ActionBar } from "./ActionBar";
+import { Effects } from "./Effects";
+import { useShortcuts } from "./shortcuts";
 import { LangToggle } from "./LangToggle";
 import { GameOver, HeroPick, LogPanel } from "./Overlays";
 
@@ -56,6 +58,7 @@ export function Table({ net }: { net: NetState }) {
   const [hideResultFor, setHideResultFor] = useState<number | null>(null);
   const [arenaRef, arena] = useSize<HTMLDivElement>();
   const [handRef, hand] = useSize<HTMLDivElement>();
+  useShortcuts();
   if (!room || !view) return null;
 
   const req = request?.req ?? null;
@@ -121,7 +124,7 @@ export function Table({ net }: { net: NetState }) {
         >
           {opponents.map((seat, i) => (
             // The slot does the positioning, so the seat's own transforms (press, shake) can't move it.
-            <div key={seat} className="seat-slot" style={layout ? boxVars("seat", layout.seats[i]) : undefined}>
+            <div key={seat} className="seat-slot" data-seat={seat} style={layout ? boxVars("seat", layout.seats[i]) : undefined}>
               <Plaque player={view.players[seat]} name={nameOf(seat)} {...seatProps(seat)} />
             </div>
           ))}
@@ -143,7 +146,7 @@ export function Table({ net }: { net: NetState }) {
                 </span>
               )}
               {plays.map((p) => (
-                <div key={p.key} className="play-slot">
+                <div key={p.key} className="play-slot" data-play-key={p.key}>
                   <Card card={p.card} size="sm" />
                   <span className="play-by">{p.seat != null ? name(p.seat) : ""}</span>
                 </div>
@@ -159,7 +162,7 @@ export function Table({ net }: { net: NetState }) {
       </div>
 
       <footer className="dock">
-        <div className="dock-self">
+        <div className="dock-self" data-seat={view.you}>
           <Plaque player={me} name={nameOf(view.you)} variant="self" isYou {...seatProps(view.you)} offline={false} range={view.attack_range} />
         </div>
         <div className="dock-main">
@@ -191,6 +194,7 @@ export function Table({ net }: { net: NetState }) {
         </div>
       </footer>
 
+      <Effects log={log} you={view.you} aim={sel.targets} />
       {req?.kind === "choose_hero" && <HeroPick req={req} isLordPick={lordSeat === view.you} />}
       {view.result && hideResultFor !== resultKey && (
         <GameOver view={view} room={room} name={nameOf} onClose={() => setHideResultFor(resultKey)} />

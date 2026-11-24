@@ -294,6 +294,19 @@
   text-transform: uppercase;
   white-space: nowrap;
   pointer-events: none;
+  animation: stampIn 420ms var(--ik-ease-out) both;
+}
+
+/* the "Fallen" seal is pressed down onto the plaque */
+@keyframes stampIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(-12deg) scale(2.2);
+  }
+  60% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(-12deg) scale(0.92);
+  }
 }
 
 .stamp:lang(zh-CN) {
