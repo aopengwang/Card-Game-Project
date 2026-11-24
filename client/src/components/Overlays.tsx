@@ -15,40 +15,46 @@ export function HeroPick({ req, isLordPick }: { req: ChooseHeroReq; isLordPick: 
     <Modal open wide dismissible={false} title={t("hero.choose")} description={isLordPick ? t("hero.lordNote") : t("hero.otherNote")}>
       {req.error && <div className={s.error}>{serverText(req.error)}</div>}
       <div className={s.heroGrid}>
-        {req.options.map((id) => {
-          const h = heroInfo(id);
-          if (!h) return null;
-          return (
-            <button key={id} type="button" className={`${s.heroCard} ${s[h.kingdom] ?? ""} hero-card`} onClick={() => answer(id)}>
-              <Portrait hero={id} width="100%" height={110} />
-              <span className={s.heroBody}>
-                <span className={s.heroHead}>
-                  <span className={s.heroName}>{h.name}</span>
-                  <span className={s.kingdom}>{kingdomName(h.kingdom)}</span>
-                </span>
-                <span className={s.heroMeta}>
-                  <Beads hp={h.max_hp} max={h.max_hp} />
-                  <span>{tMaybe(`gender.${h.gender}`) ?? h.gender}</span>
-                </span>
-                {h.skills.map((sk) => (
-                  <span key={sk.id} className={s.skill}>
-                    <span className={s.skillHead}>
-                      <b className={s.skillName}>{sk.title ?? sk.id}</b>
-                      {sk.tags.map((tag) => (
-                        <span key={tag} className={s.tag}>
-                          {tMaybe(`tag.${tag}`) ?? tag}
-                        </span>
-                      ))}
-                    </span>
-                    <span className={s.skillText}>{sk.text}</span>
-                  </span>
-                ))}
-              </span>
-            </button>
-          );
-        })}
+        {req.options.map((id) => (
+          <HeroCard key={id} id={id} onClick={() => answer(id)} />
+        ))}
       </div>
     </Modal>
+  );
+}
+
+/** A hero to choose: portrait, name, kingdom, HP, skills (hero pick; also the gallery). */
+export function HeroCard({ id, onClick }: { id: string; onClick?: () => void }) {
+  useContent();
+  const h = heroInfo(id);
+  if (!h) return null;
+  return (
+    <button type="button" className={`${s.heroCard} ${s[h.kingdom] ?? ""} hero-card`} onClick={onClick}>
+      <Portrait hero={id} width="100%" height={110} />
+      <span className={s.heroBody}>
+        <span className={s.heroHead}>
+          <span className={s.heroName}>{h.name}</span>
+          <span className={s.kingdom}>{kingdomName(h.kingdom)}</span>
+        </span>
+        <span className={s.heroMeta}>
+          <Beads hp={h.max_hp} max={h.max_hp} />
+          <span>{tMaybe(`gender.${h.gender}`) ?? h.gender}</span>
+        </span>
+        {h.skills.map((sk) => (
+          <span key={sk.id} className={s.skill}>
+            <span className={s.skillHead}>
+              <b className={s.skillName}>{sk.title ?? sk.id}</b>
+              {sk.tags.map((tag) => (
+                <span key={tag} className={s.tag}>
+                  {tMaybe(`tag.${tag}`) ?? tag}
+                </span>
+              ))}
+            </span>
+            <span className={s.skillText}>{sk.text}</span>
+          </span>
+        ))}
+      </span>
+    </button>
   );
 }
 

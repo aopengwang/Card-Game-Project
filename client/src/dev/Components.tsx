@@ -1,6 +1,7 @@
 // Gallery: every Ink & Lacquer component in each of its states (developer tool).
 import { useState } from "react";
 import { ActionBar } from "../components/ActionBar";
+import { HeroCard } from "../components/Overlays";
 import { EMPTY } from "../selection";
 import type { Card as CardData, PlayerView } from "../types";
 import { Beads, RoleSeal, TimerRing } from "../ui/Bits";
@@ -59,6 +60,58 @@ function ArtShowcase() {
   );
 }
 
+/**
+ * Every hero the three ways a portrait is shown, so you can check how your art crops:
+ * the hero-pick card, an opponent's seat (a wide strip) and your own seat (taller).
+ * Images go in client/public/art/heroes/<id>.png|webp|jpg.
+ */
+function HeroShowcase() {
+  const content = useContent();
+  const art = useArtManifest();
+  const custom = content.heroes.filter((h) => art.heroes[h.id]).length;
+  return (
+    <section className={s.section} aria-labelledby="heroes">
+      <span id="heroes" className={s.label}>
+        Heroes · {custom}/{content.heroes.length} with your own portrait
+      </span>
+      <div className={s.heroes}>
+        {content.heroes.map((h) => {
+          const player = samplePlayer({
+            hero: h.id,
+            kingdom: h.kingdom,
+            gender: h.gender,
+            skills: h.skills,
+            hp: h.max_hp,
+            max_hp: h.max_hp,
+            role: null,
+            equips: [],
+            judge: [],
+            spent: [],
+          });
+          return (
+            <figure key={h.id} className={`${s.heroGroup} hero-showcase`}>
+              <div className={s.heroViews}>
+                <div style={{ width: 250 }}>
+                  <HeroCard id={h.id} />
+                </div>
+                <div style={{ width: 176 }}>
+                  <Plaque player={player} name="Lin" />
+                </div>
+                <div style={{ width: 236 }}>
+                  <Plaque player={{ ...player, role: "lord" }} name="Mei" variant="self" isYou />
+                </div>
+              </div>
+              <figcaption className={`${s.caption} art-source`}>
+                {h.name} · {h.id} · {art.heroes[h.id] ? "your image" : "built-in (brush character)"}
+              </figcaption>
+            </figure>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export function ComponentsShowcase() {
   const [deadline] = useState(() => Date.now() + 40_000);
   const [lowDeadline] = useState(() => Date.now() + 6_000);
@@ -89,6 +142,7 @@ export function ComponentsShowcase() {
       </section>
 
       <ArtShowcase />
+      <HeroShowcase />
 
       <section className={s.section} aria-labelledby="plaques">
         <span id="plaques" className={s.label}>Seat plaques</span>

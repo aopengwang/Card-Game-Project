@@ -184,3 +184,23 @@
   flex-direction: column;
   gap: var(--ik-space-3);
 }
+
+/* hero showcase: each hero as hero-pick card, seat and your seat, side by side */
+.heroes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(700px, 1fr));
+  gap: 28px 24px;
+}
+
+.heroGroup {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.heroViews {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}

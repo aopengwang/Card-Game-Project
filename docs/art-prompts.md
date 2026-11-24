@@ -59,7 +59,10 @@ writing or seals with characters (the card already has its own seal and title).
 
 ## Hero portraits (optional)
 
-`client/public/art/heroes/<hero id>.png`, portrait 3:2 landscape (e.g. 900×600) with the
-face in the centre. Use the same style block plus "portrait of <the hero>, a Three
+`client/public/art/heroes/<hero id>.png`, 3:2 landscape (e.g. 900×600). It's cropped from
+the centre, and an opponent's seat shows only a wide strip across the middle (about the
+middle third of the height), so **put the face right in the centre**. The gallery's
+"Heroes" section shows each hero as the hero-pick card, an opponent's seat and your own
+seat, so you can check the crops. Use the same style block plus "portrait of <the hero>, a Three
 Kingdoms-era general, half-length, dignified". Ids are in `/api/content` (`heroes`).
 Without an image, each plaque shows the hero's brush character.
