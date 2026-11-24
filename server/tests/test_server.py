@@ -155,6 +155,47 @@ def test_bot_levels():
     run(main())
 
 
+def test_host_changes_game_settings():
+    async def main():
+        room, (host, guest) = await room_with(2, 2)
+        h = await FakeClient(room, host).connect()
+        g = await FakeClient(room, guest, auto=False).connect()
+        info = h.of("room")[-1]
+        assert info["options"] == {"play_timeout": 5, "response_timeout": 5, "hero_timeout": 5, "bot_delay": 0.0}
+        assert info["option_limits"]["play_timeout"] == [15, 300]
+
+        await room.handle(host, h.conn, {"type": "settings", "settings": {"play_timeout": 120, "response_timeout": 10}})
+        assert g.of("room")[-1]["options"]["play_timeout"] == 120  # everyone sees the change
+        assert room.options.response_timeout == 10
+
+        with pytest.raises(RoomError, match="only the host"):
+            await room.handle(guest, g.conn, {"type": "settings", "settings": {"play_timeout": 60}})
+        for bad, why in [
+            ({"play_timeout": 5}, "between 15 and 300"),
+            ({"play_timeout": True}, "number"),
+            ({"turbo": 1}, "unknown setting"),
+            ({"play_timeout": 60, "bot_delay": 99}, "between 0 and 3"),
+        ]:
+            with pytest.raises(RoomError, match=why):
+                await room.handle(host, h.conn, {"type": "settings", "settings": bad})
+        assert room.options.play_timeout == 120  # all-or-nothing: the 60 above wasn't applied
+
+        # the timeout actually used for a guest's request comes from the room's options
+        await room.start(seed=2)
+        with pytest.raises(RoomError, match="during a game"):
+            await room.handle(host, h.conn, {"type": "settings", "settings": {"play_timeout": 60}})
+        for _ in range(200):
+            if g.of("request"):
+                break
+            await asyncio.sleep(0.01)
+        req = g.of("request")[0]
+        expected = {"play": 120, "choose_hero": 5, "discard": 5}.get(req["request"]["kind"], 10)
+        assert expected - 1 < req["timeout"] <= expected
+        await room.close()
+
+    run(main())
+
+
 def test_room_codes_and_tokens():
     async def main():
         mgr = RoomManager(Settings(**FAST))

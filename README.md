@@ -88,8 +88,14 @@ To let friends outside your network join, either:
 - **Cloudflare Tunnel**: `cloudflared tunnel --url http://localhost:8000` prints a
   public `https://….trycloudflare.com` URL (websockets work through it).
 
-Tuning (env vars, seconds): `SGS_PLAY_TIMEOUT` (90), `SGS_RESPONSE_TIMEOUT` (20),
-`SGS_BOT_DELAY` (0.6). Rooms live in memory; restarting the server ends all games.
+Defaults (env vars, seconds): `SGS_PLAY_TIMEOUT` (90), `SGS_RESPONSE_TIMEOUT` (20),
+`SGS_BOT_DELAY` (0.6). Each room starts from these and the host can change the turn
+time, response time, hero-pick/discard time and bot speed in the lobby (within
+`OPTION_LIMITS` in `net/room.py`). Rooms live in memory; restarting the server ends all games.
+
+**Settings** (gear button, any screen): interface size scales the whole app. "Auto"
+(the default) grows it on big monitors; or pick 80–160%. Remembered per browser
+(`client/src/uiScale.ts`).
 
 ## How the engine works
 - Every action that might need a decision is a generator. It `yield`s a `Request`

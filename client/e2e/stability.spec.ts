@@ -9,6 +9,7 @@ const SIZES = [
   { width: 1920, height: 1080 },
   { width: 1366, height: 650 }, // laptop with browser toolbars
   { width: 1280, height: 720 },
+  { width: 2560, height: 1400 }, // big monitor: Auto interface size zooms the whole table
 ];
 
 /** Everything that should stay put, rounded to whole pixels. */

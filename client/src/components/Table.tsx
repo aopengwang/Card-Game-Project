@@ -9,6 +9,8 @@ import { Button } from "../ui/Button";
 import { Card, CardBack } from "../ui/Card";
 import { Plaque } from "../ui/Plaque";
 import { useSize, useWindowSize } from "../useSize";
+import { useUiScale } from "../uiScale";
+import { SettingsButton } from "./Settings";
 import { ActionBar } from "./ActionBar";
 import { Effects } from "./Effects";
 import { useShortcuts } from "./shortcuts";
@@ -59,7 +61,8 @@ export function Table({ net }: { net: NetState }) {
   const [arenaRef, arena] = useSize<HTMLDivElement>();
   const [handRef, hand] = useSize<HTMLDivElement>();
   const win = useWindowSize();
-  const tier = sizeTier(win.width, win.height);
+  const scale = useUiScale(); // the window in the app's own (zoomed) pixels picks card sizes
+  const tier = sizeTier(win.width / scale, win.height / scale);
   useShortcuts();
   if (!room || !view) return null;
 
@@ -112,6 +115,7 @@ export function Table({ net }: { net: NetState }) {
         )}
         {net.conn !== "open" && <span className="pill warn">{t("conn.reconnecting")}</span>}
         <span className="spacer" />
+        <SettingsButton />
         <LangToggle />
         <Button shape="pill" className="log-toggle" onClick={toggleLog} aria-expanded={showLog}>
           {showLog ? t("table.hideLog") : t("table.log")}

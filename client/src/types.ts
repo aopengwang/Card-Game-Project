@@ -72,6 +72,17 @@ export interface RoomInfo {
   min_players: number;
   max_players: number;
   bot_levels?: string[];
+  /** This room's game options (seconds); the host changes them in the lobby. */
+  options?: GameOptions;
+  /** Allowed [min, max] per option, from the server. */
+  option_limits?: Record<keyof GameOptions, [number, number]>;
+}
+
+export interface GameOptions {
+  play_timeout: number;
+  response_timeout: number;
+  hero_timeout: number;
+  bot_delay: number;
 }
 
 // ---- requests (the `kind` field discriminates)

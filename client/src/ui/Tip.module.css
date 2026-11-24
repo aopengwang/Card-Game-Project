@@ -1,4 +1,6 @@
+/* Tooltips render outside #root, so they take the interface size (uiScale.ts) themselves. */
 .tip {
+  zoom: var(--ui-scale, 1);
   max-width: 280px;
   z-index: 50;
   padding: var(--ik-space-3);

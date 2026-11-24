@@ -5,7 +5,10 @@
  */
 
 * { box-sizing: border-box; }
-html, body, #root { height: 100%; }
+html, body { height: 100%; }
+/* Interface size (Settings, uiScale.ts): the whole app is zoomed; its box is shrunk by the
+   same factor so it still fills exactly one window. */
+#root { zoom: var(--ui-scale, 1); height: calc(100% / var(--ui-scale, 1)); }
 body {
   margin: 0;
   background: var(--ik-lacquer);
@@ -80,8 +83,9 @@ select:focus-visible {
    hidden) so the browser can't scroll them when something takes focus. */
 .table-screen {
   position: relative; /* the effects layer (Effects.tsx) covers it */
-  height: 100vh;
-  height: 100dvh;
+  /* one window tall: viewport units are zoomed with #root, so divide by the scale */
+  height: calc(100vh / var(--ui-scale, 1));
+  height: calc(100dvh / var(--ui-scale, 1));
   min-height: 600px;
   overflow: clip;
   display: grid;

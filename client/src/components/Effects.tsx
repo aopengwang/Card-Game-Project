@@ -38,7 +38,9 @@ function centreIn(layer: HTMLElement, el: Element | null): Pt | null {
   const base = layer.getBoundingClientRect();
   const r = el.getBoundingClientRect();
   if (!r.width) return null;
-  return { x: r.left + r.width / 2 - base.left, y: r.top + r.height / 2 - base.top };
+  // Rects are in screen pixels; the layer's CSS pixels are zoomed by the interface size.
+  const zoom = layer.offsetWidth ? base.width / layer.offsetWidth : 1;
+  return { x: (r.left + r.width / 2 - base.left) / zoom, y: (r.top + r.height / 2 - base.top) / zoom };
 }
 
 /** Quadratic path with a slight bow, like a brush stroke rather than a ruler line. */

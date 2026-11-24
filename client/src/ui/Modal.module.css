@@ -11,7 +11,9 @@
   animation: fade var(--ik-dur-card) var(--ik-ease-out);
 }
 
+/* Dialogs render outside #root, so they take the interface size (uiScale.ts) themselves. */
 .modal {
+  zoom: var(--ui-scale, 1);
   position: relative;
   box-sizing: border-box;
   width: min(560px, 100%);

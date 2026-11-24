@@ -386,6 +386,33 @@
   margin-top: var(--ik-space-2);
 }
 
+/* game settings: label + select per row */
+.options {
+  display: grid;
+  gap: var(--ik-space-2);
+  margin-top: var(--ik-space-2);
+}
+
+.option {
+  display: grid;
+  grid-template-columns: 1fr 140px;
+  align-items: center;
+  gap: var(--ik-space-3);
+  font-size: var(--ik-text-sm);
+  color: var(--ik-text);
+}
+
+.option select {
+  min-height: 34px;
+  padding: 0 8px;
+}
+
+.optionValue {
+  font-weight: 600;
+  color: var(--ik-text-strong);
+  text-align: right;
+}
+
 .start {
   min-height: 48px;
   font-size: var(--ik-text-lg);

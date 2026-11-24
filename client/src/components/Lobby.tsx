@@ -6,7 +6,9 @@ import type { Card as CardData } from "../types";
 import { RoleSeal } from "../ui/Bits";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
+import { GameSettings } from "./GameSettings";
 import { LangToggle } from "./LangToggle";
+import { SettingsButton } from "./Settings";
 import s from "./Screens.module.css";
 
 const NAME_KEY = "cardgame_name";
@@ -65,6 +67,7 @@ export function Home({ error, initialCode }: { error: string | null; initialCode
   return (
     <div className={s.screen}>
       <div className={s.corner}>
+        <SettingsButton />
         <LangToggle />
       </div>
       <div className={s.homeGrid}>
@@ -156,6 +159,7 @@ export function Lobby({ net }: { net: NetState }) {
     <div className={s.screen}>
       <div className={s.corner}>
         {net.conn !== "open" && <span className="pill warn">{t("conn.reconnecting")}</span>}
+        <SettingsButton />
         <LangToggle />
       </div>
       <div className={s.lobbyGrid}>
@@ -228,6 +232,8 @@ export function Lobby({ net }: { net: NetState }) {
               ))}
             </div>
           </div>
+
+          <GameSettings room={room} />
 
           {isHost ? (
             <>

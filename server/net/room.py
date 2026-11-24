@@ -43,6 +43,50 @@ class Settings:
     hero_timeout: float = 60.0
     bot_delay: float = 0.6  # pause before bot answers so humans can follow along
     room_ttl: float = 3 * 3600  # idle rooms with nobody connected are removed after this
+    # (the first four are each new room's starting options; the host can change them)
+
+# Game options the host can change in the lobby, and their allowed ranges (seconds).
+# The ranges are sent to clients, which build their controls from them.
+OPTION_LIMITS: dict[str, tuple[float, float]] = {
+    "play_timeout": (15, 300),  # your own play phase
+    "response_timeout": (5, 60),  # dodge / peach / nullify / confirm...
+    "hero_timeout": (15, 180),  # choosing a hero, discarding
+    "bot_delay": (0, 3),  # pause before a bot acts (bot speed)
+}
+
+
+@dataclass
+class RoomOptions:
+    """One room's game options: start from the server defaults, the host can change them."""
+
+    play_timeout: float
+    response_timeout: float
+    hero_timeout: float
+    bot_delay: float
+
+    @classmethod
+    def from_settings(cls, s: Settings) -> RoomOptions:
+        return cls(s.play_timeout, s.response_timeout, s.hero_timeout, s.bot_delay)
+
+    def to_dict(self) -> dict[str, float]:
+        return {k: getattr(self, k) for k in OPTION_LIMITS}
+
+    def update(self, changes: Any) -> None:
+        """Apply {option: seconds}; all-or-nothing, so a bad value changes nothing."""
+        if not isinstance(changes, dict) or not changes:
+            raise RoomError("settings must be an object of option -> seconds")
+        checked: dict[str, float] = {}
+        for key, value in changes.items():
+            if key not in OPTION_LIMITS:
+                raise RoomError(f"unknown setting {key!r}")
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise RoomError(f"{key} must be a number of seconds")
+            lo, hi = OPTION_LIMITS[key]
+            if not lo <= value <= hi:
+                raise RoomError(f"{key} must be between {lo:g} and {hi:g} seconds")
+            checked[key] = float(value)
+        for key, value in checked.items():
+            setattr(self, key, value)
 
     def timeout_for(self, req: Request) -> float:
         if req.kind == "play":
@@ -100,6 +144,7 @@ class Room:
     def __init__(self, code: str, settings: Settings):
         self.code = code
         self.settings = settings
+        self.options = RoomOptions.from_settings(settings)
         self.members: list[Member] = []
         self.host_token: str | None = None
         self.status = "lobby"  # lobby | playing | finished
@@ -174,6 +219,8 @@ class Room:
             "bot_levels": list(BOT_LEVELS),
             "min_players": MIN_PLAYERS,
             "max_players": MAX_PLAYERS,
+            "options": self.options.to_dict(),
+            "option_limits": {k: list(v) for k, v in OPTION_LIMITS.items()},
         }
 
     # ------------------------------------------------------------ connections
@@ -225,6 +272,11 @@ class Room:
             removed = self.remove(msg.get("seat", -1) if isinstance(msg.get("seat"), int) else -1)
             for c in list(removed.conns):
                 await c.send({"type": "kicked"})
+            await self.broadcast_room()
+        elif t == "settings":
+            self._need(host, "only the host can change the game settings")
+            self._need(self.status != "playing", "settings can't change during a game")
+            self.options.update(msg.get("settings"))
             await self.broadcast_room()
         elif t == "start":
             self._need(host, "only the host can start the game")
@@ -295,13 +347,13 @@ class Room:
         m = self.members[req.seat]
         bot = self.bots[req.seat]
         if not m.connected or m.is_bot:
-            await asyncio.sleep(self.settings.bot_delay)  # always yield: never starve other rooms
+            await asyncio.sleep(self.options.bot_delay)  # always yield: never starve other rooms
             return bot(game, req)
         loop = asyncio.get_running_loop()
         # The engine re-asks the same Request object after an invalid answer: keep its deadline.
         if req is not self._last_req:
             self._last_req = req
-            self._last_deadline = loop.time() + self.settings.timeout_for(req)
+            self._last_deadline = loop.time() + self.options.timeout_for(req)
         deadline = self._last_deadline
         self._req_seq += 1
         p = Pending(self._req_seq, req, req.seat, deadline, loop.create_future())
