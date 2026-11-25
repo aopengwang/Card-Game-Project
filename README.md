@@ -1,5 +1,4 @@
-# Cardgame
-
+# Jibros Sha
 An online hidden-role card game (Lord / Loyalist / Rebel / Spy) inspired by 三国杀,
 playable with friends from a browser link.
 
