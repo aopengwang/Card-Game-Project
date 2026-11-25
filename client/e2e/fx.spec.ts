@@ -1,4 +1,4 @@
-﻿// Big table moments, replayed in the animation lab (/?fx): no game needed, nothing random.
+// Big table moments, replayed in the animation lab (/?fx): no game needed, nothing random.
 import { expect, test, type Page } from "@playwright/test";
 
 test.describe.configure({ timeout: 60_000 });
@@ -77,6 +77,35 @@ test("slow motion stretches the blow", async ({ page }) => {
   // at 1× the whole blow is over in about 2 s; at 0.25× it is still in the air
   await page.waitForTimeout(2500);
   await expect(page.locator(".kill-card")).toBeVisible();
+});
+
+test("kill streak: a banner after the blow, fiercer the more kills, with its fanfare", async ({ page }) => {
+  await openLab(page, "streak");
+  for (const [kills, title] of [
+    ["2", "Double Kill"],
+    ["7", "Unstoppable"],
+  ] as const) {
+    await page.getByLabel("Kills", { exact: true }).selectOption(kills);
+    await page.getByRole("button", { name: /^Play/ }).click(); // (the click also unlocks audio)
+    const banner = page.locator(".kill-streak");
+    await expect(page.locator(".kill-card")).toBeVisible(); // the killing blow comes first...
+    await expect(banner).toBeVisible({ timeout: 5000 }); // ...then the streak
+    await expect(page.locator(".kill-card")).toHaveCount(0);
+    await expect(banner.locator(".streak-title")).toHaveText(title);
+    await expect(banner).toHaveAttribute("data-level", kills);
+    await expect(banner.locator("[class*=mark]")).toHaveCount(Number(kills) + 1); // (the marks row + one mark per kill)
+    await expect(banner).toHaveCount(0, { timeout: 6000 });
+    expect(await sounds(page)).toContain(`streak${kills}`);
+  }
+});
+
+test("kill streak in Chinese", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/?fx=streak&lang=zh");
+  await page.locator(".table-screen").waitFor();
+  await page.getByLabel("Kills", { exact: true }).selectOption("3");
+  await page.getByRole("button", { name: /^Play/ }).click();
+  await expect(page.locator(".kill-streak .streak-title")).toHaveText("三杀", { timeout: 5000 });
 });
 
 test("reduced motion: no blow, the victim falls at once", async ({ browser }) => {

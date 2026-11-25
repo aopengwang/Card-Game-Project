@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { holdDeath, killBlow } from "../fx/killBlow";
 import { fxSpeed, Stage } from "../fx/stage";
+import { killStreak, streakAt } from "../fx/streak";
 import { getLang, t } from "../i18n";
-import { playAll, type SoundName } from "../sound";
+import { playAll, playStreak, type SoundName } from "../sound";
 import type { LogEntry } from "../types";
 import { Card } from "../ui/Card";
 import s from "./Effects.module.css";
@@ -14,7 +15,8 @@ import s from "./Effects.module.css";
  *   - an ink stroke runs from the player to each target,
  *   - damage / healing float up over the seat as numbers,
  *   - your turn opens with a brush banner,
- *   - a death plays the killing blow (fx/killBlow.ts); these big moments queue on a Stage.
+ *   - a death plays the killing blow (fx/killBlow.ts), and from a player's second kill a
+ *     kill streak banner (fx/streak.ts); these big moments queue on a Stage.
  * Only entries that arrive while you watch animate: a reconnect, a rejoin or the gallery
  * shows the table at rest. Positions come from the DOM ([data-seat], [data-play-key]),
  * so this works for every layout (seats in a row, stacked, phone).
@@ -73,7 +75,20 @@ function strokePath(from: Pt, to: Pt): string {
  * @param aim seats you have selected as targets right now: a dashed ink line runs from
  *            your plaque to each, until you play or cancel.
  */
-export function Effects({ log, you, aim, playSize = "sm" }: { log: LogEntry[]; you: number; aim: number[]; playSize?: "sm" | "md" }) {
+export function Effects({
+  log,
+  you,
+  aim,
+  playSize = "sm",
+  nameOf,
+}: {
+  log: LogEntry[];
+  you: number;
+  aim: number[];
+  playSize?: "sm" | "md";
+  /** A seat's display name (the kill streak banner names the killer). */
+  nameOf?: (seat: number) => string;
+}) {
   const layer = useRef<HTMLDivElement>(null);
   const seen = useRef(log.length); // entries already on the table when we mounted
   const nextId = useRef(1);
@@ -110,15 +125,26 @@ export function Effects({ log, you, aim, playSize = "sm" }: { log: LogEntry[]; y
     if (log.length <= start) return;
     const el = layer.current;
     const motion = !!el && !reducedMotion();
-    const deaths = motion ? log.slice(start).filter((e) => e.type === "death") : [];
+    const deaths: number[] = [];
+    for (let i = start; i < log.length; i++) if (log[i].type === "death") deaths.push(i);
     // Sounds play even with reduced motion (that setting is about movement, not audio).
-    // A killing blow sounds its own gong when it lands.
-    playAll(soundsFor(log.slice(start), you).filter((n) => !(deaths.length && n === "death")));
-    if (!motion || !el) return;
-    for (const d of deaths) {
+    // A killing blow sounds its own gong when it lands; a kill streak its own fanfare.
+    playAll(soundsFor(log.slice(start), you).filter((n) => !(motion && deaths.length && n === "death")));
+    if (!motion || !el) {
+      for (const i of deaths) if (streakAt(log, i) >= 2) playStreak(streakAt(log, i), 0.4);
+      return;
+    }
+    for (const i of deaths) {
+      const d = log[i];
       const release = holdDeath(d.seat); // before this paints: the victim falls on impact
       const killer = typeof d.killer === "number" ? d.killer : null;
       stage.current!.add({ run: () => killBlow(el, killer, d.seat, release), skip: release });
+      const level = streakAt(log, i);
+      if (level >= 2 && killer != null) {
+        const who = nameOf ? nameOf(killer) : "";
+        const run = () => killStreak(el, level, t(`streak.${level}` as "streak.2"), who, getLang() === "zh");
+        stage.current!.add({ run, skip: () => playStreak(level) });
+      }
     }
     const centre = (target: Element | null) => centreIn(el, target);
     const seat = (n: number | null | undefined) => (n == null ? null : centre(document.querySelector(`[data-seat="${n}"]`)));

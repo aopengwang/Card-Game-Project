@@ -26,7 +26,7 @@ export class Stage {
   private queue: Moment[] = [];
   private playing = false;
 
-  constructor(private readonly max = 3) {}
+  constructor(private readonly max = 6) {}
 
   add(m: Moment): void {
     if (this.queue.length >= this.max) {

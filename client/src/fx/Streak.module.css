@@ -1,0 +1,166 @@
+/* Kill streak banner (streak.ts). --life is the whole length; the higher the level
+   (.l2 .. .l7), the bigger, redder and more golden it gets. */
+.streak {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  --size: 46px;
+  --glow: rgba(227, 98, 75, 0.55);
+  --ink: var(--ik-vermilion-bright);
+}
+
+.l3 { --size: 52px; }
+.l4 { --size: 58px; --glow: rgba(227, 98, 75, 0.7); }
+.l5 { --size: 64px; --glow: rgba(240, 110, 70, 0.8); }
+.l6 { --size: 70px; --glow: rgba(240, 150, 70, 0.85); --ink: #f08a4b; }
+.l7 { --size: 80px; --glow: rgba(240, 196, 90, 0.95); --ink: #f0c45a; }
+
+/* a red flash over the table as it lands */
+.flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, var(--glow), transparent 65%);
+  opacity: 0;
+  animation: flash var(--life) ease-out forwards;
+}
+
+@keyframes flash {
+  8% {
+    opacity: 0.9;
+  }
+  30% {
+    opacity: 0.35;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* the ink band with the title, the killer's name and one mark per kill */
+.band {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 14px 0 16px;
+  background: linear-gradient(90deg, transparent, rgba(16, 8, 6, 0.94) 16%, rgba(16, 8, 6, 0.94) 84%, transparent);
+  border-top: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+  box-shadow: 0 0 40px var(--glow);
+  animation: band var(--life) cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes band {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.2) scaleY(0.6);
+  }
+  12% {
+    opacity: 1;
+    transform: scaleX(1.04) scaleY(1);
+  }
+  18% {
+    transform: none;
+  }
+  82% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: scaleY(0.8);
+  }
+}
+
+.title {
+  color: var(--ink);
+  font: 700 var(--size) / 1.05 var(--ik-font-display);
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 18px var(--glow), 0 3px 0 #1c0d0a;
+  animation: slam var(--life) cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.title:lang(zh-CN) {
+  font: calc(var(--size) * 1.25) / 1 var(--ik-font-brush);
+  letter-spacing: 0.08em;
+}
+
+/* the title is stamped down hard */
+@keyframes slam {
+  0%,
+  6% {
+    opacity: 0;
+    transform: scale(2.4);
+  }
+  14% {
+    opacity: 1;
+    transform: scale(0.94);
+  }
+  19% {
+    transform: scale(1.03);
+  }
+  24%,
+  100% {
+    transform: scale(1);
+  }
+}
+
+.who {
+  margin-top: calc(var(--size) * 0.14); /* clear of the title's descenders */
+  color: var(--ik-text-strong);
+  font: 600 16px / 1.2 var(--ik-font-body);
+  letter-spacing: 0.06em;
+}
+
+.marks {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* one crossed-blades mark per kill, stamped in on the drum beats */
+.mark {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  opacity: 0;
+  animation: mark calc(260ms * var(--fx-slow, 1)) cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.mark::before,
+.mark::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  margin-left: -2px;
+  border-radius: 2px;
+  background: var(--ink);
+  box-shadow: 0 0 6px var(--glow);
+}
+
+.mark::before {
+  transform: rotate(45deg);
+}
+
+.mark::after {
+  transform: rotate(-45deg);
+}
+
+@keyframes mark {
+  from {
+    opacity: 0;
+    transform: scale(2);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

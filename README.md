@@ -46,7 +46,9 @@ Without a build, "/" falls back to the plain test client, which is always at `/d
   battlefield, an ink stroke runs to each target, damage/healing float over the seat, your
   turn opens with a banner, and a dashed line shows the targets you're aiming at. A death
   plays the **killing blow** (`client/src/fx/`): the killer's hero card lifts off, flies
-  over the victim and slams down on it. Big moments like that queue on a `Stage`
+  over the victim and slams down on it. From a player's second kill of the game, a **kill
+  streak** banner follows (Double Kill ... Unstoppable at seven; `fx/streak.ts`), fiercer
+  with each kill, with a drum roll and gong (`playStreak` in `sound.ts`). Big moments like that queue on a `Stage`
   (`fx/stage.ts`) and play one at a time. It's a layer over the table (never moves the
   layout), only animates what happens while you watch, and is off with the system
   "reduce motion" setting.
@@ -57,8 +59,8 @@ Without a build, "/" falls back to the plain test client, which is always at `/d
   type, plus real game moments rendered by the live UI: hero pick, Nullify chain,
   dying, 8 players, game over, and more. Regenerate the moments from seeded hard-bot
   games with `cd server; python -m tools.dump_fixtures`.
-- **Animation lab**: open `/?fx` (or `/?fx=kill`, `double`, `fate`, `strike`, `heal`,
-  `turn`; add `&lang=zh`). It replays one effect on a real table: pick the effect, who
+- **Animation lab**: open `/?fx` (or `/?fx=kill`, `streak`, `double`, `fate`, `strike`,
+  `heal`, `turn`; add `&lang=zh`). It replays one effect on a real table: pick the effect, who
   kills whom and the speed (1x / 0.5x / 0.25x), then press Play or `P`. Use it to tune a
   new animation in seconds instead of playing games. To add an effect, add an entry to
   `EFFECTS` in `client/src/dev/FxLab.tsx` listing the log entries a game would send.

@@ -171,6 +171,35 @@ export function play(name: SoundName, delay = 0): void {
   if (w.__sgsSounds.length > 100) w.__sgsSounds.shift();
 }
 
+/**
+ * A kill streak of `level` kills: one war-drum beat per kill (in time with the banner's
+ * marks), then a gong that rises with the streak; from five kills a brass blare joins in,
+ * and seven brings a full fanfare.
+ */
+export function playStreak(level: number, delay = 0.26): void {
+  if (prefs.muted || prefs.volume === 0) return;
+  const c = audio();
+  if (!c || c.state !== "running") return;
+  const t0 = c.currentTime + 0.01 + delay;
+  const beat = 0.11;
+  for (let i = 0; i < level; i++) {
+    const at = t0 + i * beat;
+    tone(c, at, 72 + i * 7, 0.34, 0.85, "sine", 38); // the drum's body
+    noise(c, at, 0.07, 0.35, 900, 300); // the skin
+  }
+  const hit = t0 + level * beat + 0.05;
+  bell(c, hit, 98 * Math.pow(1.122, level - 2), 2.6, 0.38 + level * 0.03, [[1, 1], [1.48, 0.6], [2.2, 0.4], [3.3, 0.2]]);
+  noise(c, hit, 0.5, 0.18, 500, 120);
+  if (level >= 5) {
+    const root = level >= 7 ? N.A4 : N.E4;
+    [1, 1.5, 2].forEach((r, i) => tone(c, hit + 0.02 * i, root * r, 0.9 + level * 0.08, 0.1, "sawtooth"));
+  }
+  if (level >= 7) [N.C5, N.E5, N.A5, N.C6].forEach((f, i) => tone(c, hit + 0.35 + i * 0.09, f, 0.8, 0.12, "triangle"));
+  const w = window as unknown as { __sgsSounds?: string[] };
+  (w.__sgsSounds ??= []).push(`streak${level}`);
+  if (w.__sgsSounds.length > 100) w.__sgsSounds.shift();
+}
+
 /** Play a batch (several log entries at once): each distinct sound once, staggered. */
 export function playAll(names: SoundName[]): void {
   [...new Set(names)].forEach((n, i) => play(n, i * 0.07));

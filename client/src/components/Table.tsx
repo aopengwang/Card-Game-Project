@@ -230,7 +230,7 @@ export function Table({ net }: { net: NetState }) {
         </div>
       </footer>
 
-      <Effects log={log} you={view.you} aim={sel.targets} playSize={tier.playSize} />
+      <Effects log={log} you={view.you} aim={sel.targets} playSize={tier.playSize} nameOf={nameOf} />
       {req?.kind === "choose_hero" && <HeroPick req={req} isLordPick={lordSeat === view.you} />}
       {req?.kind === "arrange" && <Arrange key={request!.id} req={req} />}
       {view.result && hideResultFor !== resultKey && (

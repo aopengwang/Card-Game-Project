@@ -1,4 +1,4 @@
-// Animation lab (developer tool): /?fx[=effect]&lang=zh. Replays table effects on a real
+// Animation lab (developer tool): /?fx[=effect]&lang=zh (effects: kill, streak, double, fate, strike, heal, turn). Replays table effects on a real
 // captured table, with the seats and speed you choose, so an animation can be tuned in
 // seconds instead of playing games until the moment comes up. Press P to replay.
 import { useEffect, useRef, useState } from "react";
@@ -45,19 +45,38 @@ const dies = (seats: number[]) => (v: GameView) => ({
   players: v.players.map((p) => (seats.includes(p.seat) ? { ...p, hp: 0, alive: false, role: p.role ?? "rebel" } : p)),
 });
 
+const killSteps = ({ killer, victim }: Seats, v: GameView): Step[] => [
+  {
+    entries: [use(killer, "strike", [victim]), damage(killer, victim, 0), { type: "dying", seat: victim, hp: 0 }],
+    view: setHp([victim], 0),
+    after: 900,
+  },
+  { entries: [death(v, victim, killer)], view: dies([victim]) },
+];
+
+interface Effect {
+  label: string;
+  uses: Role[];
+  steps: (s: Seats, v: GameView) => Step[];
+  /** Earlier events already in the log when it starts (counted, not replayed). */
+  prelude?: (s: Seats, v: GameView, kills: number) => LogEntry[];
+  /** Offers a "kills so far" choice. */
+  streak?: boolean;
+}
+
 /** Each effect as the log entries a real game would send, in steps (`after`: ms to the next). */
-const EFFECTS: Record<string, { label: string; uses: Role[]; steps: (s: Seats, v: GameView) => Step[] }> = {
-  kill: {
-    label: "Killing blow",
+const EFFECTS: Record<string, Effect> = {
+  kill: { label: "Killing blow", uses: ["killer", "victim"], steps: killSteps },
+  streak: {
+    label: "Kill streak",
     uses: ["killer", "victim"],
-    steps: ({ killer, victim }, v) => [
-      {
-        entries: [use(killer, "strike", [victim]), damage(killer, victim, 0), { type: "dying", seat: victim, hp: 0 }],
-        view: setHp([victim], 0),
-        after: 900,
-      },
-      { entries: [death(v, victim, killer)], view: dies([victim]) },
-    ],
+    streak: true,
+    // the killer's earlier kills this game, so this one makes the chosen streak
+    prelude: ({ killer, victim }, v, kills) => {
+      const others = v.players.map((p) => p.seat).filter((s) => s !== killer && s !== victim);
+      return Array.from({ length: kills - 1 }, (_, i) => death(v, others[i % others.length], killer));
+    },
+    steps: killSteps,
   },
   double: {
     label: "Two fall at once (they queue)",
@@ -124,6 +143,7 @@ export default function FxLab({ initial }: { initial: string }) {
     return { you: view.you, killer: others[0], victim: others[1], second: others[3] ?? others[2] };
   });
   const [speed, setSpeed] = useState<number>(1);
+  const [kills, setKills] = useState(3);
   const [open, setOpen] = useState(true);
   const timers = useRef<number[]>([]);
 
@@ -133,7 +153,8 @@ export default function FxLab({ initial }: { initial: string }) {
   const replay = () => {
     timers.current.forEach(clearTimeout);
     timers.current = [];
-    setNet(base);
+    const prelude = EFFECTS[effect].prelude?.(seats, view, kills) ?? [];
+    setNet({ ...base, log: [...base.log, ...prelude] });
     setRun((r) => r + 1);
     let at = 150; // the fresh table mounts and measures first
     for (const st of EFFECTS[effect].steps(seats, view)) {
@@ -201,6 +222,18 @@ export default function FxLab({ initial }: { initial: string }) {
                 </select>
               </label>
             ))}
+            {EFFECTS[effect].streak && (
+              <label className={s.field}>
+                <span>Kills</span>
+                <select value={kills} onChange={(e) => setKills(Number(e.target.value))} aria-label="Kills">
+                  {[2, 3, 4, 5, 6, 7].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <div className={s.field}>
               <span>Speed</span>
               <div className={s.speeds} role="group" aria-label="Speed">
