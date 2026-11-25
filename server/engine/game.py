@@ -34,6 +34,7 @@ from .model import (
 )
 from .requests import (
     HAND,
+    REFRESH,
     ChooseCardRequest,
     ChooseHeroRequest,
     Convert,
@@ -580,6 +581,8 @@ class Game:
         on top of the request's own."""
         while True:
             answer = yield req
+            if answer is REFRESH and isinstance(req, PlayRequest):
+                return answer  # phase_play builds a fresh request
             err = req.validate(answer)
             if err is None and check is not None:
                 err = check(answer)
@@ -1016,6 +1019,8 @@ class Game:
             )
             if answer is None:
                 return
+            if answer is REFRESH:
+                continue
             cards, targets = list(answer.cards), list(answer.targets)
             if answer.skill is None:
                 cid: int = answer.card_id  # type: ignore[assignment]

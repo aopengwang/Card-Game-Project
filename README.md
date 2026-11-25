@@ -128,6 +128,27 @@ seconds, and the panel's button counts unread messages. Plain text only, up to 2
 characters, at most 5 messages per 10 seconds each; the room keeps the last 100, so
 anyone who (re)connects sees the conversation.
 
+**Emotes**: the smiley button in the table's top bar opens 10 emotes (brush-character
+seals: Nice!, Haha, Thanks, Sorry, Grr!, Whoa!, Hmm…, Cheers, Well played, Hurry up!). The
+one you pick pops up beside your hero card for everyone, with a soft woodblock sound.
+At most 4 per 6 seconds each; they aren't kept (`EMOTES` in `server/net/room.py` and
+`client/src/components/Emotes.tsx` list them).
+
+**Test room (skill testing)**: create a room, set **Test room** to *On* in the game
+settings, and press **Start test game** (no bots needed: empty seats fill with bots up to
+4 players). You're the Lord and go first, and nobody drafts. A **Test** button in the
+table's top bar opens a panel that works at any time during the game:
+- switch any player's hero (new skills, HP reset; their cards stay),
+- give any card to anyone's hand, optionally of a chosen suit, or put it on top of the
+  deck (to set up the next draw or judgment),
+- set anyone's HP,
+- keep the bots passive (they end their turns and never respond: the default) or let
+  them play normally.
+
+Changes happen instantly (your play prompt refreshes with the new cards and skills), are
+shown in the log as `[Test]` lines, and don't trigger skills. The code is
+`server/engine/sandbox.py`; the panel is `client/src/components/TestPanel.tsx`.
+
 **Battle expansion (军争篇)**: on by default; the host can turn it off in the lobby's game
 settings. It adds 52 cards (one of each suit and rank, 160 in all; see `BATTLE_SPEC` in
 `server/content/standard.py`): Fire Strike ×5 and Thunder Strike ×9 (Strikes that deal
@@ -148,7 +169,9 @@ equipment, damage, healing, your-turn bell, last-seconds ticks, deaths, victory/
 Volume and mute are in Settings, and there's a speaker button in the table's top bar.
 
 **Settings** (gear button, any screen): interface size scales the whole app. "Auto"
-(the default) grows it on big monitors; or pick 80–160%. Remembered per browser
+(the default) grows it on big monitors and shrinks it to fit small screens: a phone on its
+side gets the whole table at about 60%, a portrait phone's table 75% (three seats to a
+row; its home and lobby stay 100%). Or pick 50–160%. Remembered per browser
 (`client/src/uiScale.ts`).
 
 ## How the engine works

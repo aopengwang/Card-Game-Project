@@ -708,6 +708,10 @@ class SmartBot:
     # ================================================================ other requests
 
     def _discard(self, game: Game, me: int, req: DiscardRequest) -> list[int]:
+        if req.reason == "false_letter":  # give a card of another suit (it hurts), cheapest first
+            hurt = self.rel(game, me, req.about) <= ENEMY
+            pool = [c for c in req.options if (str(game.cards[c].suit) != req.context.get("suit")) == hurt]
+            return self._lowest(game, me, pool or req.options, 1)
         return self._lowest(game, me, req.options, req.count)
 
     def _bend_fate(self, game: Game, me: int, req: ChooseCardRequest) -> int | None:

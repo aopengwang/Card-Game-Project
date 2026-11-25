@@ -121,7 +121,7 @@
      {
       "id": "false_letter",
       "tags": [],
-      "text": "Once per turn, in your play phase, if you have hand cards: choose another player. They\nname a suit, then take one of your hand cards (unseen) and show it. If it isn't the suit\nthey named, they take 1 damage from you."
+      "text": "Once per turn, in your play phase, if you have hand cards: choose another player. They\nname a suit, then you choose one of your hand cards and give it to them, face up. If it\nisn't the suit they named, they take 1 damage from you."
      }
     ],
     "spent": [],

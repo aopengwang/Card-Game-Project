@@ -284,10 +284,10 @@ export function Lobby({ net }: { net: NetState }) {
               <Button className={s.wide} disabled={n >= room.max_players} onClick={() => send({ type: "add_bot", level })}>
                 {t("lobby.addBot")}
               </Button>
-              <Button variant="primary" className={`${s.wide} ${s.start}`} disabled={n < room.min_players} onClick={() => send({ type: "start" })}>
-                {room.status === "finished" ? t("lobby.rematch") : t("lobby.start")}
+              <Button variant="primary" className={`${s.wide} ${s.start}`} disabled={n < room.min_players && !room.sandbox} onClick={() => send({ type: "start" })}>
+                {room.status === "finished" ? t("lobby.rematch") : room.sandbox ? t("lobby.startTest") : t("lobby.start")}
               </Button>
-              {n < room.min_players && <p className={s.note}>{t("lobby.needMore", { min: room.min_players }).trim()}</p>}
+              {n < room.min_players && !room.sandbox && <p className={s.note}>{t("lobby.needMore", { min: room.min_players }).trim()}</p>}
             </>
           ) : (
             <p className={s.waiting}>{t("lobby.waitHost")}</p>

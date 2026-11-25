@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import random
 import secrets
 import time
 from dataclasses import dataclass, field
@@ -22,7 +23,8 @@ from typing import Any, Protocol
 from bots import BOT_LEVELS, make_bot
 from content.heroes import HERO_MAP
 from content.standard import new_game
-from engine import Game, Request
+from engine import REFRESH, ROLE_TABLE, Game, PlayRequest, Request, Role
+from engine import sandbox
 from engine.view import log_for, view_for
 
 from .protocol import ProtocolError, parse_answer, request_to_dict
@@ -35,6 +37,9 @@ CHAT_MAX = 200  # characters per message (longer ones are cut)
 CHAT_KEEP = 100  # messages a room remembers (sent to whoever (re)connects)
 CHAT_BURST = (5, 10.0)  # at most 5 messages per 10 seconds per player
 JOIN_TRIES = (10, 60.0)  # at most 10 wrong passwords per minute per room
+# Emotes players can send (shown beside their seat for a moment; never stored).
+EMOTES = ("nice", "haha", "thanks", "sorry", "angry", "whoa", "hmm", "cheers", "gg", "hurry")
+EMOTE_BURST = (4, 6.0)  # at most 4 emotes per 6 seconds per player
 PRIVATE_KINDS = {"respond"}  # don't reveal who is being asked
 
 
@@ -129,6 +134,7 @@ class Member:
     bot_level: str = "hard"  # for bot seats; humans who go AFK are covered by a hard bot
     conns: set[Conn] = field(default_factory=set)
     chat_times: list[float] = field(default_factory=list)  # recent message times (rate limit)
+    emote_times: list[float] = field(default_factory=list)
 
     @property
     def connected(self) -> bool:
@@ -156,6 +162,11 @@ class Room:
         # added to the game later start enabled).
         self.disabled_heroes: set[str] = set()
         self.battle = True  # play with the Battle expansion's 52 cards (the host can turn it off)
+        # Test room: no draft, the table fills up with bots, and anyone can change heroes,
+        # cards and HP mid-game (engine/sandbox.py). Bots sit still unless told to play.
+        self.sandbox = False
+        self.passive_bots = True
+        self._waiting: Request | None = None  # the request the game is paused on
         # Optional: new players must give it to join (reconnecting with your token never
         # needs it). Only the host is ever sent it back.
         self.password: str | None = None
@@ -271,6 +282,16 @@ class Room:
         self.chat = [*self.chat, msg][-CHAT_KEEP:]
         return msg
 
+    def check_emote(self, m: Member, emote: Any) -> None:
+        if emote not in EMOTES:
+            raise RoomError("unknown emote")
+        now = time.monotonic()
+        limit, window = EMOTE_BURST
+        m.emote_times = [t for t in m.emote_times if now - t < window]
+        if len(m.emote_times) >= limit:
+            raise RoomError("you're sending emotes too fast")
+        m.emote_times.append(now)
+
     def by_token(self, token: str) -> Member | None:
         return next((m for m in self.members if secrets.compare_digest(m.token, token)), None)
 
@@ -300,6 +321,8 @@ class Room:
             "option_limits": {k: list(v) for k, v in OPTION_LIMITS.items()},
             "disabled_heroes": sorted(self.disabled_heroes),
             "battle": self.battle,
+            "sandbox": self.sandbox,
+            "passive_bots": self.passive_bots,
             "locked": self.password is not None,
             **({"password": self.password} if is_host and self.password is not None else {}),
         }
@@ -370,6 +393,12 @@ class Room:
             for member in self.members:
                 for c in list(member.conns):
                     await c.send({"type": "chat", **msg})
+        elif t == "emote":
+            emote = msg.get("emote")
+            self.check_emote(m, emote)
+            for member in self.members:
+                for c in list(member.conns):
+                    await c.send({"type": "emote", "seat": self.seat_of(m), "emote": emote})
         elif t == "password":
             self._need(host, "only the host can set the password")
             self.set_password(msg.get("password"))
@@ -381,6 +410,15 @@ class Room:
             self._need(isinstance(battle, bool), "battle must be true or false")
             self.battle = battle
             await self.broadcast_room()
+        elif t == "sandbox":
+            self._need(host, "only the host can make this a test room")
+            self._need(self.status != "playing", "settings can't change during a game")
+            on = msg.get("on")
+            self._need(isinstance(on, bool), "on must be true or false")
+            self.sandbox = on
+            await self.broadcast_room()
+        elif t == "test":
+            await self._on_test(msg)
         elif t == "start":
             self._need(host, "only the host can start the game")
             await self.start()
@@ -407,11 +445,36 @@ class Room:
         if not p.future.done():
             p.future.set_result(answer)
 
+    async def _on_test(self, msg: dict[str, Any]) -> None:
+        """A test-room action (any player may use them: it's a practice table)."""
+        self._need(self.sandbox, "this isn't a test room")
+        if msg.get("action") == "bots":
+            passive = msg.get("passive")
+            self._need(isinstance(passive, bool), "passive must be true or false")
+            self.passive_bots = passive
+            await self.broadcast_room()
+            return
+        game = self.game
+        self._need(game is not None and self.status == "playing", "start the game first")
+        assert game is not None
+        try:
+            sandbox.apply(game, msg)
+        except ValueError as e:
+            raise RoomError(str(e)) from None
+        p = self.pending
+        if p is not None and isinstance(p.req, PlayRequest) and not p.future.done():
+            p.future.set_result(REFRESH)  # their options changed: ask again (pushes the new state)
+        else:
+            await self.push_all(waiting=self._waiting)
+
     # ------------------------------------------------------------ game
 
     async def start(self, seed: int | None = None) -> None:
         if self.status == "playing":
             raise RoomError("the game is already running")
+        if self.sandbox:  # fill the table with bots
+            while len(self.members) < MIN_PLAYERS:
+                self.add_bot("hard")
         if not MIN_PLAYERS <= len(self.members) <= MAX_PLAYERS:
             raise RoomError(f"need {MIN_PLAYERS}-{MAX_PLAYERS} players")
         n = len(self.members)
@@ -419,8 +482,19 @@ class Room:
         if len(pool) < n:
             raise RoomError(f"enable at least {n} heroes for {n} players")
         seed = secrets.randbits(32) if seed is None else seed
-        # (no pool when every hero is enabled: the draft deals exactly as it always has)
-        self.game = new_game(n, seed, draft=True, hero_pool=pool if self.disabled_heroes else None, battle=self.battle)
+        if self.sandbox:
+            # No draft: random heroes (change them at the table), and the host is the Lord,
+            # so they take the first turn.
+            rng = random.Random(seed)
+            host = next((i for i, m in enumerate(self.members) if m.token == self.host_token), 0)
+            roles = list(ROLE_TABLE[n])
+            rng.shuffle(roles)
+            roles.remove(Role.LORD)
+            roles.insert(host, Role.LORD)
+            self.game = new_game(n, seed, roles, heroes=rng.sample(pool, n), battle=self.battle)
+        else:
+            # (no pool when every hero is enabled: the draft deals exactly as it always has)
+            self.game = new_game(n, seed, draft=True, hero_pool=pool if self.disabled_heroes else None, battle=self.battle)
         self.bots = [make_bot(m.bot_level, seed + i) for i, m in enumerate(self.members)]
         for m in self.members:
             for c in m.conns:
@@ -440,10 +514,12 @@ class Room:
                     req = gen.send(reply)
                 except StopIteration:
                     break
+                self._waiting = req
                 await self.push_all(waiting=req)
                 reply = await self._answer(req)
         finally:
             self.pending = None
+            self._waiting = None
             self.status = "finished"
             await self.push_all()
             await self.broadcast_room()
@@ -455,6 +531,8 @@ class Room:
         bot = self.bots[req.seat]
         if not m.connected or m.is_bot:
             await asyncio.sleep(self.options.bot_delay)  # always yield: never starve other rooms
+            if self.sandbox and self.passive_bots and m.is_bot:
+                return req.default()  # test room: bots end their turns and never respond
             return bot(game, req)
         loop = asyncio.get_running_loop()
         # The engine re-asks the same Request object after an invalid answer: keep its deadline.

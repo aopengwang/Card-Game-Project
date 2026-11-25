@@ -526,6 +526,98 @@ def test_chat_reaches_everyone_and_is_kept_for_reconnects():
     run(main())
 
 
+def test_emotes_reach_everyone_and_are_limited():
+    async def main():
+        room, (host, guest) = await room_with(2, 2)
+        h = await FakeClient(room, host).connect()
+        g = await FakeClient(room, guest).connect()
+        await room.handle(guest, g.conn, {"type": "emote", "emote": "haha"})
+        assert h.of("emote")[-1] == {"type": "emote", "seat": 1, "emote": "haha"}
+        assert g.of("emote")[-1]["emote"] == "haha"
+        for bad in ["lol", None, 3, "<script>"]:
+            with pytest.raises(RoomError, match="unknown emote"):
+                await room.handle(guest, g.conn, {"type": "emote", "emote": bad})
+        for e in ["nice", "gg", "hurry"]:
+            await room.handle(guest, g.conn, {"type": "emote", "emote": e})
+        with pytest.raises(RoomError, match="too fast"):
+            await room.handle(guest, g.conn, {"type": "emote", "emote": "thanks"})
+        await room.handle(host, h.conn, {"type": "emote", "emote": "thanks"})  # (each player has their own limit)
+        await room.close()
+
+    run(main())
+
+
+def test_test_room_fills_with_passive_bots_and_changes_the_table():
+    async def main():
+        room, (host,) = await room_with(1, 0)
+        h = await FakeClient(room, host, auto=False).connect()
+        with pytest.raises(RoomError, match="test room"):
+            await room.handle(host, h.conn, {"type": "test", "action": "hp", "seat": 0, "hp": 1})
+        await room.handle(host, h.conn, {"type": "sandbox", "on": True})
+        assert h.of("room")[-1]["sandbox"] is True and h.of("room")[-1]["passive_bots"] is True
+        await room.handle(host, h.conn, {"type": "start"})
+        assert len(room.members) == 4 and all(m.is_bot for m in room.members[1:])
+        game = room.game
+        assert game.lord_seat == 0 and not game.draft and all(p.hero != "blank" for p in game.players)
+        for _ in range(300):  # passive bots: it's soon the host's play phase
+            pend = room.pending
+            if pend is not None and pend.req.kind == "play":
+                break
+            if pend is not None and not pend.future.done():  # (their hero's turn-start skills)
+                pend.future.set_result(pend.req.default())
+            await asyncio.sleep(0.01)
+        first = room.pending
+        assert first.seat == 0
+
+        await room.handle(host, h.conn, {"type": "test", "action": "hero", "seat": 0, "hero": "zhou_yu"})
+        p = game.players[0]
+        assert p.hero == "zhou_yu" and p.hp == p.max_hp == HERO_MAP["zhou_yu"].max_hp  # (4 players: no Lord bonus)
+        await room.handle(host, h.conn, {"type": "test", "action": "hp", "seat": 0, "hp": 1})
+        await room.handle(host, h.conn, {"type": "test", "action": "card", "seat": 0, "name": "peach", "suit": "heart"})
+        await asyncio.sleep(0.05)
+        peach = p.hand[-1]  # (the newest card: they may hold another Peach already)
+        assert peach.name == "peach" and str(peach.suit) == "heart"
+        # The play request was re-sent with the new hand and skill.
+        req = h.of("request")[-1]["request"]
+        assert room.pending is not first and req["kind"] == "play"
+        assert any(o["card_id"] == peach.id for o in req["options"])
+        assert any(s["skill"] == "false_letter" for s in req["skills"])
+
+        await room.handle(host, h.conn, {"type": "test", "action": "top", "name": "lightning"})
+        assert game.draw_pile[-1].name == "lightning"
+        await room.handle(host, h.conn, {"type": "test", "action": "hp", "seat": 2, "hp": 1})
+        assert game.players[2].hp == 1
+        for bad, err in [
+            ({"action": "hp", "seat": 2, "hp": 0}, "HP must be"),
+            ({"action": "hero", "seat": 1, "hero": "nobody"}, "unknown hero"),
+            ({"action": "card", "seat": 9, "name": "strike"}, "no such seat"),
+            ({"action": "card", "seat": 1, "name": "rocket"}, "unknown card"),
+            ({"action": "fly"}, "unknown test-room action"),
+        ]:
+            with pytest.raises(RoomError, match=err):
+                await room.handle(host, h.conn, {"type": "test", **bad})
+        await room.handle(host, h.conn, {"type": "test", "action": "bots", "passive": False})
+        assert room.passive_bots is False
+        assert any(e["type"] == "sandbox" for e in game.log)
+        await room.close()
+
+    run(main())
+
+
+def test_test_room_card_must_be_in_the_deck():
+    async def main():
+        room, (host,) = await room_with(1, 3)
+        h = await FakeClient(room, host, auto=False).connect()
+        await room.handle(host, h.conn, {"type": "sandbox", "on": True})
+        await room.handle(host, h.conn, {"type": "deck", "battle": False})
+        await room.handle(host, h.conn, {"type": "start"})
+        with pytest.raises(RoomError, match="isn't in this deck"):
+            await room.handle(host, h.conn, {"type": "test", "action": "card", "seat": 0, "name": "wine"})
+        await room.close()
+
+    run(main())
+
+
 def test_art_manifest_lists_dropped_in_images(tmp_path):
     art = tmp_path / "art"
     (art / "cards").mkdir(parents=True)

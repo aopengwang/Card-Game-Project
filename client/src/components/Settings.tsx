@@ -9,7 +9,7 @@ import { KEY } from "./shortcuts";
 import s from "./Settings.module.css";
 
 const pct = (scale: number) => `${Math.round(scale * 100)}%`;
-const PRESETS = [1, 1.25, 1.5];
+const PRESETS = [0.75, 1, 1.25, 1.5];
 
 const SpeakerIcon = ({ muted }: { muted: boolean }) => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

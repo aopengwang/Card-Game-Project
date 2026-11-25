@@ -1,0 +1,149 @@
+/* Emotes: a round seal with a brush character, its label underneath (Emotes.tsx). */
+.emote {
+  --tone: var(--ik-gold);
+  --tone-deep: #6b4a14;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.gold { --tone: #e2b866; --tone-deep: #6b4a14; }
+.jade { --tone: #5fb391; --tone-deep: #1f4a3a; }
+.ink { --tone: #8ea4c8; --tone-deep: #26324a; }
+.red { --tone: var(--ik-vermilion-bright); --tone-deep: #5a1a12; }
+
+.seal {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid var(--tone);
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--tone) 30%, #2a140e), #1c0d0a 72%);
+  color: var(--tone);
+  font: 30px / 1 var(--ik-font-brush);
+  box-shadow: 0 0 0 3px rgba(20, 10, 8, 0.85), 0 0 16px color-mix(in srgb, var(--tone) 55%, transparent);
+}
+
+.label {
+  padding: 1px 8px;
+  border-radius: 9px;
+  background: rgba(20, 10, 8, 0.9);
+  color: var(--ik-text-strong);
+  font: 700 12px / 1.4 var(--ik-font-body);
+  white-space: nowrap;
+}
+
+.small .seal {
+  width: 40px;
+  height: 40px;
+  font-size: 23px;
+  box-shadow: none;
+}
+
+.small .label {
+  background: none;
+  font-size: 11px;
+}
+
+/* ---------------------------------------------------------------- the picker */
+.picker {
+  position: relative;
+}
+
+.panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: repeat(5, 72px);
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--ik-gold-line-strong);
+  border-radius: var(--ik-radius-lg);
+  background: rgba(20, 10, 8, 0.97);
+  box-shadow: var(--ik-shadow-modal);
+}
+
+.option {
+  display: grid;
+  place-items: center;
+  padding: 6px 0;
+  border: 1px solid transparent;
+  border-radius: var(--ik-radius-sm);
+  background: none;
+  cursor: pointer;
+}
+
+.option:hover,
+.option:focus-visible {
+  outline: none;
+  border-color: var(--ik-gold-line-strong);
+  background: rgba(201, 163, 90, 0.12);
+}
+
+/* ---------------------------------------------------------------- on the table */
+/* beside the hero card's top right corner: pops in, hangs, floats up and fades */
+.pop {
+  position: absolute;
+  top: -4px;
+  z-index: 7;
+  pointer-events: none;
+  animation: pop 2600ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.right {
+  right: -14px;
+}
+
+/* a seat at the table's right edge: on the other side, so it isn't cut off */
+.left {
+  left: -14px;
+}
+
+/* stacked seats (phones): inside the card, so the page never scrolls sideways */
+.inside {
+  top: 4px;
+  right: 4px;
+}
+
+@keyframes pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) rotate(-12deg);
+  }
+  12% {
+    opacity: 1;
+    transform: scale(1.15) rotate(4deg);
+  }
+  20% {
+    transform: scale(1) rotate(0deg);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pop {
+    animation: none;
+  }
+}
+
+/* phones: the picker spans the screen under the top bar */
+@media (max-width: 760px) {
+  .panel {
+    position: fixed;
+    top: 56px;
+    left: 8px;
+    right: 8px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}

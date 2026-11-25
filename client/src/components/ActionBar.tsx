@@ -55,10 +55,14 @@ function title(r: GameRequest, name: NameFn, you: number): string {
       return t("act.playPhase");
     case "respond":
       return respondText(r, name, you);
-    case "discard":
-      return r.reason === "discard_phase"
-        ? t("act.discardPhase", { n: r.count })
-        : t("act.discardFor", { reason: reasonTitle(r.reason), n: r.count });
+    case "discard": {
+      if (r.reason === "discard_phase") return t("act.discardPhase", { n: r.count });
+      const suit = String(r.context?.suit ?? "");
+      return (
+        tMaybe(`pick.${r.reason}`, { name: name(r.about), suit: tMaybe(`opt.${suit}`) ?? suit, n: r.count }) ??
+        t("act.discardFor", { reason: reasonTitle(r.reason), n: r.count })
+      );
+    }
     case "choose_card":
       if (r.reason === "fire_attack" && r.context?.step) {
         const ctx = r.context as { step: string; source?: number; target?: number; suit?: string };
@@ -227,7 +231,7 @@ export function ActionBar({ request, view, sel, setSel, name, waitingText }: Pro
 
         {(r.kind === "discard" || r.kind === "choose_player") && (
           <Button variant="primary" disabled={!ready} onClick={submit} shortcut={KEY.main}>
-            {t("act.confirm")}
+            {(r.kind === "discard" && tMaybe(`pickBtn.${r.reason}`)) || t("act.confirm")}
           </Button>
         )}
         {r.kind === "choose_player" && r.optional && (

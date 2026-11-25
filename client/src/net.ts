@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { serverText, t } from "./i18n";
+import { play } from "./sound";
 import type { ActiveRequest, GameView, LogEntry, RoomInfo, Waiting } from "./types";
 
 export interface Session {
@@ -22,6 +23,13 @@ export interface ChatMessage {
   live?: boolean;
 }
 
+/** An emote someone just sent (`key` is local and only increases). */
+export interface EmoteEvent {
+  key: number;
+  seat: number;
+  emote: string;
+}
+
 export interface NetState {
   session: Session | null;
   conn: "idle" | "connecting" | "open" | "reconnecting";
@@ -31,6 +39,7 @@ export interface NetState {
   request: ActiveRequest | null;
   log: LogEntry[];
   chat: ChatMessage[];
+  emotes: EmoteEvent[];
   toasts: Toast[];
   homeError: string | null;
   /** The room you tried to join wants a password (show the field). */
@@ -69,10 +78,12 @@ let state: NetState = {
   request: null,
   log: [],
   chat: [],
+  emotes: [],
   toasts: [],
   homeError: null,
   homeNeedsPassword: false,
 };
+let emoteSeq = 0;
 const listeners = new Set<() => void>();
 let ws: WebSocket | null = null;
 let retryMs = 500;
@@ -152,6 +163,10 @@ export async function roomLocked(code: string): Promise<boolean | null> {
   } catch {
     return null;
   }
+}
+
+export function sendEmote(emote: string): void {
+  send({ type: "emote", emote });
 }
 
 export function sendChat(text: string): void {
@@ -256,10 +271,14 @@ export function onMessage(m: any): void {
       set({ chat: [...state.chat, { ...(msg as ChatMessage), live: true }].slice(-CHAT_KEEP) });
       break;
     }
+    case "emote":
+      set({ emotes: [...state.emotes, { key: ++emoteSeq, seat: m.seat, emote: m.emote }].slice(-20) });
+      play("emote");
+      break;
   }
 }
 
 /** Test hook: reset module state. */
 export function _reset(patch: Partial<NetState> = {}): void {
-  state = { ...state, room: null, view: null, request: null, log: [], chat: [], toasts: [], ...patch };
+  state = { ...state, room: null, view: null, request: null, log: [], chat: [], emotes: [], toasts: [], ...patch };
 }

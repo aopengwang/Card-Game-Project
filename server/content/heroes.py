@@ -680,8 +680,8 @@ SUITS = [str(s) for s in (Suit.SPADE, Suit.HEART, Suit.CLUB, Suit.DIAMOND)]
 
 class FalseLetter(ActiveSkill):
     """Once per turn, in your play phase, if you have hand cards: choose another player. They
-    name a suit, then take one of your hand cards (unseen) and show it. If it isn't the suit
-    they named, they take 1 damage from you."""
+    name a suit, then you choose one of your hand cards and give it to them, face up. If it
+    isn't the suit they named, they take 1 damage from you."""
 
     name = "false_letter"
     min_targets = max_targets = 1
@@ -696,11 +696,16 @@ class FalseLetter(ActiveSkill):
         (t,) = targets
         suit = yield from game.ask(ChooseOptionRequest(seat=t, reason=self.name, about=owner.seat, choices=SUITS))
         game._log("named_suit", seat=t, suit=suit, reason=self.name)
-        cid = yield from game.choose_card_from(t, owner.seat, reason=self.name, include_judge=False, include_equips=False)
-        if cid is None:
+        if not owner.hand:
             return
+        (cid,) = yield from game.ask(
+            DiscardRequest(
+                seat=owner.seat, count=1, options=[c.id for c in owner.hand], reason=self.name,
+                about=t, context={"suit": suit},
+            )
+        )
         card = game.cards[cid]
-        game._log("take", seat=t, target=owner.seat, zone=str(Zone.HAND), reason=self.name, card=card.to_dict())
+        game._log("give", seat=owner.seat, target=t, reason=self.name, card=card.to_dict())  # shown face up
         yield from game.move_cards([cid], Zone.HAND, t, reason=self.name)
         if str(card.suit) != suit:
             yield from game.damage(owner.seat, t, 1)

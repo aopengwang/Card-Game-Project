@@ -9,14 +9,16 @@ import { Button } from "../ui/Button";
 import { Card, CardBack } from "../ui/Card";
 import { Plaque } from "../ui/Plaque";
 import { useSize, useWindowSize } from "../useSize";
-import { useUiScale } from "../uiScale";
+import { setTableMode, useUiScale } from "../uiScale";
 import { play } from "../sound";
 import { MuteButton, SettingsButton } from "./Settings";
 import { ActionBar } from "./ActionBar";
 import { Arrange } from "./Arrange";
 import { ChatBox, useBubbles } from "./Chat";
+import { EmoteButton, EmotePop, useEmotePops } from "./Emotes";
 import { Effects } from "./Effects";
 import { useShortcuts } from "./shortcuts";
+import { TestPanel } from "./TestPanel";
 import { LangToggle } from "./LangToggle";
 import { GameOver, HeroPick, LogPanel } from "./Overlays";
 
@@ -75,6 +77,17 @@ export function Table({ net }: { net: NetState }) {
   const scale = useUiScale(); // the window in the app's own (zoomed) pixels picks card sizes
   const tier = sizeTier(win.width / scale, win.height / scale);
   useShortcuts();
+  // The table is exactly one window tall. When the interface is shrunk to fit (a phone on
+  // its side), browsers still measure the page at its unshrunk height and let it scroll
+  // into empty space below the table: the stylesheet stops that while we're here.
+  useEffect(() => {
+    document.documentElement.classList.add("on-table");
+    setTableMode(true);
+    return () => {
+      document.documentElement.classList.remove("on-table");
+      setTableMode(false);
+    };
+  }, []);
 
   // Chat: unread count while it's out of sight, bubbles over the speakers, T to type.
   const chat = net.chat;
@@ -86,6 +99,7 @@ export function Table({ net }: { net: NetState }) {
   }, [chatVisible, lastChat]);
   const unread = chatVisible ? 0 : chat.filter((m) => m.id > seenChat && m.seat !== view?.you).length;
   const bubbles = useBubbles(chat);
+  const pops = useEmotePops(net.emotes);
   const chatInput = useRef<HTMLInputElement>(null);
   const openChat = useRef(() => {});
   openChat.current = () => {
@@ -117,8 +131,18 @@ export function Table({ net }: { net: NetState }) {
   const opponents = opponentOrder(view.you, n);
   // Null until measured, and when the table is too small for the seats-in-a-row layout:
   // then the stylesheet stacks the seats (as on phones) and the table scrolls inside.
-  const layout = arena.width > 0 ? tableLayout(opponents.length, arena.width, arena.height, tier.centerH) : null;
+  // Portrait phones always stack, at any interface size (the phone styles expect it; a
+  // shrunk interface would otherwise measure wide enough for the desktop layout).
+  const phone = win.width <= 760;
+  const layout = arena.width > 0 && !phone ? tableLayout(opponents.length, arena.width, arena.height, tier.centerH) : null;
   const fan = handFan(view.hand.length, hand.width, tier.handW);
+  /** Which side of the table a seat touches (emotes and chat bubbles there turn inward). */
+  const edgeOf = (i: number): "left" | "right" | null => {
+    const b = layout?.seats[i];
+    if (!b) return null;
+    if (b.left + b.width > arena.width - 40) return "right";
+    return b.left < 40 ? "left" : null;
+  };
   const me = view.players[view.you];
   const lordSeat = view.players.find((p) => p.role === "lord")?.seat;
 
@@ -156,6 +180,8 @@ export function Table({ net }: { net: NetState }) {
         )}
         {net.conn !== "open" && <span className="pill warn">{t("conn.reconnecting")}</span>}
         <span className="spacer" />
+        {room.sandbox && !view.result && <TestPanel room={room} view={view} name={name} />}
+        <EmoteButton />
         <MuteButton />
         <SettingsButton />
         <LangToggle />
@@ -181,7 +207,16 @@ export function Table({ net }: { net: NetState }) {
             // The slot does the positioning, so the seat's own transforms (press, shake) can't move it.
             <div key={seat} className="seat-slot" data-seat={seat} style={layout ? boxVars("seat", layout.seats[i]) : undefined}>
               <Plaque player={view.players[seat]} name={nameOf(seat)} {...seatProps(seat)} />
-              {bubbles.get(seat) && <span className="chat-bubble">{bubbles.get(seat)!.text}</span>}
+              {bubbles.get(seat) && (
+                <span className={`chat-bubble ${edgeOf(i) ? `at-${edgeOf(i)}` : ""}`}>{bubbles.get(seat)!.text}</span>
+              )}
+              {pops.get(seat) && (
+                <EmotePop
+                  key={pops.get(seat)!.key}
+                  event={pops.get(seat)!}
+                  side={!layout ? "inside" : edgeOf(i) === "right" ? "left" : "right"}
+                />
+              )}
             </div>
           ))}
           <div className="center" style={layout ? boxVars("center", layout.center) : undefined}>
@@ -233,6 +268,7 @@ export function Table({ net }: { net: NetState }) {
       <footer className="dock">
         <div className="dock-self" data-seat={view.you}>
           {bubbles.get(view.you) && <span className="chat-bubble">{bubbles.get(view.you)!.text}</span>}
+          {pops.get(view.you) && <EmotePop key={pops.get(view.you)!.key} event={pops.get(view.you)!} />}
           <Plaque
             player={me}
             name={nameOf(view.you)}

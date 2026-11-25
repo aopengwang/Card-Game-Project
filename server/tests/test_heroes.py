@@ -480,9 +480,29 @@ def test_false_letter_wrong_suit_hurts(named, hp):
     sp = give_where(g, 0, lambda c: c.suit == Suit.SPADE)
     drive(
         g.phase_play(g.players[0]),
-        script(Play(skill="false_letter", targets=(1,)), choose_option=named, choose_card="hand"),
+        script(Play(skill="false_letter", targets=(1,)), choose_option=named, discard=[sp]),
     )
     assert hand_ids(g, 1) == [sp] and g.players[1].hp == hp
+
+
+def test_false_letter_zhou_yu_picks_the_card():
+    """After the suit is named, Zhou Yu chooses which hand card to hand over."""
+    g = heroes("zhou_yu", None, None, None)
+    sp = give_where(g, 0, lambda c: c.suit == Suit.SPADE)
+    ht = give_where(g, 0, lambda c: c.suit == Suit.HEART)
+    asked = []
+
+    def pick(req):
+        asked.append(req)
+        return [ht]
+
+    drive(
+        g.phase_play(g.players[0]),
+        script(Play(skill="false_letter", targets=(1,)), choose_option="spade", discard=pick),
+    )
+    (req,) = asked
+    assert req.seat == 0 and req.about == 1 and req.context == {"suit": "spade"} and set(req.options) == {sp, ht}
+    assert hand_ids(g, 0) == [sp] and hand_ids(g, 1) == [ht] and g.players[1].hp == 3
 
 
 def test_captivate_diamond_as_indulgence():

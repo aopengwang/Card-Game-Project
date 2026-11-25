@@ -167,6 +167,16 @@ class RespondRequest(Request):
 HAND = "hand"
 
 
+class _Refresh:
+    """Answer to a PlayRequest meaning "the table changed under you (test room): ask again"."""
+
+    def __repr__(self) -> str:
+        return "REFRESH"
+
+
+REFRESH = _Refresh()
+
+
 @dataclass(kw_only=True)
 class ChooseCardRequest(Request):
     """Pick one card: a visible card id from `options`, or "hand" for a random
@@ -288,6 +298,10 @@ class DiscardRequest(Request):
     count: int
     options: list[int]
     reason: str = "discard_phase"
+    # Not always a discard: a skill may use it to have you pick hand cards for another use
+    # (False Letter: which card to hand over). `about`/`context` let the client word it.
+    about: int | None = None
+    context: dict[str, Any] = field(default_factory=dict)
 
     def validate(self, answer: Any) -> str | None:
         if not isinstance(answer, (list, tuple)):

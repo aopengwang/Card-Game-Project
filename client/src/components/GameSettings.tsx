@@ -122,8 +122,28 @@ export function GameSettings({ room }: { room: RoomInfo }) {
             )}
           </div>
         )}
+        {room.sandbox != null && (
+          <div className={s.option} title={t("game.sandboxHint")}>
+            <label htmlFor="opt-sandbox">{t("game.sandbox")}</label>
+            {editable ? (
+              <select
+                id="opt-sandbox"
+                value={room.sandbox ? "on" : "off"}
+                onChange={(e) => send({ type: "sandbox", on: e.target.value === "on" })}
+              >
+                <option value="off">{t("game.sandboxOff")}</option>
+                <option value="on">{t("game.sandboxOn")}</option>
+              </select>
+            ) : (
+              <output id="opt-sandbox" className={s.optionValue}>
+                {room.sandbox ? t("game.sandboxOn") : t("game.sandboxOff")}
+              </output>
+            )}
+          </div>
+        )}
       </div>
       {room.battle && <p className={s.note}>{t("game.battleHint")}</p>}
+      {room.sandbox && <p className={`${s.note} sandbox-note`}>{t("game.sandboxHint")}</p>}
       {isHost ? (
         <PasswordField room={room} />
       ) : (

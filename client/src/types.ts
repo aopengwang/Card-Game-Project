@@ -86,6 +86,10 @@ export interface RoomInfo {
   disabled_heroes?: string[];
   /** Playing with the Battle expansion's 52 cards. */
   battle?: boolean;
+  /** Test room: bots fill the table, no draft, and a Test panel changes heroes/cards/HP. */
+  sandbox?: boolean;
+  /** Test room: bots end their turns and never respond. */
+  passive_bots?: boolean;
   /** New players need a password to join. */
   locked?: boolean;
   /** The password itself: only ever sent to the host. */
@@ -155,6 +159,8 @@ export interface DiscardReq extends Base {
   count: number;
   options: number[];
   reason: string;
+  about?: number | null; // a skill may use it to pick cards for another use (False Letter: whom they go to)
+  context?: Record<string, unknown>;
 }
 
 export interface ChooseCardReq extends Base {

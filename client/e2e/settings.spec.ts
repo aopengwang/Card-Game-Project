@@ -67,6 +67,28 @@ test("interface size: Auto makes a big monitor's table bigger", async ({ page })
   await checkFits(page, 1400);
 });
 
+test("interface size: Auto shrinks the table to fit a phone on its side", async ({ page }) => {
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.goto("/?gallery=play_strike&lang=en");
+  await page.locator(".table-screen").waitFor();
+  const scale = Number(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--ui-scale")));
+  expect(scale).toBe(0.6);
+  // The whole table in one window, and the page can't be scrolled off it...
+  const fit = await page.evaluate(() => {
+    window.scrollTo(0, 10_000);
+    return {
+      table: Math.round(document.querySelector(".table-screen")!.getBoundingClientRect().height),
+      scrolled: window.scrollY,
+    };
+  });
+  expect(fit).toEqual({ table: 390, scrolled: 0 });
+  // ...with every seat, the prompt and the hand on screen.
+  await expect(page.locator(".seat-slot").first()).toBeInViewport();
+  await expect(page.locator(".seat-slot").last()).toBeInViewport();
+  await expect(page.locator(".action-bar")).toBeInViewport();
+  await expect(page.locator(".hand .card").first()).toBeInViewport();
+});
+
 test("host chooses the heroes in the draft; guests see it; the hero pick only offers those", async ({ browser }) => {
   const errors: string[] = [];
   const host = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();

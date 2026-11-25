@@ -18,6 +18,7 @@ export type SoundName =
   | "heal"
   | "turn"
   | "slam"
+  | "emote"
   | "death"
   | "victory"
   | "defeat";
@@ -149,6 +150,11 @@ const SOUNDS: Record<SoundName, (c: AudioContext, t: number) => void> = {
     tone(c, t, 95, 0.55, 0.95, "sine", 34);
     tone(c, t, 190, 0.14, 0.4, "triangle", 70);
     noise(c, t, 0.22, 0.55, 2400, 260, 0.7);
+  },
+  // an emote pops up: a light two-note woodblock
+  emote: (c, t) => {
+    tone(c, t, 880, 0.09, 0.12, "triangle", 760);
+    tone(c, t + 0.07, 1320, 0.11, 0.1, "triangle", 1180);
   },
   // a player falls: a deep gong
   death: (c, t) => {

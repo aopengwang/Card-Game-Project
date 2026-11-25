@@ -4,6 +4,7 @@ import { _setLangForTests } from "./i18n";
 import { describe, recentPlays } from "./describe";
 import { handFan, opponentOrder, overlaps, plaqueHeightFor, sizeTier, tableLayout } from "./layout";
 import { soundsFor } from "./components/Effects";
+import { PHONE_SCALE, SCALE, autoScale } from "./uiScale";
 import { _reset, getState, onMessage } from "./net";
 import {
   EMPTY,
@@ -183,6 +184,26 @@ group("layout", () => {
       expect(tilt(0) + tilt(n - 1)).toBe(0);
     }
     expect(handFan(4, 1000).step).toBe(96); // room to spare: no overlap
+  });
+});
+
+group("interface size (auto)", () => {
+  it("grows on big screens, shrinks to fit small ones, 75% on portrait phones", () => {
+    expect(autoScale(1440, 900)).toBe(1);
+    expect(autoScale(1366, 650)).toBe(1); // laptops: unchanged
+    expect(autoScale(1280, 720)).toBe(1);
+    expect(autoScale(2560, 1400)).toBeGreaterThanOrEqual(1.5); // big monitor
+    expect(autoScale(390, 844, true)).toBe(PHONE_SCALE); // portrait phone at the table: stacked, 3 to a row
+    expect(autoScale(390, 844, false)).toBe(1); // ...but its home and lobby forms stay full size
+    expect(autoScale(844, 390)).toBe(0.6); // phone on its side: the whole table fits
+    expect(autoScale(1024, 768)).toBe(0.9); // small tablet
+    expect(autoScale(568, 640, true)).toBe(PHONE_SCALE); // (narrow: portrait rules)
+    expect(autoScale(800, 300)).toBe(SCALE.min); // never smaller than the minimum
+    // whatever Auto picks, the table it leaves is at least the size it's laid out for
+    for (const [w, h] of [[844, 390], [932, 430], [1024, 600], [1180, 820]]) {
+      const s = autoScale(w, h);
+      expect(h / s, `${w}x${h}`).toBeGreaterThanOrEqual(600);
+    }
   });
 });
 

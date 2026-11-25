@@ -98,7 +98,9 @@ select:focus-visible {
   gap: var(--ik-space-2);
   padding: 0 var(--ik-space-4);
   white-space: nowrap;
-  overflow: clip;
+  /* (not clipped: the emote picker opens below it; the table screen clips the page edges) */
+  position: relative;
+  z-index: 25;
   background: var(--ik-scrim);
   border-bottom: 1px solid var(--ik-gold-line);
 }
@@ -282,6 +284,12 @@ select:focus-visible {
 @keyframes bubble-in {
   from { opacity: 0; transform: translateX(-50%) translateY(6px) scale(0.9); }
 }
+/* seats at the table's edges: the bubble lines up with the card's inner side, not centred */
+.chat-bubble.at-left { left: 4px; transform: none; animation-name: bubble-in-edge; }
+.chat-bubble.at-right { left: auto; right: 4px; transform: none; animation-name: bubble-in-edge; }
+@keyframes bubble-in-edge {
+  from { opacity: 0; transform: translateY(6px) scale(0.9); }
+}
 .arena.stacked .seat-slot, .dock-self { position: relative; }
 .log-line { padding: 1px 0; }
 .log-line.tone-turn { margin-top: var(--ik-space-2); font: 700 var(--ik-text-md) var(--ik-font-display); color: var(--ik-gold); }
@@ -348,10 +356,15 @@ select:focus-visible {
   animation: slide-in var(--ik-dur-card) var(--ik-ease-out);
 }
 
+/* the table fills the window: no page scrolling (phones in portrait, below, scroll instead) */
+@media (min-width: 761px) {
+  html.on-table, html.on-table body { overflow: hidden; }
+}
+
 /* ---------------------------------------------------------------- phones */
 /* The page scrolls (the seats stack); the prompt bar, plaques and hand keep fixed sizes. */
 @media (max-width: 760px) {
-  .table-screen { height: auto; min-height: 100%; overflow: visible; grid-template-rows: auto auto auto; }
+  .table-screen { height: auto; min-height: 100%; overflow: visible; grid-template-rows: auto auto auto; align-content: start; }
   .topbar { flex-wrap: wrap; white-space: normal; min-height: 48px; padding: 6px var(--ik-space-3); }
   .table-main, .arena, .dock { overflow: visible; }
   .arena.placed, .arena.stacked {

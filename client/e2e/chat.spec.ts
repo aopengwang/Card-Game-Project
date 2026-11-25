@@ -76,5 +76,26 @@ test("a password keeps strangers out; chat works in the lobby and at the table",
   await expect(guest.locator(".unread")).toHaveCount(0); // read now
   await expect(guest.locator(".chat-bubble")).toHaveCount(0, { timeout: 10_000 }); // bubbles fade
 
+  // Emotes: picked from the top bar, shown beside the sender's hero card for everyone.
+  await host.getByRole("button", { name: "Emotes" }).click();
+  await expect(host.getByRole("menuitem")).toHaveCount(10);
+  await host.getByRole("menuitem", { name: "Nice!" }).click();
+  await expect(host.getByRole("menu")).toHaveCount(0); // the picker closes
+  const pop = guest.locator('.seat-slot[data-seat="0"] .emote-pop');
+  await expect(pop).toContainText("Nice!");
+  await expect(host.locator(".dock-self .emote-pop")).toContainText("Nice!");
+  await expect(pop).toHaveCount(0, { timeout: 6000 }); // and goes again
+
+  // The guest sits at the right edge of the host's table: their emote turns inward, uncut.
+  await guest.getByRole("button", { name: "Emotes" }).click();
+  await guest.getByRole("menuitem", { name: "Haha" }).click();
+  const edgePop = host.locator('.seat-slot[data-seat="1"] .emote-pop');
+  await expect(edgePop).toHaveAttribute("data-side", "left");
+  const [popBox, arenaBox] = [await edgePop.boundingBox(), await host.locator(".arena").boundingBox()];
+  expect(popBox!.x + popBox!.width).toBeLessThanOrEqual(arenaBox!.x + arenaBox!.width);
+  await host.getByRole("button", { name: "Emotes" }).click();
+  await host.keyboard.press("Escape");
+  await expect(host.getByRole("menu")).toHaveCount(0); // Esc closes it too
+
   expect(errors.filter((e) => !/HTTP 403/.test(e))).toEqual([]);
 });

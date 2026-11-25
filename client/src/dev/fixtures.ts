@@ -39,6 +39,7 @@ export function fixtureNet(fx: Fixture): NetState {
     request: fx.request ? { id: fx.request.id, req: fx.request.req, deadline: Date.now() + total, total } : null,
     log: fx.log,
     chat: [],
+    emotes: [],
     toasts: [],
     homeError: null,
     homeNeedsPassword: false,

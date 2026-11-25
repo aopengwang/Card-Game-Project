@@ -88,6 +88,18 @@ export function describe(e: LogEntry, name: (seat: number | null | undefined) =>
     }
     case "give":
       return line(t("log.give", { name: name(e.seat), what: e.card ? cardText(e.card) : t("log.aCard"), target: name(e.target) }));
+    case "sandbox": // a test-room change
+      switch (e.action) {
+        case "hero":
+          return line(t("log.sandboxHero", { name: name(e.seat), hero: heroName(e.hero) }), "skill");
+        case "card":
+          return line(t("log.sandboxCard", { name: name(e.seat), card: cardText(e.card) }), "skill");
+        case "top":
+          return line(t("log.sandboxTop", { card: cardText(e.card) }), "skill");
+        case "hp":
+          return line(t("log.sandboxHp", { name: name(e.seat), hp: e.hp }), "skill");
+      }
+      return null;
     case "phase_skipped":
       return line(t("log.skip", { name: name(e.seat), phase: phaseName(e.phase) }));
     case "reveal":

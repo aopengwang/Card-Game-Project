@@ -9,7 +9,7 @@ import { useSyncExternalStore } from "react";
  * that turns getBoundingClientRect() (zoomed, screen pixels) into CSS positions inside
  * #root must divide by the scale (see Effects.tsx).
  */
-export const SCALE = { min: 0.8, max: 1.6, step: 0.05 } as const;
+export const SCALE = { min: 0.5, max: 1.6, step: 0.05 } as const;
 const KEY = "sgs.uiScale";
 
 export type ScaleChoice = "auto" | number;
@@ -17,8 +17,24 @@ export type ScaleChoice = "auto" | number;
 const clamp = (s: number) => Math.min(SCALE.max, Math.max(SCALE.min, s));
 const round = (s: number) => Math.round(s / SCALE.step) * SCALE.step;
 
-/** Auto: grow the table so the window looks like at least a 1440x900 one, never shrink. */
-export function autoScale(windowW: number, windowH: number): number {
+let tableMode = false; // the game table is on screen (setTableMode)
+
+/** The smallest window the full table is laid out for (the table needs 600px of height). */
+const TABLE_MIN = { w: 1100, h: 640 };
+
+/**
+ * Auto: on a big monitor, grow the table so the window looks like at least a 1440x900 one.
+ * On a window too small for the full table (a phone on its side, a small tablet), shrink
+ * everything until it fits. Portrait phones (760 wide or less) get their own stacked
+ * layouts, which scroll: the table at 75% (three seats to a row instead of two), the
+ * home and lobby screens at 100% (their forms are made for phones).
+ */
+export const PHONE_SCALE = 0.75;
+
+export function autoScale(windowW: number, windowH: number, atTable = tableMode): number {
+  if (windowW <= 760) return atTable ? PHONE_SCALE : 1;
+  const fit = Math.min(windowW / TABLE_MIN.w, windowH / TABLE_MIN.h);
+  if (fit < 1) return Number(Math.max(SCALE.min, Math.floor(fit / SCALE.step) * SCALE.step).toFixed(2));
   const s = Math.min(windowW / 1440, windowH / 900);
   return Number(Math.max(1, Math.min(SCALE.max, round(s))).toFixed(2));
 }
@@ -35,6 +51,12 @@ function load(): ScaleChoice {
 
 let choice: ScaleChoice = load();
 const listeners = new Set<() => void>();
+
+/** The table is (or isn't) on screen: Auto sizes portrait phones differently there. */
+export function setTableMode(on: boolean): void {
+  tableMode = on;
+  if (choice === "auto") apply();
+}
 
 export function currentScale(): number {
   return choice === "auto" ? autoScale(window.innerWidth, window.innerHeight) : choice;
