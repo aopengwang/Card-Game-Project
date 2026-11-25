@@ -60,7 +60,7 @@ Without a build, "/" falls back to the plain test client, which is always at `/d
   dying, 8 players, game over, and more. Regenerate the moments from seeded hard-bot
   games with `cd server; python -m tools.dump_fixtures`.
 - **Animation lab**: open `/?fx` (or `/?fx=kill`, `streak`, `double`, `fate`, `strike`,
-  `heal`, `turn`; add `&lang=zh`). It replays one effect on a real table: pick the effect, who
+  `heal`, `judge`, `judgeGood`, `judgeMiss`, `judgeKill`, `turn`; add `&lang=zh`). It replays one effect on a real table: pick the effect, who
   kills whom and the speed (1x / 0.5x / 0.25x), then press Play or `P`. Use it to tune a
   new animation in seconds instead of playing games. To add an effect, add an entry to
   `EFFECTS` in `client/src/dev/FxLab.tsx` listing the log entries a game would send.
@@ -108,6 +108,27 @@ To let friends outside your network join, either:
   `http://<your-tailscale-ip>:8000`. Nothing is exposed to the public internet.
 - **Cloudflare Tunnel**: `cloudflared tunnel --url http://localhost:8000` prints a
   public `https://….trycloudflare.com` URL (websockets work through it).
+- **Render** (free hosting, no PC needed; see below).
+
+### Host it on Render (free)
+The repo has a `Dockerfile` (builds the client, then runs the server) and a
+`render.yaml` Blueprint. One-time setup:
+1. Push the repo to GitHub.
+2. On https://render.com, sign up (GitHub login is easiest) and choose
+   **New > Blueprint**, pick this repo, and confirm. Render builds the image (a few
+   minutes the first time) and gives you a `https://….onrender.com` link to share.
+
+How the free plan behaves:
+- It **sleeps after 15 minutes with no traffic**. The next visitor wakes it, which
+  takes about a minute, so open the link a few minutes before your friends join.
+  Playing (moves, chat, emotes) counts as traffic and keeps it awake.
+- **Sleeping or redeploying ends every room** (rooms live in memory).
+- Pushing to GitHub does **not** redeploy (`autoDeploy: false`), so a push can't end a
+  game. To put new code online, press **Manual Deploy > Deploy latest commit** on the
+  service's page when nobody is playing.
+
+To try the image locally (Docker Desktop running): `docker build -t cardgame .` then
+`docker run -p 8000:8000 cardgame`.
 
 Defaults (env vars, seconds): `SGS_PLAY_TIMEOUT` (90), `SGS_RESPONSE_TIMEOUT` (20),
 `SGS_BOT_DELAY` (0.6). Each room starts from these and the host can change the turn

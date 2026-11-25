@@ -1,4 +1,4 @@
-// Animation lab (developer tool): /?fx[=effect]&lang=zh (effects: kill, streak, double, fate, strike, heal, turn). Replays table effects on a real
+// Animation lab (developer tool): /?fx[=effect]&lang=zh (effects: kill, streak, double, fate, strike, heal, judge, judgeGood, judgeMiss, judgeKill, turn). Replays table effects on a real
 // captured table, with the seats and speed you choose, so an animation can be tuned in
 // seconds instead of playing games until the moment comes up. Press P to replay.
 import { useEffect, useRef, useState } from "react";
@@ -35,6 +35,13 @@ const death = (v: GameView, seat: number, killer: number | null): LogEntry => ({
   seat,
   role: v.players[seat].role ?? "rebel",
   killer,
+});
+const judged = (seat: number, reason: string, suit: string, rank: number, hit: boolean): LogEntry => ({
+  type: "judge_result",
+  seat,
+  reason,
+  card: { id: nextCardId++, name: suit === "heart" ? "peach" : "dodge", suit, rank },
+  hit,
 });
 const setHp = (seats: number[], hp: number) => (v: GameView) => ({
   ...v,
@@ -113,6 +120,33 @@ const EFFECTS: Record<string, Effect> = {
       const hp = v.players[victim].hp + 1;
       return [{ entries: [use(victim, "peach", []), { type: "recover", seat: victim, amount: 1, hp }], view: setHp([victim], hp) }];
     },
+  },
+  judge: {
+    label: "Judgment: Indulgence hits (bad news)",
+    uses: ["victim"],
+    steps: ({ victim }) => [{ entries: [judged(victim, "indulgence", "spade", 9, true)] }],
+  },
+  judgeGood: {
+    label: "Judgment: Eight Trigrams hits (good news)",
+    uses: ["victim"],
+    steps: ({ victim }) => [{ entries: [judged(victim, "eight_trigrams", "heart", 4, true)] }],
+  },
+  judgeMiss: {
+    label: "Judgment: Lightning misses (good news)",
+    uses: ["victim"],
+    steps: ({ victim }) => [{ entries: [judged(victim, "lightning", "heart", 12, false)] }],
+  },
+  judgeKill: {
+    label: "Judgment: Lightning hits and kills (they queue)",
+    uses: ["victim"],
+    steps: ({ victim }, v) => [
+      {
+        entries: [judged(victim, "lightning", "spade", 5, true), { ...damage(null, victim, 0, "thunder"), amount: 3 }],
+        view: setHp([victim], 0),
+        after: 600,
+      },
+      { entries: [death(v, victim, null)], view: dies([victim]) },
+    ],
   },
   turn: {
     label: "Your turn banner",

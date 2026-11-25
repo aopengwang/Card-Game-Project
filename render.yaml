@@ -1,0 +1,12 @@
+# Render Blueprint: one free web service built from the Dockerfile.
+# In Render: New > Blueprint > pick this repo. See README "Host it on Render".
+services:
+  - type: web
+    name: three-kingdoms-table
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    # Rooms live in memory, so a redeploy ends every game in progress. Deploy only when
+    # you choose (Manual Deploy in the dashboard), never on every push.
+    autoDeploy: false
+    healthCheckPath: /api/content

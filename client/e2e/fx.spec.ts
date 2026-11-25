@@ -108,6 +108,42 @@ test("kill streak in Chinese", async ({ page }) => {
   await expect(page.locator(".kill-streak .streak-title")).toHaveText("三杀", { timeout: 5000 });
 });
 
+test("judgment: the card turns over the judged seat and a seal stamps the outcome", async ({ page }) => {
+  await openLab(page, "judge");
+  const victim = await page.getByLabel("Victim / target").inputValue();
+  const seatBox = (await page.locator(`[data-seat="${victim}"] .hero-face`).boundingBox())!;
+  for (const [effect, word, good, sound] of [
+    ["judge", "Hit!", "false", "judgeBad"], // Indulgence hits: bad news
+    ["judgeGood", "Hit!", "true", "judgeGood"], // Eight Trigrams hits: good news
+    ["judgeMiss", "Miss", "true", "judgeGood"], // Lightning misses: good news
+  ] as const) {
+    await page.getByLabel("Effect").selectOption(effect);
+    await page.getByRole("button", { name: /^Play/ }).click(); // (the click also unlocks audio)
+    const fx = page.locator(".judgment-fx"); // (a 0×0 anchor at the seat's centre)
+    await expect(fx).toHaveCount(1);
+    await expect(fx).toHaveAttribute("data-good", good);
+    await expect(fx.locator(".judgment-seal")).toContainText(word);
+    const card = fx.locator(".card"); // a copy of the judgment card...
+    await expect(card).toHaveCount(1);
+    const box = (await card.boundingBox())!; // ...over the judged player's hero card
+    expect(Math.abs(box.x + box.width / 2 - (seatBox.x + seatBox.width / 2))).toBeLessThan(8);
+    await expect(fx).toHaveCount(0, { timeout: 4000 });
+    expect(await sounds(page)).toContain(sound);
+  }
+});
+
+test("judgment before the death it causes (Lightning)", async ({ page }) => {
+  await watchBlows(page);
+  await openLab(page, "judgeKill");
+  const victim = page.locator(`[data-seat="${await page.getByLabel("Victim / target").inputValue()}"]`);
+  await page.getByRole("button", { name: /^Play/ }).click();
+  await expect(page.locator(".judgment-fx")).toHaveCount(1);
+  await expect(victim.locator(".death-stamp")).toBeHidden(); // the fall waits for the judgment
+  await expect(page.locator(".judgment-fx")).toHaveCount(0, { timeout: 4000 });
+  await expect(victim.locator(".death-stamp")).toBeVisible({ timeout: 6000 });
+  expect((await blows(page)).seen).toBe(0); // (no killer: only the impact)
+});
+
 test("reduced motion: no blow, the victim falls at once", async ({ browser }) => {
   const page = await (await browser.newContext({ reducedMotion: "reduce" })).newPage();
   await watchBlows(page);

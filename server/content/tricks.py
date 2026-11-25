@@ -372,7 +372,7 @@ class DelayedTrick(CardDef):
 
 
 class Indulgence(DelayedTrick):
-    """Judge: unless Hearts, the owner skips their play phase."""
+    """Judge: unless Hearts ♥, the owner skips their play phase."""
 
     name = "indulgence"
     target_count = 1
@@ -392,7 +392,7 @@ class Indulgence(DelayedTrick):
 
 
 class SupplyShortage(DelayedTrick):
-    """Target a player at distance 1. Judge: unless it's a Club, they skip their draw phase."""
+    """Target a player at distance 1. Judge: unless it's a Club ♣, they skip their draw phase."""
 
     name = "supply_shortage"
     target_count = 1
@@ -416,7 +416,7 @@ class SupplyShortage(DelayedTrick):
 
 
 class Lightning(DelayedTrick):
-    """Placed on yourself. Judge: Spade 2-9 deals 3 thunder damage; otherwise it moves on."""
+    """Placed on yourself. Judge: Spade ♠ 2-9 deals 3 thunder damage; otherwise it moves on."""
 
     name = "lightning"
 

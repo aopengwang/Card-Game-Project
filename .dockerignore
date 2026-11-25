@@ -1,0 +1,13 @@
+# Not needed to build or run the game (keeps the Docker build small and fast).
+.git
+.claude
+docs
+**/node_modules
+**/__pycache__
+**/.pytest_cache
+server/.venv
+client/dist
+client/test-results
+client/playwright-report
+client/e2e
+client/tsconfig.tsbuildinfo

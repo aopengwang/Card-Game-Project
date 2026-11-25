@@ -1,9 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { reasonTitle } from "../content";
+import { judgment, judgmentGood, type JudgmentShow } from "../fx/judgment";
 import { holdDeath, killBlow } from "../fx/killBlow";
 import { fxSpeed, Stage } from "../fx/stage";
 import { killStreak, streakAt } from "../fx/streak";
 import { getLang, t } from "../i18n";
-import { playAll, playStreak, type SoundName } from "../sound";
+import { play, playAll, playStreak, type SoundName } from "../sound";
 import type { LogEntry } from "../types";
 import { Card } from "../ui/Card";
 import s from "./Effects.module.css";
@@ -15,6 +17,8 @@ import s from "./Effects.module.css";
  *   - an ink stroke runs from the player to each target,
  *   - damage / healing float up over the seat as numbers,
  *   - your turn opens with a brush banner,
+ *   - a judgment flips its card over the judged seat and stamps Hit / Miss on it
+ *     (fx/judgment.ts),
  *   - a death plays the killing blow (fx/killBlow.ts), and from a player's second kill a
  *     kill streak banner (fx/streak.ts); these big moments queue on a Stage.
  * Only entries that arrive while you watch animate: a reconnect, a rejoin or the gallery
@@ -126,16 +130,47 @@ export function Effects({
     const el = layer.current;
     const motion = !!el && !reducedMotion();
     const deaths: number[] = [];
-    for (let i = start; i < log.length; i++) if (log[i].type === "death") deaths.push(i);
+    const judged: number[] = [];
+    for (let i = start; i < log.length; i++) {
+      if (log[i].type === "death") deaths.push(i);
+      if (log[i].type === "judge_result") judged.push(i);
+    }
     // Sounds play even with reduced motion (that setting is about movement, not audio).
     // A killing blow sounds its own gong when it lands; a kill streak its own fanfare.
     playAll(soundsFor(log.slice(start), you).filter((n) => !(motion && deaths.length && n === "death")));
+    const judgeOf = (i: number): JudgmentShow => {
+      const e = log[i];
+      const reason = String(e.reason ?? "");
+      return {
+        seat: e.seat,
+        hit: !!e.hit,
+        good: judgmentGood(reason, !!e.hit),
+        word: t(e.hit ? "fx.judgeHit" : "fx.judgeMiss"),
+        reason: reason ? reasonTitle(reason) : "",
+        zh: getLang() === "zh",
+        cardEl: document.querySelector(`[data-play-key="${i}"]`),
+      };
+    };
     if (!motion || !el) {
+      for (const i of judged) play(judgeOf(i).good ? "judgeGood" : "judgeBad", 0.15);
       for (const i of deaths) if (streakAt(log, i) >= 2) playStreak(streakAt(log, i), 0.4);
       return;
     }
-    for (const i of deaths) {
+    // Big moments take the stage in the order they happened (a Lightning judgment, then
+    // the death it caused).
+    for (const i of [...judged, ...deaths].sort((a, b) => a - b)) {
       const d = log[i];
+      if (d.type === "judge_result") {
+        // Copy the card now: the battlefield may have moved on by the time it plays.
+        const show = judgeOf(i);
+        const face = show.cardEl?.querySelector(".card") ?? null;
+        const box = face?.getBoundingClientRect();
+        const zoom = el.offsetWidth ? el.getBoundingClientRect().width / el.offsetWidth : 1;
+        show.cardEl = face ? (face.cloneNode(true) as Element) : null;
+        show.cardSize = box?.width ? { w: box.width / zoom, h: box.height / zoom } : null;
+        stage.current!.add({ run: () => judgment(el, show), skip: () => play(show.good ? "judgeGood" : "judgeBad") });
+        continue;
+      }
       const release = holdDeath(d.seat); // before this paints: the victim falls on impact
       const killer = typeof d.killer === "number" ? d.killer : null;
       stage.current!.add({ run: () => killBlow(el, killer, d.seat, release), skip: release });

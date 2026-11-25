@@ -19,6 +19,8 @@ export type SoundName =
   | "turn"
   | "slam"
   | "emote"
+  | "judgeGood"
+  | "judgeBad"
   | "death"
   | "victory"
   | "defeat";
@@ -155,6 +157,18 @@ const SOUNDS: Record<SoundName, (c: AudioContext, t: number) => void> = {
   emote: (c, t) => {
     tone(c, t, 880, 0.09, 0.12, "triangle", 760);
     tone(c, t + 0.07, 1320, 0.11, 0.1, "triangle", 1180);
+  },
+  // a judgment goes your way: the seal's tap, then a rising pair of jade chimes
+  judgeGood: (c, t) => {
+    noise(c, t, 0.06, 0.3, 1800, 700);
+    bell(c, t + 0.04, N.A5, 0.7, 0.12, [[1, 1], [2.76, 0.3]]);
+    bell(c, t + 0.15, N.E6, 0.9, 0.11, [[1, 1], [2.76, 0.3]]);
+  },
+  // a judgment goes against you: the seal thuds down over a low, falling drum
+  judgeBad: (c, t) => {
+    tone(c, t, 120, 0.4, 0.6, "sine", 52);
+    noise(c, t, 0.12, 0.4, 1600, 300);
+    tone(c, t + 0.05, N.E4, 0.5, 0.09, "triangle", N.D4 * 0.7);
   },
   // a player falls: a deep gong
   death: (c, t) => {

@@ -206,7 +206,7 @@ class BendFate(Skill):
 
 
 class BloodForBlood(Skill):
-    """After you take damage from a player, you may judge: unless it's a Heart, they must
+    """After you take damage from a player, you may judge: unless it's a Heart ♥, they must
     discard 2 hand cards or take 1 damage from you (their choice)."""
 
     name = "blood_for_blood"
@@ -712,7 +712,7 @@ class FalseLetter(ActiveSkill):
 
 
 class Captivate(_Conversion):
-    """You may use any Diamond card (hand or equipment) as an Indulgence."""
+    """You may use any Diamond ♦ card (hand or equipment) as an Indulgence."""
 
     name = "captivate"
     as_name = "indulgence"
