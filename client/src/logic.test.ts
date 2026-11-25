@@ -236,4 +236,13 @@ group("net message handling", () => {
     onMessage({ type: "timeout", id: 6 });
     expect(getState().request?.id).toBe(7);
   });
+
+  it("keeps the chat: history on connecting, then live messages (only those make bubbles)", () => {
+    _reset();
+    const m = (id: number, text: string) => ({ id, seat: 1, name: "Bo", text, time: 0 });
+    onMessage({ type: "chat_history", messages: [m(1, "hi"), m(2, "ready?")] });
+    onMessage({ type: "chat", ...m(3, "go!") });
+    expect(getState().chat.map((c) => [c.text, !!c.live])).toEqual([["hi", false], ["ready?", false], ["go!", true]]);
+    expect(getState().chat[2]).not.toHaveProperty("type");
+  });
 });

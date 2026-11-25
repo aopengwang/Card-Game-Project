@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react";
 import { t, tMaybe, useLang } from "../i18n";
 import { send } from "../net";
 import type { GameOptions, RoomInfo } from "../types";
+import { Button } from "../ui/Button";
 import s from "./Screens.module.css";
 
 type Key = keyof GameOptions;
@@ -22,6 +24,44 @@ function label(key: Key, v: number): string {
     return name ? `${name} (${t("game.seconds", { n: v })})` : t("game.seconds", { n: v });
   }
   return t("game.seconds", { n: v });
+}
+
+/** The host sets, changes or removes the room password (guests only see whether there is one). */
+function PasswordField({ room }: { room: RoomInfo }) {
+  const current = room.password ?? "";
+  const [value, setValue] = useState(current);
+  useEffect(() => setValue(current), [current]); // the server confirmed a change
+  const changed = value.trim() !== "" && value !== current;
+  return (
+    <form
+      className={s.password}
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (changed) send({ type: "password", password: value });
+      }}
+    >
+      <label htmlFor="opt-password">{t("game.password")}</label>
+      <div className={s.passwordRow}>
+        <input
+          id="opt-password"
+          value={value}
+          maxLength={40}
+          autoComplete="off"
+          placeholder={t("game.passwordPlaceholder")}
+          onChange={(e) => setValue(e.target.value)}
+        />
+        <Button type="submit" shape="small" disabled={!changed}>
+          {t("game.passwordSet")}
+        </Button>
+        {room.locked && (
+          <Button shape="small" variant="ghost" onClick={() => send({ type: "password", password: null })}>
+            {t("game.passwordRemove")}
+          </Button>
+        )}
+      </div>
+      <span className={s.note}>{room.locked ? t("game.passwordHintOn") : t("game.passwordHintOff")}</span>
+    </form>
+  );
 }
 
 /** The room's game settings: the host picks them, everyone else sees them. */
@@ -84,6 +124,14 @@ export function GameSettings({ room }: { room: RoomInfo }) {
         )}
       </div>
       {room.battle && <p className={s.note}>{t("game.battleHint")}</p>}
+      {isHost ? (
+        <PasswordField room={room} />
+      ) : (
+        <div className={s.option}>
+          <span>{t("game.password")}</span>
+          <output className={`${s.optionValue} room-locked`}>{room.locked ? t("game.passwordOn") : t("game.passwordOff")}</output>
+        </div>
+      )}
       {!isHost && <p className={s.note}>{t("game.hostOnly")}</p>}
     </div>
   );

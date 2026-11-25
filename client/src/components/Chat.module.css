@@ -1,0 +1,66 @@
+/* Chat: a scrolling list of messages and a box to type in (lobby and the table's side panel). */
+.chat {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0;
+  padding: var(--ik-space-3);
+  list-style: none;
+  font-size: 13px;
+  color: var(--ik-text);
+}
+
+.empty {
+  color: var(--ik-text-muted);
+  font-style: italic;
+}
+
+.msg {
+  padding: 2px 0;
+  overflow-wrap: anywhere;
+}
+
+.name {
+  margin-right: 6px;
+  color: var(--ik-gold);
+  font-weight: 700;
+}
+
+.mine .name {
+  color: var(--ik-vermilion-bright);
+}
+
+.text {
+  white-space: pre-wrap;
+}
+
+.form {
+  display: flex;
+  gap: var(--ik-space-2);
+  padding: var(--ik-space-2) var(--ik-space-3) var(--ik-space-3);
+  border-top: 1px solid var(--ik-gold-line);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--ik-gold-line);
+  border-radius: var(--ik-radius-sm);
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--ik-text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--ik-gold);
+  outline-offset: 1px;
+}

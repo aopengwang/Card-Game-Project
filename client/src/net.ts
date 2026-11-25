@@ -12,6 +12,16 @@ export interface Toast {
   text: string;
 }
 
+export interface ChatMessage {
+  id: number;
+  seat: number;
+  name: string;
+  text: string;
+  time: number; // ms since epoch
+  /** Arrived while connected (not part of the history sent on connecting). */
+  live?: boolean;
+}
+
 export interface NetState {
   session: Session | null;
   conn: "idle" | "connecting" | "open" | "reconnecting";
@@ -20,9 +30,15 @@ export interface NetState {
   waiting: Waiting | null;
   request: ActiveRequest | null;
   log: LogEntry[];
+  chat: ChatMessage[];
   toasts: Toast[];
   homeError: string | null;
+  /** The room you tried to join wants a password (show the field). */
+  homeNeedsPassword: boolean;
 }
+
+const CHAT_KEEP = 100;
+const PASSWORD_ERRORS = ["this room needs a password", "wrong password"];
 
 const SESSION_KEY = "cardgame_session";
 
@@ -52,8 +68,10 @@ let state: NetState = {
   waiting: null,
   request: null,
   log: [],
+  chat: [],
   toasts: [],
   homeError: null,
+  homeNeedsPassword: false,
 };
 const listeners = new Set<() => void>();
 let ws: WebSocket | null = null;
@@ -85,6 +103,13 @@ export function toast(text: string): void {
 
 // ---------------------------------------------------------------- lobby HTTP
 
+/** A failed request: `message` for people, `detail` the server's own words. */
+class RequestError extends Error {
+  constructor(message: string, readonly detail: string) {
+    super(message);
+  }
+}
+
 async function post(path: string, body: unknown): Promise<Session> {
   const r = await fetch(path, {
     method: "POST",
@@ -92,9 +117,14 @@ async function post(path: string, body: unknown): Promise<Session> {
     body: JSON.stringify(body),
   });
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data.detail ? serverText(data.detail) : t("err.requestFailed", { status: r.status }));
+  if (!r.ok) {
+    const detail = typeof data.detail === "string" ? data.detail : "";
+    throw new RequestError(detail ? serverText(detail) : t("err.requestFailed", { status: r.status }), detail);
+  }
   return { code: data.code, token: data.token };
 }
+
+const codeOf = (code: string) => encodeURIComponent(code.trim().toUpperCase());
 
 export async function createRoom(name: string): Promise<void> {
   try {
@@ -104,12 +134,29 @@ export async function createRoom(name: string): Promise<void> {
   }
 }
 
-export async function joinRoom(code: string, name: string): Promise<void> {
+export async function joinRoom(code: string, name: string, password = ""): Promise<void> {
   try {
-    start(await post(`/api/rooms/${encodeURIComponent(code.trim().toUpperCase())}/join`, { name }));
+    start(await post(`/api/rooms/${codeOf(code)}/join`, { name, password: password || null }));
   } catch (e) {
-    set({ homeError: (e as Error).message });
+    const detail = e instanceof RequestError ? e.detail : "";
+    set({ homeError: (e as Error).message, homeNeedsPassword: state.homeNeedsPassword || PASSWORD_ERRORS.includes(detail) });
   }
+}
+
+/** Does this room want a password to join? (null: no such room / can't tell) */
+export async function roomLocked(code: string): Promise<boolean | null> {
+  try {
+    const r = await fetch(`/api/rooms/${codeOf(code)}`);
+    if (!r.ok) return null;
+    return !!(await r.json()).locked;
+  } catch {
+    return null;
+  }
+}
+
+export function sendChat(text: string): void {
+  const clean = text.trim();
+  if (clean) send({ type: "chat", text: clean });
 }
 
 // ---------------------------------------------------------------- websocket
@@ -121,7 +168,7 @@ function start(session: Session): void {
     ws = null;
   }
   writeSession(session);
-  set({ session, homeError: null, room: null, view: null, request: null, log: [] });
+  set({ session, homeError: null, homeNeedsPassword: false, room: null, view: null, request: null, log: [], chat: [] });
   connect();
 }
 
@@ -137,7 +184,7 @@ export function leave(message: string | null = null): void {
     ws.close();
     ws = null;
   }
-  set({ session: null, conn: "idle", room: null, view: null, request: null, waiting: null, log: [], homeError: message });
+  set({ session: null, conn: "idle", room: null, view: null, request: null, waiting: null, log: [], chat: [], homeError: message });
 }
 
 function connect(): void {
@@ -201,10 +248,18 @@ export function onMessage(m: any): void {
     case "kicked":
       leave(t("toast.kicked"));
       break;
+    case "chat_history":
+      set({ chat: (m.messages as ChatMessage[]).slice(-CHAT_KEEP) });
+      break;
+    case "chat": {
+      const { type: _type, ...msg } = m;
+      set({ chat: [...state.chat, { ...(msg as ChatMessage), live: true }].slice(-CHAT_KEEP) });
+      break;
+    }
   }
 }
 
 /** Test hook: reset module state. */
 export function _reset(patch: Partial<NetState> = {}): void {
-  state = { ...state, room: null, view: null, request: null, log: [], toasts: [], ...patch };
+  state = { ...state, room: null, view: null, request: null, log: [], chat: [], toasts: [], ...patch };
 }

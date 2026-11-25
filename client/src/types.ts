@@ -86,6 +86,10 @@ export interface RoomInfo {
   disabled_heroes?: string[];
   /** Playing with the Battle expansion's 52 cards. */
   battle?: boolean;
+  /** New players need a password to join. */
+  locked?: boolean;
+  /** The password itself: only ever sent to the host. */
+  password?: string;
 }
 
 export interface GameOptions {

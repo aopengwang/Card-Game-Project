@@ -225,6 +225,64 @@ select:focus-visible {
   font-size: 13px;
   color: var(--ik-text);
 }
+.log-panel { flex-direction: column; }
+/* the side panel's Log / Chat tabs */
+.side-tabs { display: flex; flex: none; border-bottom: 1px solid var(--ik-gold-line); }
+.side-tabs button {
+  flex: 1;
+  padding: 8px 10px 6px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--ik-text-muted);
+  font: 600 13px var(--ik-font-body);
+  cursor: pointer;
+}
+.side-tabs button[aria-selected="true"] { color: var(--ik-gold); border-bottom-color: var(--ik-gold); }
+.side-tabs button:focus-visible { outline: 2px solid var(--ik-gold); outline-offset: -2px; }
+.side-chat { flex: 1; min-height: 0; }
+/* unread chat messages: a count on the side panel's toggle and its Chat tab */
+.unread {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--ik-vermilion-bright);
+  color: #fff4e4;
+  font: 700 11px var(--ik-font-body);
+}
+.log-toggle { position: relative; }
+.log-toggle .unread { position: absolute; top: -6px; right: -6px; margin: 0; } /* (doesn't widen the button) */
+/* what someone just said, over their seat for a few seconds */
+.chat-bubble {
+  position: absolute;
+  left: 50%;
+  top: 12%;
+  z-index: 6;
+  width: max-content;
+  max-width: 200px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--ik-paper);
+  color: #1c0d0a;
+  font: 600 13px / 1.3 var(--ik-font-body);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: bubble-in 220ms var(--ik-ease-out);
+}
+@keyframes bubble-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px) scale(0.9); }
+}
+.arena.stacked .seat-slot, .dock-self { position: relative; }
 .log-line { padding: 1px 0; }
 .log-line.tone-turn { margin-top: var(--ik-space-2); font: 700 var(--ik-text-md) var(--ik-font-display); color: var(--ik-gold); }
 .log-line.tone-damage { color: var(--ik-danger-text); }
@@ -303,7 +361,7 @@ select:focus-visible {
     gap: var(--ik-space-2);
   }
   .arena.placed::before { display: none; }
-  .arena .seat-slot { position: static; width: auto; }
+  .arena .seat-slot { position: relative; left: auto; top: auto; width: auto; }
   .arena.placed .center, .arena.stacked .center {
     position: static;
     width: auto;

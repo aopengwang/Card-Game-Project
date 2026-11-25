@@ -117,6 +117,17 @@ hero as a small card (hover for its skills); the host clicks one to leave it out
 hero pick or put it back. At least 4 must stay in, and at least one per player to start.
 Rooms live in memory; restarting the server ends all games.
 
+**Room password**: the host can set one in the lobby's game settings (only the host's
+screen ever shows it). New players then need it to join (the home screen asks for it);
+anyone already in the room, or reconnecting to their seat, never does. Wrong guesses are
+limited to 10 a minute per room.
+
+**Chat**: in the lobby, and at the table in the side panel's Chat tab (press **T** to open
+it and type). A message also pops up as a bubble over the speaker's seat for a few
+seconds, and the panel's button counts unread messages. Plain text only, up to 200
+characters, at most 5 messages per 10 seconds each; the room keeps the last 100, so
+anyone who (re)connects sees the conversation.
+
 **Battle expansion (军争篇)**: on by default; the host can turn it off in the lobby's game
 settings. It adds 52 cards (one of each suit and rank, 160 in all; see `BATTLE_SPEC` in
 `server/content/standard.py`): Fire Strike ×5 and Thunder Strike ×9 (Strikes that deal

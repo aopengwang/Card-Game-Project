@@ -30,6 +30,11 @@ from .protocol import ProtocolError, parse_answer, request_to_dict
 MIN_PLAYERS, MAX_PLAYERS = 4, 8
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I / O
 NAME_MAX = 20
+PASSWORD_MAX = 40
+CHAT_MAX = 200  # characters per message (longer ones are cut)
+CHAT_KEEP = 100  # messages a room remembers (sent to whoever (re)connects)
+CHAT_BURST = (5, 10.0)  # at most 5 messages per 10 seconds per player
+JOIN_TRIES = (10, 60.0)  # at most 10 wrong passwords per minute per room
 PRIVATE_KINDS = {"respond"}  # don't reveal who is being asked
 
 
@@ -123,6 +128,7 @@ class Member:
     is_bot: bool = False
     bot_level: str = "hard"  # for bot seats; humans who go AFK are covered by a hard bot
     conns: set[Conn] = field(default_factory=set)
+    chat_times: list[float] = field(default_factory=list)  # recent message times (rate limit)
 
     @property
     def connected(self) -> bool:
@@ -150,6 +156,12 @@ class Room:
         # added to the game later start enabled).
         self.disabled_heroes: set[str] = set()
         self.battle = True  # play with the Battle expansion's 52 cards (the host can turn it off)
+        # Optional: new players must give it to join (reconnecting with your token never
+        # needs it). Only the host is ever sent it back.
+        self.password: str | None = None
+        self._failed_joins: list[float] = []
+        self.chat: list[dict[str, Any]] = []
+        self._chat_seq = 0
         self.members: list[Member] = []
         self.host_token: str | None = None
         self.status = "lobby"  # lobby | playing | finished
@@ -215,6 +227,50 @@ class Room:
     def hero_pool(self) -> list[str]:
         return sorted(set(HERO_MAP) - self.disabled_heroes)
 
+    def set_password(self, password: Any) -> None:
+        """Set (a non-empty string) or clear (None / "") the room password."""
+        if password is None or password == "":
+            self.password = None
+            return
+        if not isinstance(password, str) or not password.strip():
+            raise RoomError("the password must be text")
+        if len(password) > PASSWORD_MAX:
+            raise RoomError(f"the password can be at most {PASSWORD_MAX} characters")
+        self.password = password
+
+    def check_password(self, given: Any) -> None:
+        """Raise RoomError unless `given` opens this room (no password: anything does)."""
+        if self.password is None:
+            return
+        now = time.monotonic()
+        window = JOIN_TRIES[1]
+        self._failed_joins = [t for t in self._failed_joins if now - t < window]
+        if len(self._failed_joins) >= JOIN_TRIES[0]:
+            raise RoomError("too many wrong passwords, try again in a minute")
+        if not given:
+            raise RoomError("this room needs a password")
+        if not isinstance(given, str) or not secrets.compare_digest(given.encode(), self.password.encode()):
+            self._failed_joins.append(now)
+            raise RoomError("wrong password")
+
+    def add_chat(self, m: Member, text: Any) -> dict[str, Any]:
+        """Record a chat message from `m` (rate-limited) and return it, ready to broadcast."""
+        if not isinstance(text, str):
+            raise RoomError("chat messages must be text")
+        text = " ".join(text.split())[:CHAT_MAX]
+        if not text:
+            raise RoomError("empty message")
+        now = time.monotonic()
+        limit, window = CHAT_BURST
+        m.chat_times = [t for t in m.chat_times if now - t < window]
+        if len(m.chat_times) >= limit:
+            raise RoomError("you're sending messages too fast")
+        m.chat_times.append(now)
+        self._chat_seq += 1
+        msg = {"id": self._chat_seq, "seat": self.seat_of(m), "name": m.name, "text": text, "time": int(time.time() * 1000)}
+        self.chat = [*self.chat, msg][-CHAT_KEEP:]
+        return msg
+
     def by_token(self, token: str) -> Member | None:
         return next((m for m in self.members if secrets.compare_digest(m.token, token)), None)
 
@@ -226,6 +282,7 @@ class Room:
         return any(c.alive for m in self.members for c in m.conns)
 
     def room_info(self, viewer: Member | None) -> dict[str, Any]:
+        is_host = viewer is not None and viewer.token == self.host_token
         return {
             "type": "room",
             "code": self.code,
@@ -243,6 +300,8 @@ class Room:
             "option_limits": {k: list(v) for k, v in OPTION_LIMITS.items()},
             "disabled_heroes": sorted(self.disabled_heroes),
             "battle": self.battle,
+            "locked": self.password is not None,
+            **({"password": self.password} if is_host and self.password is not None else {}),
         }
 
     # ------------------------------------------------------------ connections
@@ -252,6 +311,7 @@ class Room:
         m.conns.add(conn)
         self.last_activity = time.monotonic()
         await self.broadcast_room()
+        await conn.send({"type": "chat_history", "messages": self.chat})
         if self.game is not None:
             await self._push(m, conn)
             p = self.pending
@@ -304,6 +364,15 @@ class Room:
             self._need(host, "only the host can choose the heroes")
             self._need(self.status != "playing", "settings can't change during a game")
             self.set_disabled_heroes(msg.get("disabled"))
+            await self.broadcast_room()
+        elif t == "chat":
+            msg = self.add_chat(m, msg.get("text"))
+            for member in self.members:
+                for c in list(member.conns):
+                    await c.send({"type": "chat", **msg})
+        elif t == "password":
+            self._need(host, "only the host can set the password")
+            self.set_password(msg.get("password"))
             await self.broadcast_room()
         elif t == "deck":
             self._need(host, "only the host can choose the deck")

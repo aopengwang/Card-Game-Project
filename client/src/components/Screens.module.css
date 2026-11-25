@@ -474,3 +474,37 @@
     display: none;
   }
 }
+
+/* ---------------------------------------------------------------- lobby chat + password */
+.lobbyChat {
+  height: 220px;
+  border: 1px solid var(--ik-gold-line);
+  border-radius: var(--ik-radius-lg);
+  background: rgba(12, 6, 5, 0.45);
+}
+
+.password {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: var(--ik-space-3);
+  font-size: var(--ik-text-sm);
+}
+
+.passwordRow {
+  display: flex;
+  gap: var(--ik-space-2);
+}
+
+.passwordRow input {
+  flex: 1;
+  min-width: 0;
+  min-height: 32px;
+  padding: 0 8px;
+}
+
+.joinForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ik-space-2);
+}

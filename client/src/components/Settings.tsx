@@ -153,6 +153,7 @@ function SettingsDialog({ onClose }: { onClose: () => void }) {
             ["↵ Enter", t("keys.main")],
             ["Esc", t("keys.back")],
             [KEY.end.toUpperCase(), t("keys.end")],
+            ["T", t("keys.chat")],
           ].map(([k, what]) => (
             <div key={k} className={s.keyRow}>
               <dt>

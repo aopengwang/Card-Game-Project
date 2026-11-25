@@ -2,7 +2,8 @@
 
     uvicorn net.app:app --host 0.0.0.0 --port 8000
 
-Flow: POST /api/rooms (host) or POST /api/rooms/{code}/join -> {code, token}.
+Flow: POST /api/rooms (host) or POST /api/rooms/{code}/join -> {code, token} (a room
+with a password needs {"password": ...} to join; GET /api/rooms/{code} says "locked").
 The client stores the token and opens WS /ws/{code}?token=...; reconnecting
 with the same token takes the seat back (a bot plays for you meanwhile).
 
@@ -63,6 +64,7 @@ def settings_from_env() -> Settings:
 
 class NameBody(BaseModel):
     name: str = ""
+    password: str | None = None  # joining a room that has one
 
 
 def create_app(settings: Settings | None = None, client_dist: Path = CLIENT_DIST, art_dir: Path = ART_DIR) -> FastAPI:
@@ -94,6 +96,10 @@ def create_app(settings: Settings | None = None, client_dist: Path = CLIENT_DIST
         room = manager.get(code)
         if room is None:
             raise HTTPException(404, "no such room")
+        try:
+            room.check_password(body.password)
+        except RoomError as e:
+            raise HTTPException(429 if "too many" in str(e) else 403, str(e))
         try:
             m = room.add_human(body.name)
         except RoomError as e:

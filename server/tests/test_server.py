@@ -425,6 +425,7 @@ def test_http_and_websocket_end_to_end():
 
         with client.websocket_connect(f"/ws/{code}?token={host['token']}") as ws:
             assert ws.receive_json()["type"] == "room"
+            assert ws.receive_json() == {"type": "chat_history", "messages": []}
             ws.send_text("not json")
             assert ws.receive_json()["type"] == "error"
             for _ in range(3):
@@ -440,6 +441,89 @@ def test_http_and_websocket_end_to_end():
                     result = msg["view"]["result"]
                     break
             assert result is not None
+
+
+def test_room_password_over_http():
+    app = create_app(Settings(**FAST))
+    with TestClient(app) as client:
+        host = client.post("/api/rooms", json={"name": "Host"}).json()
+        code = host["code"]
+        room = app.state.rooms.get(code)
+        assert client.get(f"/api/rooms/{code}").json()["locked"] is False
+        room.set_password("plum blossom")
+        assert client.get(f"/api/rooms/{code}").json()["locked"] is True
+        assert "password" not in client.get(f"/api/rooms/{code}").json()  # never shown to outsiders
+
+        r = client.post(f"/api/rooms/{code}/join", json={"name": "A"})
+        assert (r.status_code, r.json()["detail"]) == (403, "this room needs a password")
+        r = client.post(f"/api/rooms/{code}/join", json={"name": "A", "password": "plum"})
+        assert (r.status_code, r.json()["detail"]) == (403, "wrong password")
+        r = client.post(f"/api/rooms/{code}/join", json={"name": "A", "password": "plum blossom"})
+        assert r.status_code == 200 and r.json()["seat"] == 1
+
+        # guessing is limited: after 10 wrong tries a minute, even the right one waits
+        for _ in range(9):
+            client.post(f"/api/rooms/{code}/join", json={"name": "B", "password": "nope"})
+        r = client.post(f"/api/rooms/{code}/join", json={"name": "B", "password": "plum blossom"})
+        assert r.status_code == 429 and "too many" in r.json()["detail"]
+
+        # reconnecting with your own token never needs the password
+        with client.websocket_connect(f"/ws/{code}?token={host['token']}") as ws:
+            info = ws.receive_json()
+            assert info["type"] == "room" and info["locked"] is True and info["password"] == "plum blossom"
+
+
+def test_host_sets_the_password_and_only_the_host_sees_it():
+    async def main():
+        room, (host, guest) = await room_with(2, 0)
+        h = await FakeClient(room, host).connect()
+        g = await FakeClient(room, guest).connect()
+        await room.handle(host, h.conn, {"type": "password", "password": "secret"})
+        assert h.of("room")[-1]["password"] == "secret" and h.of("room")[-1]["locked"] is True
+        assert "password" not in g.of("room")[-1] and g.of("room")[-1]["locked"] is True
+        with pytest.raises(RoomError, match="only the host"):
+            await room.handle(guest, g.conn, {"type": "password", "password": "mine"})
+        for bad, why in [(123, "must be text"), ("   ", "must be text"), ("x" * 41, "at most 40")]:
+            with pytest.raises(RoomError, match=why):
+                await room.handle(host, h.conn, {"type": "password", "password": bad})
+        assert room.password == "secret"
+        await room.handle(host, h.conn, {"type": "password", "password": None})  # removed
+        assert room.password is None and g.of("room")[-1]["locked"] is False
+        await room.close()
+
+    run(main())
+
+
+def test_chat_reaches_everyone_and_is_kept_for_reconnects():
+    async def main():
+        room, (host, guest) = await room_with(2, 2)
+        h = await FakeClient(room, host).connect()
+        g = await FakeClient(room, guest).connect()
+        await room.handle(guest, g.conn, {"type": "chat", "text": "  hello   <b>everyone</b>  "})
+        msg = h.of("chat")[-1]
+        assert (msg["seat"], msg["name"], msg["text"]) == (1, "P1", "hello <b>everyone</b>")  # text as-is
+        assert g.of("chat")[-1]["id"] == msg["id"]
+
+        await room.handle(host, h.conn, {"type": "chat", "text": "x" * 500})
+        assert len(h.of("chat")[-1]["text"]) == 200  # long ones are cut
+        for bad in ["", "   ", 5, None]:
+            with pytest.raises(RoomError):
+                await room.handle(host, h.conn, {"type": "chat", "text": bad})
+
+        # flooding is slowed down: 5 messages per 10 seconds (the guest has sent 1)
+        for i in range(4):
+            await room.handle(guest, g.conn, {"type": "chat", "text": f"spam {i}"})
+        with pytest.raises(RoomError, match="too fast"):
+            await room.handle(guest, g.conn, {"type": "chat", "text": "one more"})
+
+        # whoever (re)connects gets the conversation so far, in the game too
+        await room.start(seed=1)
+        late = await FakeClient(room, guest).connect()
+        history = late.of("chat_history")[-1]["messages"]
+        assert [m["text"] for m in history][-1] == "spam 3" and len(history) == 6
+        await room.close()
+
+    run(main())
 
 
 def test_art_manifest_lists_dropped_in_images(tmp_path):

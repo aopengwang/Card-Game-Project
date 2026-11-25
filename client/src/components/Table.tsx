@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useContent } from "../content";
 import { recentPlays } from "../describe";
 import { memberName, t, tMaybe, useLang } from "../i18n";
@@ -14,33 +14,41 @@ import { play } from "../sound";
 import { MuteButton, SettingsButton } from "./Settings";
 import { ActionBar } from "./ActionBar";
 import { Arrange } from "./Arrange";
+import { ChatBox, useBubbles } from "./Chat";
 import { Effects } from "./Effects";
 import { useShortcuts } from "./shortcuts";
 import { LangToggle } from "./LangToggle";
 import { GameOver, HeroPick, LogPanel } from "./Overlays";
 
 const LOG_KEY = "sgs.logOpen";
+const TAB_KEY = "sgs.sideTab";
 
-/** Log open/closed, remembered per browser. Default: open where there's room for it. */
-function useLogOpen() {
-  const [open, setOpen] = useState(() => {
+/** A small setting remembered per browser (nothing breaks if storage is blocked). */
+function useRemembered<T extends string>(key: string, initial: () => T): [T, (v: T) => void] {
+  const [value, setValue] = useState<T>(() => {
     try {
-      const saved = localStorage.getItem(LOG_KEY);
-      if (saved != null) return saved === "1";
+      const saved = localStorage.getItem(key);
+      if (saved != null) return saved as T;
     } catch {
-      // storage unavailable (private mode): fall through to the default
+      // storage unavailable (private mode): the default
     }
-    return window.innerWidth >= 1280;
+    return initial();
   });
-  const toggle = () => {
-    setOpen(!open);
+  const set = (v: T) => {
+    setValue(v);
     try {
-      localStorage.setItem(LOG_KEY, open ? "0" : "1");
+      localStorage.setItem(key, v);
     } catch {
       // not remembered, that's fine
     }
   };
-  return [open, toggle] as const;
+  return [value, set];
+}
+
+/** Side panel open/closed. Default: open where there's room for it. */
+function useLogOpen() {
+  const [open, setOpen] = useRemembered<"1" | "0">(LOG_KEY, () => (window.innerWidth >= 1280 ? "1" : "0"));
+  return [open === "1", (v: boolean) => setOpen(v ? "1" : "0")] as const;
 }
 
 /** Pixel box as CSS custom properties (the stylesheet decides whether to use them). */
@@ -58,7 +66,8 @@ export function Table({ net }: { net: NetState }) {
   useContent();
   const { room, view, request, waiting, log } = net;
   const [selState, setSelState] = useState<{ id: number | null; sel: Selection }>({ id: null, sel: EMPTY });
-  const [showLog, toggleLog] = useLogOpen();
+  const [showLog, setShowLog] = useLogOpen();
+  const [tab, setTab] = useRemembered<"log" | "chat">(TAB_KEY, () => "log");
   const [hideResultFor, setHideResultFor] = useState<number | null>(null);
   const [arenaRef, arena] = useSize<HTMLDivElement>();
   const [handRef, hand] = useSize<HTMLDivElement>();
@@ -66,6 +75,36 @@ export function Table({ net }: { net: NetState }) {
   const scale = useUiScale(); // the window in the app's own (zoomed) pixels picks card sizes
   const tier = sizeTier(win.width / scale, win.height / scale);
   useShortcuts();
+
+  // Chat: unread count while it's out of sight, bubbles over the speakers, T to type.
+  const chat = net.chat;
+  const lastChat = chat.length ? chat[chat.length - 1].id : 0;
+  const [seenChat, setSeenChat] = useState(lastChat);
+  const chatVisible = showLog && tab === "chat";
+  useEffect(() => {
+    if (chatVisible) setSeenChat(lastChat);
+  }, [chatVisible, lastChat]);
+  const unread = chatVisible ? 0 : chat.filter((m) => m.id > seenChat && m.seat !== view?.you).length;
+  const bubbles = useBubbles(chat);
+  const chatInput = useRef<HTMLInputElement>(null);
+  const openChat = useRef(() => {});
+  openChat.current = () => {
+    setShowLog(true);
+    setTab("chat");
+    requestAnimationFrame(() => chatInput.current?.focus());
+  };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() !== "t" || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+      const el = e.target as HTMLElement | null;
+      if (el?.closest?.("input, textarea, select, [contenteditable=true]") || document.querySelector("[role=dialog]")) return;
+      e.preventDefault();
+      openChat.current();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   if (!room || !view) return null;
 
   const req = request?.req ?? null;
@@ -120,8 +159,13 @@ export function Table({ net }: { net: NetState }) {
         <MuteButton />
         <SettingsButton />
         <LangToggle />
-        <Button shape="pill" className="log-toggle" onClick={toggleLog} aria-expanded={showLog}>
+        <Button shape="pill" className="log-toggle" onClick={() => setShowLog(!showLog)} aria-expanded={showLog}>
           {showLog ? t("table.hideLog") : t("table.log")}
+          {unread > 0 && (
+            <span className="unread" aria-label={t("chat.unread", { n: unread })}>
+              {unread}
+            </span>
+          )}
         </Button>
         <Button shape="pill" variant="ghost" onClick={() => window.confirm(t("table.leaveConfirm")) && leave()}>
           {t("table.leave")}
@@ -137,6 +181,7 @@ export function Table({ net }: { net: NetState }) {
             // The slot does the positioning, so the seat's own transforms (press, shake) can't move it.
             <div key={seat} className="seat-slot" data-seat={seat} style={layout ? boxVars("seat", layout.seats[i]) : undefined}>
               <Plaque player={view.players[seat]} name={nameOf(seat)} {...seatProps(seat)} />
+              {bubbles.get(seat) && <span className="chat-bubble">{bubbles.get(seat)!.text}</span>}
             </div>
           ))}
           <div className="center" style={layout ? boxVars("center", layout.center) : undefined}>
@@ -167,13 +212,27 @@ export function Table({ net }: { net: NetState }) {
         </div>
 
         <aside className={`log-panel ${showLog ? "open" : ""}`}>
-          {/* Log lines are third-person sentences ("X draws 2"), so use real names there. */}
-          <LogPanel log={log} name={(seat) => (seat == null ? "?" : nameOf(seat))} />
+          <div className="side-tabs" role="tablist" aria-label={t("table.sidePanel")}>
+            <button type="button" role="tab" aria-selected={tab === "log"} onClick={() => setTab("log")}>
+              {t("table.logTab")}
+            </button>
+            <button type="button" role="tab" aria-selected={tab === "chat"} className="chat-tab" onClick={() => setTab("chat")}>
+              {t("chat.title")}
+              {unread > 0 && <span className="unread">{unread}</span>}
+            </button>
+          </div>
+          {tab === "log" ? (
+            // Log lines are third-person sentences ("X draws 2"), so use real names there.
+            <LogPanel log={log} name={(seat) => (seat == null ? "?" : nameOf(seat))} />
+          ) : (
+            <ChatBox messages={chat} you={view.you} inputRef={chatInput} className="side-chat" />
+          )}
         </aside>
       </div>
 
       <footer className="dock">
         <div className="dock-self" data-seat={view.you}>
+          {bubbles.get(view.you) && <span className="chat-bubble">{bubbles.get(view.you)!.text}</span>}
           <Plaque
             player={me}
             name={nameOf(view.you)}

@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { roleName, rolesFor, useContent } from "../content";
 import { getLang, memberName, t, tMaybe, useLang } from "../i18n";
-import { createRoom, joinRoom, leave, send, type NetState } from "../net";
+import { createRoom, joinRoom, leave, roomLocked, send, type NetState } from "../net";
+import { ChatBox } from "./Chat";
 import type { Card as CardData } from "../types";
 import { RoleSeal } from "../ui/Bits";
 import { Button } from "../ui/Button";
@@ -45,12 +46,25 @@ const FAN: CardData[] = [
   { id: -3, name: "nullify", suit: "club", rank: 12 },
 ];
 
-export function Home({ error, initialCode }: { error: string | null; initialCode: string }) {
+export function Home({ error, initialCode, needsPassword = false }: { error: string | null; initialCode: string; needsPassword?: boolean }) {
   useLang();
   useContent();
   const [name, setName] = useState(savedName);
   const [code, setCode] = useState(initialCode);
+  const [password, setPassword] = useState("");
+  const [locked, setLocked] = useState(false);
   const [busy, setBusy] = useState(false);
+  // A full room code: ask the server whether that room has a password, to show the field.
+  useEffect(() => {
+    setLocked(false);
+    if (code.trim().length !== 5) return;
+    let live = true;
+    void roomLocked(code).then((l) => live && setLocked(!!l));
+    return () => {
+      live = false;
+    };
+  }, [code]);
+  const askPassword = locked || needsPassword;
   const remember = () => {
     try {
       localStorage.setItem(NAME_KEY, name);
@@ -110,23 +124,37 @@ export function Home({ error, initialCode }: { error: string | null; initialCode
             <span>{t("home.or")}</span>
           </div>
           <form
-            className={s.joinRow}
+            className={s.joinForm}
             onSubmit={(e) => {
               e.preventDefault();
-              if (canJoin) void run(() => joinRoom(code, name));
+              if (canJoin) void run(() => joinRoom(code, name, askPassword ? password : ""));
             }}
           >
-            <input
-              value={code}
-              maxLength={5}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-              placeholder={t("home.codePlaceholder")}
-              aria-label={t("home.codeLabel")}
-              className={`${s.codeInput} code-input`}
-            />
-            <Button type="submit" disabled={!canJoin}>
-              {t("home.join")}
-            </Button>
+            <div className={s.joinRow}>
+              <input
+                value={code}
+                maxLength={5}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                placeholder={t("home.codePlaceholder")}
+                aria-label={t("home.codeLabel")}
+                className={`${s.codeInput} code-input`}
+              />
+              <Button type="submit" disabled={!canJoin}>
+                {t("home.join")}
+              </Button>
+            </div>
+            {askPassword && (
+              <input
+                type="password"
+                value={password}
+                maxLength={40}
+                autoComplete="off"
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={t("home.passwordPlaceholder")}
+                aria-label={t("home.password")}
+                className="room-password"
+              />
+            )}
           </form>
           {error && <div className="error-line">{error}</div>}
         </section>
@@ -175,6 +203,7 @@ export function Lobby({ net }: { net: NetState }) {
             <div className={s.inviteText}>
               <b>{t("lobby.invite")}</b>
               <span className={s.note}>{t("lobby.inviteHint")}</span>
+              {room.locked && <span className={`${s.note} locked-note`}>{t("lobby.passwordHint")}</span>}
               <span className={s.linkRow}>
                 <code className="invite-link">{link}</code>
                 <Button shape="small" onClick={copy}>
@@ -220,6 +249,9 @@ export function Lobby({ net }: { net: NetState }) {
               </div>
             ))}
           </div>
+
+          <h2 className={s.subhead}>{t("chat.title")}</h2>
+          <ChatBox messages={net.chat} you={room.you} className={s.lobbyChat} />
         </section>
 
         <aside className={`${s.panel} ${s.side}`}>

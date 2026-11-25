@@ -43,7 +43,7 @@ export function App() {
 
   let screen: React.ReactNode;
   if (!net.session) {
-    screen = <Home error={net.homeError} initialCode={roomFromUrl?.toUpperCase() ?? ""} />;
+    screen = <Home error={net.homeError} initialCode={roomFromUrl?.toUpperCase() ?? ""} needsPassword={net.homeNeedsPassword} />;
   } else if (!net.room) {
     screen = <div className="home muted">{t("app.connecting")}</div>;
   } else if (net.room.status !== "lobby" && net.view) {
