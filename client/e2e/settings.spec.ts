@@ -117,19 +117,16 @@ test("host chooses the heroes in the draft; guests see it; the hero pick only of
   await expect(tip).toBeVisible();
   expect(((await tip.textContent()) ?? "").length).toBeGreaterThan(30);
 
-  // Leave out all but four (the minimum): one click each, waiting for the room to agree.
-  const off = ids.slice(0, total - 4);
-  for (const id of off) {
+  // Deselect all, then put four back: one click each, waiting for the room to agree.
+  await host.getByRole("button", { name: "Deselect all" }).click();
+  await expect(host.locator(".hero-pool button.pool-hero[aria-pressed=true]")).toHaveCount(0);
+  await expect(host.getByRole("button", { name: "Deselect all" })).toHaveCount(0); // nothing left to deselect
+  await expect(host.locator(".hero-pool")).toContainText("2 players need at least 2 heroes in the draft.");
+  for (const id of ids.slice(total - 4)) {
     const card = host.locator(`.hero-pool [data-hero="${id}"]`);
     await card.click();
-    await expect(card).toHaveAttribute("aria-pressed", "false");
+    await expect(card).toHaveAttribute("aria-pressed", "true");
   }
-  await expect(host.locator(".hero-pool")).toContainText("At least 4 heroes must stay in the draft.");
-  const last = host.locator(`.hero-pool [data-hero="${ids[total - 1]}"]`);
-  await expect(last).toHaveAttribute("aria-disabled", "true");
-  await last.click({ force: true }); // can't go below four (force: it's marked disabled)
-  await host.waitForTimeout(300);
-  await expect(last).toHaveAttribute("aria-pressed", "true");
 
   // The guest sees the same pool, read-only.
   await expect(guest.locator(".hero-pool .is-off")).toHaveCount(total - 4);

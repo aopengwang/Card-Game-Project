@@ -21,7 +21,6 @@ export function HeroPool({ room }: { room: RoomInfo }) {
   const editable = room.you === room.host && room.status !== "playing";
   const on = heroes.filter((h) => !off.has(h.id)).length;
   const players = room.members.length;
-  const atMinimum = on <= room.min_players; // the server keeps at least this many
   const send_ = (disabled: string[]) => send({ type: "heroes", disabled });
 
   return (
@@ -30,17 +29,25 @@ export function HeroPool({ room }: { room: RoomInfo }) {
         <h2 id="hero-pool-title" className={sc.subhead}>
           {t("heroes.title")} <span className={sc.count}>{t("heroes.count", { n: on, total: heroes.length })}</span>
         </h2>
-        {editable && off.size > 0 && (
-          <Button shape="small" variant="ghost" onClick={() => send_([])}>
-            {t("heroes.all")}
-          </Button>
+        {editable && (
+          <div className={s.actions}>
+            {off.size > 0 && (
+              <Button shape="small" variant="ghost" onClick={() => send_([])}>
+                {t("heroes.all")}
+              </Button>
+            )}
+            {on > 0 && (
+              <Button shape="small" variant="ghost" onClick={() => send_(heroes.map((h) => h.id))}>
+                {t("heroes.none")}
+              </Button>
+            )}
+          </div>
         )}
       </div>
       <p className={sc.note}>{editable ? t("heroes.hostHint") : t("heroes.guestHint")}</p>
       <ul className={s.grid}>
         {heroes.map((h) => {
           const enabled = !off.has(h.id);
-          const locked = enabled && atMinimum; // leaving it out would leave too few
           const cls = `${s.hero} ${enabled ? "" : `${s.off} is-off`} pool-hero`;
           const face = <HeroFace hero={h.id} kingdom={h.kingdom} title={h.name} />;
           return (
@@ -53,11 +60,7 @@ export function HeroPool({ room }: { room: RoomInfo }) {
                     data-hero={h.id}
                     aria-label={h.name}
                     aria-pressed={enabled}
-                    aria-disabled={locked || undefined}
-                    onClick={() => {
-                      if (locked) return;
-                      send_(enabled ? [...off, h.id] : [...off].filter((id) => id !== h.id));
-                    }}
+                    onClick={() => send_(enabled ? [...off, h.id] : [...off].filter((id) => id !== h.id))}
                   >
                     {face}
                   </button>
@@ -71,7 +74,6 @@ export function HeroPool({ room }: { room: RoomInfo }) {
           );
         })}
       </ul>
-      {editable && atMinimum && <p className={sc.note}>{t("heroes.minimum", { min: room.min_players })}</p>}
       {on < players && <p className={`${sc.note} ${s.warn}`}>{t("heroes.tooFew", { n: players })}</p>}
     </section>
   );

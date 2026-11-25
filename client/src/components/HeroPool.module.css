@@ -51,8 +51,11 @@ button.hero:focus-visible {
   outline-offset: 2px;
 }
 
-button.hero[aria-disabled="true"] {
-  cursor: not-allowed;
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--ik-space-2);
 }
 
 /* left out of the draft: faded ink, dashed edge */

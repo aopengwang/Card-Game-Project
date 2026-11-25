@@ -224,14 +224,13 @@ class Room:
         return m
 
     def set_disabled_heroes(self, disabled: Any) -> None:
-        """Replace the disabled list; at least MIN_PLAYERS heroes must stay enabled."""
+        """Replace the disabled list. Any choice is allowed here, even none enabled (the host
+        may clear the pool and pick a few back); start() checks there's one per player."""
         if not isinstance(disabled, list) or not all(isinstance(h, str) for h in disabled):
             raise RoomError("disabled heroes must be a list of hero ids")
         unknown = set(disabled) - set(HERO_MAP)
         if unknown:
             raise RoomError(f"unknown hero {sorted(unknown)[0]!r}")
-        if len(HERO_MAP) - len(set(disabled)) < MIN_PLAYERS:
-            raise RoomError(f"at least {MIN_PLAYERS} heroes must stay enabled")
         self.disabled_heroes = set(disabled)
 
     @property

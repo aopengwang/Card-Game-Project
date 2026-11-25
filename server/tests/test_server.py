@@ -225,7 +225,6 @@ def test_host_chooses_which_heroes_can_be_picked():
         with pytest.raises(RoomError, match="only the host"):
             await room.handle(guest, g.conn, {"type": "heroes", "disabled": []})
         for bad, why in [
-            (sorted(HERO_MAP)[: total - 3], "at least 4 heroes"),
             (["nobody"], "unknown hero"),
             ("cao_cao", "list of hero ids"),
         ]:
@@ -233,7 +232,12 @@ def test_host_chooses_which_heroes_can_be_picked():
                 await room.handle(host, h.conn, {"type": "heroes", "disabled": bad})
         assert room.disabled_heroes == set(off)  # a bad list changes nothing
 
-        # 5 players need 5 heroes: with one more off, the game can't start
+        # "Deselect all" is allowed (to pick a few back), but the game can't start like that
+        await room.handle(host, h.conn, {"type": "heroes", "disabled": sorted(HERO_MAP)})
+        assert room.hero_pool == []
+        with pytest.raises(RoomError, match="enable at least 5 heroes"):
+            await room.start(seed=3)
+        # 5 players need 5 heroes: with 4 in, it still can't start
         await room.handle(host, h.conn, {"type": "heroes", "disabled": sorted(HERO_MAP)[: total - 4]})
         with pytest.raises(RoomError, match="enable at least 5 heroes"):
             await room.start(seed=3)
