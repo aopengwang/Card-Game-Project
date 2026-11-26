@@ -179,6 +179,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: 50% 12%; /* a portrait's face is near the top: crop from there, not the middle */
 }
 
 .mountains {
