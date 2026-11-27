@@ -8,7 +8,7 @@ import { holdTariff, tariffStamp } from "../fx/tariff";
 import { getLang, t, tMaybe } from "../i18n";
 import { play, playAll, playStreak, type SoundName } from "../sound";
 import type { Card as CardData, LogEntry } from "../types";
-import { Card } from "../ui/Card";
+import { Card, CardBack } from "../ui/Card";
 import s from "./Effects.module.css";
 
 /*
@@ -33,18 +33,29 @@ type Fx =
   | { id: number; kind: "line"; from: Pt; to: Pt }
   | { id: number; kind: "number"; at: Pt; text: string; heal: boolean }
   | { id: number; kind: "skill"; at: Pt; char: string; title: string; delay: number; gear: boolean }
-  | { id: number; kind: "banner"; text: string };
+  | { id: number; kind: "banner"; text: string }
+  // a card changing hands: face up if you may see it, else face down
+  | { id: number; kind: "transfer"; card: CardData | null; from: Pt; to: Pt; delay: number }
+  // the discard pile shuffled into a new deck (the deck ran out)
+  | { id: number; kind: "shuffle"; from: Pt; at: Pt };
 
 /** An effect before it has an id (Omit applied to each member of the union). */
 type NewFx = Fx extends infer F ? (F extends Fx ? Omit<F, "id"> : never) : never;
 
 /** Effect lengths (ms); the CSS animations use the same numbers. */
-const LIFE = { flight: 520, line: 1100, number: 1200, banner: 1500, skill: 1500 } as const;
+// (a shuffle's last card starts SHUFFLE_CARDS × 30 ms after the first)
+const LIFE = { flight: 520, line: 1100, number: 1200, banner: 1500, skill: 1500, transfer: 760, shuffle: 1700 } as const;
+// Draws after a reshuffle wait for it: the new deck is dealt from once it's shuffled.
+const SHUFFLE_DEAL = 1250;
+const SHUFFLE_CARDS = 7;
+// Several cards changing hands at once leave one after another.
+const TRANSFER_STAGGER = 110;
+const MAX_TRANSFER = 5;
 // Two skills of the same player in one moment take turns in the same spot (the next one
 // lands as the last one fades), at most three in a row.
 const SKILL_STAGGER = 950;
 const MAX_CASTS = 3;
-const MAX_LIVE = 16; // fast bot games: drop effects rather than pile them up
+const MAX_LIVE = 40; // fast bot games: drop effects rather than pile them up (a deal to 8 is 32 cards)
 
 const reducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
@@ -58,6 +69,8 @@ export function soundsFor(entries: LogEntry[], you: number): SoundName[] {
     else if (e.type === "recover") out.push("heal");
     else if (e.type === "death") out.push("death");
     else if (e.type === "turn_start" && e.seat === you) out.push("turn");
+    else if (e.type === "reshuffle") out.push("shuffle");
+    else if (e.type === "draw" && e.seat === you) out.push("select"); // your cards coming in
     else if (e.type === "game_over" && Array.isArray(e.winners)) out.push((e.winners as number[]).includes(you) ? "victory" : "defeat");
   }
   return out;
@@ -275,8 +288,39 @@ export function Effects({
         gear,
       });
     };
+    // Cards changing hands fly from one seat to the other (or from the middle of the table).
+    const middle = () => centre(document.querySelector(".center .plays") ?? document.querySelector(".center"));
+    // (each pile: its card or empty slot first, then its count)
+    const deck = () => centre(document.querySelector('[data-pile="draw"] > :first-child'));
+    const discards = () => centre(document.querySelector('[data-pile="discard"] > :first-child'));
+    let wait = 0; // after a reshuffle in this batch, later cards wait for the new deck
+    const transfer = (cards: (CardData | null)[], from: Pt | null, to: Pt | null) => {
+      if (!from || !to) return;
+      cards
+        .slice(0, MAX_TRANSFER)
+        .forEach((card, n) => add({ kind: "transfer", card, from, to, delay: wait + n * TRANSFER_STAGGER }));
+    };
     for (let i = start; i < log.length; i++) {
       const e = log[i];
+      if (e.type === "reshuffle") {
+        const from = discards();
+        const at = deck();
+        if (from && at) {
+          add({ kind: "shuffle", from, at });
+          wait = SHUFFLE_DEAL;
+        }
+      }
+      // Drawn cards leave the deck for the drawer: face up for your own (you see them), else face down.
+      if (e.type === "draw" && typeof e.count === "number" && e.count > 0) {
+        const cards: (CardData | null)[] = Array.isArray(e.cards) ? e.cards : Array.from({ length: e.count }, () => null);
+        transfer(cards, deck(), seat(e.seat));
+      }
+      if (e.type === "take") {
+        const cards: (CardData | null)[] = Array.isArray(e.cards) ? e.cards : [e.card ?? null];
+        transfer(cards, e.target != null ? seat(e.target) : middle(), seat(e.seat));
+      }
+      if (e.type === "give") transfer([e.card ?? null], seat(e.seat), seat(e.target));
+      if (e.type === "pick" && e.card) transfer([e.card], middle(), seat(e.seat)); // a Harvest pick
       if (e.type === "skill" && typeof e.skill === "string") cast(e.seat, e.skill);
       if ((e.type === "use" || e.type === "respond") && typeof e.via === "string") cast(e.seat, e.via);
       if (e.type === "use" || e.type === "respond") {
@@ -301,7 +345,7 @@ export function Effects({
     if (!made.length) return;
     setFx((live) => [...live, ...made].slice(-MAX_LIVE));
     const ids = new Set(made.map((f) => f.id));
-    const longest = Math.max(...made.map((f) => LIFE[f.kind] + (f.kind === "skill" ? f.delay : 0)));
+    const longest = Math.max(...made.map((f) => LIFE[f.kind] + ("delay" in f ? f.delay : 0)));
     window.setTimeout(() => setFx((live) => live.filter((f) => !ids.has(f.id))), longest / fxSpeed() + 50);
   }, [log, you]);
 
@@ -337,6 +381,43 @@ export function Effects({
           return (
             <span key={f.id} className={s.flight} style={style}>
               <Card card={f.card} size={playSize} tip={false} />
+            </span>
+          );
+        }
+        if (f.kind === "transfer") {
+          const style = {
+            left: f.to.x,
+            top: f.to.y,
+            "--dx": `${f.from.x - f.to.x}px`,
+            "--dy": `${f.from.y - f.to.y}px`,
+            "--delay": `${f.delay / fxSpeed()}ms`,
+          } as CSSProperties;
+          return (
+            <span key={f.id} className={`${s.transfer} card-transfer`} style={style} data-face={f.card ? "up" : "down"}>
+              {f.card ? <Card card={f.card} size="sm" tip={false} /> : <CardBack size="sm" />}
+            </span>
+          );
+        }
+        if (f.kind === "shuffle") {
+          // the discards gather onto the deck, are riffled twice, and settle as the new deck
+          return (
+            <span key={f.id} className={`${s.shuffle} deck-shuffle`} style={{ left: f.at.x, top: f.at.y }}>
+              {Array.from({ length: SHUFFLE_CARDS }, (_, i) => (
+                <span
+                  key={i}
+                  className={s.shuffleCard}
+                  style={
+                    {
+                      "--dx": `${f.from.x - f.at.x}px`,
+                      "--dy": `${f.from.y - f.at.y}px`,
+                      "--side": i % 2 ? 1 : -1,
+                      "--i": i,
+                    } as CSSProperties
+                  }
+                >
+                  <CardBack size="sm" />
+                </span>
+              ))}
             </span>
           );
         }

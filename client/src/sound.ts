@@ -22,6 +22,7 @@ export type SoundName =
   | "judgeHit"
   | "judgeMiss"
   | "tariff"
+  | "shuffle"
   | "death"
   | "victory"
   | "defeat";
@@ -178,6 +179,13 @@ const SOUNDS: Record<SoundName, (c: AudioContext, t: number) => void> = {
     noise(c, t, 0.26, 0.6, 2000, 220, 0.7);
     bell(c, t + 0.16, N.E6, 0.55, 0.09, [[1, 1], [2.76, 0.3]]);
     bell(c, t + 0.24, N.A6, 0.7, 0.08, [[1, 1], [2.76, 0.3]]);
+  },
+  // the discards shuffled into a new deck: two riffles (a run of quick paper flicks) and a tap
+  shuffle: (c, t) => {
+    for (const [start, n] of [[0.35, 12], [0.75, 10]] as const) {
+      for (let i = 0; i < n; i++) noise(c, t + start + i * 0.018, 0.03, 0.12, 5200 - i * 120, 2600, 1.4);
+    }
+    tone(c, t + 1.12, 210, 0.08, 0.16, "triangle", 140);
   },
   // a player falls: a deep gong
   death: (c, t) => {

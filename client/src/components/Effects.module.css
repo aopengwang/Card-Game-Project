@@ -117,6 +117,81 @@
   }
 }
 
+/* a card changing hands: lifts off one seat, arcs over the table and drops into the other */
+.transfer {
+  position: absolute;
+  opacity: 0;
+  transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy)));
+  animation: transfer calc(760ms * var(--fx-slow, 1)) var(--ik-ease-out) var(--delay, 0ms) forwards;
+}
+
+@keyframes transfer {
+  0% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.6) rotate(-10deg);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(calc(-50% + var(--dx) * 0.9), calc(-50% + var(--dy) * 0.9 - 10px)) scale(0.9) rotate(-6deg);
+  }
+  50% {
+    transform: translate(calc(-50% + var(--dx) * 0.5), calc(-50% + var(--dy) * 0.5 - 44px)) scale(1) rotate(4deg);
+  }
+  82% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.85) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.55) rotate(0deg);
+  }
+}
+
+/* the deck ran out: the discard pile gathers onto the deck's spot, is riffled twice (halves
+   split left and right and fall back together) and settles as the new deck */
+.shuffle {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.shuffleCard {
+  position: absolute;
+  opacity: 0;
+  transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy)));
+  animation: shuffle calc(1400ms * var(--fx-slow, 1)) var(--ik-ease-out) calc(var(--i) * 30ms * var(--fx-slow, 1)) forwards;
+}
+
+@keyframes shuffle {
+  0% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(calc(var(--side) * 14deg));
+  }
+  8% {
+    opacity: 1;
+  }
+  30% {
+    transform: translate(-50%, calc(-50% - var(--i) * 1.5px)) rotate(0deg);
+  }
+  45% {
+    transform: translate(calc(-50% + var(--side) * 30px), calc(-50% - 8px)) rotate(calc(var(--side) * 9deg));
+  }
+  58% {
+    transform: translate(-50%, calc(-50% - var(--i) * 1.5px)) rotate(0deg);
+  }
+  71% {
+    transform: translate(calc(-50% + var(--side) * 24px), calc(-50% - 6px)) rotate(calc(var(--side) * 7deg));
+  }
+  84% {
+    opacity: 1;
+    transform: translate(-50%, calc(-50% - var(--i) * 1.5px)) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+}
+
 /* a played card flying from the seat to its spot on the battlefield */
 .flight {
   position: absolute;

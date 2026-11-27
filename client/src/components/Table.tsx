@@ -244,11 +244,11 @@ export function Table({ net }: { net: NetState }) {
           ))}
           <div className="center" style={layout ? boxVars("center", layout.center) : undefined}>
             <div className="piles">
-              <span className="pile">
+              <span className="pile" data-pile="draw">
                 <CardBack size="sm" label={t("table.drawPile")} />
                 <span>{t("table.deck", { n: view.draw_pile })}</span>
               </span>
-              <span className="pile">
+              <span className="pile" data-pile="discard">
                 <span className="pile-empty" aria-hidden="true" />
                 <span>{t("table.discard", { n: view.discard_pile })}</span>
               </span>

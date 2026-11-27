@@ -1,4 +1,4 @@
-// Animation lab (developer tool): /?fx[=effect]&lang=zh (effects: kill, streak, double, fate, strike, heal, skill, skillCard, judge, judgeMiss, judgeKill, tariff, turn). Replays table effects on a real
+// Animation lab (developer tool): /?fx[=effect]&lang=zh (effects: kill, streak, double, fate, strike, heal, skill, skillCard, judge, judgeMiss, judgeKill, transfer, draw, reshuffle, tariff, turn). Replays table effects on a real
 // captured table, with the seats and speed you choose, so an animation can be tuned in
 // seconds instead of playing games until the moment comes up. Press P to replay.
 import { useEffect, useRef, useState } from "react";
@@ -159,6 +159,51 @@ const EFFECTS: Record<string, Effect> = {
         after: 600,
       },
       { entries: [death(v, victim, null)], view: dies([victim]) },
+    ],
+  },
+  transfer: {
+    label: "Cards change hands (a Snatch you see, then a hidden give)",
+    uses: ["killer", "victim"],
+    steps: ({ killer, victim }) => [
+      {
+        entries: [
+          use(killer, "snatch", [victim]),
+          { type: "take", seat: killer, target: victim, zone: "hand", card: { id: nextCardId++, name: "peach", suit: "heart", rank: 3 } },
+        ],
+        after: 1000,
+      },
+      { entries: [{ type: "give", seat: killer, target: victim, reason: "open_hand" }] }, // and back, unseen
+    ],
+  },
+  draw: {
+    label: "Drawing: yours face up, theirs face down",
+    uses: ["victim"],
+    steps: ({ victim, you }) => [
+      {
+        entries: [
+          {
+            type: "draw", seat: you, count: 2, reason: "draw",
+            cards: [
+              { id: nextCardId++, name: "peach", suit: "heart", rank: 7 },
+              { id: nextCardId++, name: "duel", suit: "spade", rank: 1 },
+            ],
+          },
+        ],
+        after: 1100,
+      },
+      { entries: [{ type: "draw", seat: victim, count: 2, reason: "draw" }] },
+    ],
+  },
+  reshuffle: {
+    label: "Deck runs out: discards shuffled into a new deck, then dealt",
+    uses: ["victim"],
+    steps: ({ victim }) => [
+      {
+        entries: [
+          { type: "reshuffle", draw_pile: 92 },
+          { type: "draw", seat: victim, count: 2, reason: "draw" },
+        ],
+      },
     ],
   },
   tariff: {

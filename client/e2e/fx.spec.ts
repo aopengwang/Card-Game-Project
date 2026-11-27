@@ -147,6 +147,64 @@ test("judgment: the card turns over the judged seat and a seal stamps the outcom
   }
 });
 
+test("cards changing hands fly from seat to seat, face down when you may not see them", async ({ page }) => {
+  await openLab(page, "transfer");
+  const centreOf = async (seat: string) => {
+    const b = (await page.locator(`[data-seat="${seat}"] .hero-face`).boundingBox())!;
+    return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+  };
+  const killer = await page.getByLabel("Killer / source").inputValue();
+  const victim = await page.getByLabel("Victim / target").inputValue();
+  await page.getByRole("button", { name: /^Play/ }).click();
+  // The Snatch: the stolen card (you were shown it) flies from the victim to the thief...
+  const fly = page.locator(".card-transfer");
+  await expect(fly).toHaveCount(1);
+  await expect(fly).toHaveAttribute("data-face", "up");
+  // (it's placed at the thief and starts out offset back to the victim: the same direction)
+  const offset = async (face: string) =>
+    page.locator(`.card-transfer[data-face="${face}"]`).evaluate((el) => {
+      const st = (el as HTMLElement).style;
+      return { x: parseFloat(st.getPropertyValue("--dx")), y: parseFloat(st.getPropertyValue("--dy")) };
+    });
+  const [a, b] = [await centreOf(killer), await centreOf(victim)];
+  const d = await offset("up");
+  // how closely two directions agree: 1 = exactly the same way
+  const same = (u: { x: number; y: number }, v: { x: number; y: number }) => (u.x * v.x + u.y * v.y) / (Math.hypot(u.x, u.y) * Math.hypot(v.x, v.y));
+  expect(same(d, { x: b.x - a.x, y: b.y - a.y })).toBeGreaterThan(0.99);
+  // ...then a hidden hand card goes back the other way, face down.
+  await expect(page.locator('.card-transfer[data-face="down"]')).toHaveCount(1, { timeout: 3000 });
+  const back = await offset("down");
+  expect(same(back, { x: a.x - b.x, y: a.y - b.y })).toBeGreaterThan(0.99);
+  await expect(fly).toHaveCount(0, { timeout: 3000 });
+});
+
+test("drawing: cards fly from the deck, face up to you and face down to others", async ({ page }) => {
+  await openLab(page, "draw");
+  await page.getByRole("button", { name: /^Play/ }).click();
+  await expect(page.locator('.card-transfer[data-face="up"]')).toHaveCount(2); // yours
+  await expect(page.locator('.card-transfer[data-face="down"]')).toHaveCount(2, { timeout: 3000 }); // theirs
+  await expect(page.locator(".card-transfer")).toHaveCount(0, { timeout: 3000 });
+  expect(await sounds(page)).toContain("select");
+});
+
+test("the deck runs out: the discards are shuffled into a new deck before the draw", async ({ page }) => {
+  await openLab(page, "reshuffle");
+  await page.getByRole("button", { name: /^Play/ }).click();
+  const shuffle = page.locator(".deck-shuffle");
+  await expect(shuffle).toHaveCount(1);
+  // over the deck
+  const deck = (await page.locator('[data-pile="draw"] > :first-child').boundingBox())!;
+  const at = (await shuffle.boundingBox()) ?? { x: 0, y: 0, width: 0, height: 0 }; // (a 0×0 anchor)
+  expect(Math.hypot(at.x - (deck.x + deck.width / 2), at.y - (deck.y + deck.height / 2))).toBeLessThan(6);
+  // the draw is dealt from the new deck: its cards wait for the shuffle
+  const drawn = page.locator(".card-transfer");
+  await expect(drawn).toHaveCount(2);
+  expect(await drawn.first().evaluate((el) => parseFloat((el as HTMLElement).style.getPropertyValue("--delay")))).toBeGreaterThanOrEqual(1200);
+  await expect(shuffle).toHaveCount(0, { timeout: 4000 });
+  await expect(drawn).toHaveCount(0, { timeout: 4000 });
+  expect(await sounds(page)).toContain("shuffle");
+});
+
 test("tariff: a giant stamp falls on the target; their Tariff chip shows on impact, with a thud", async ({ page }) => {
   await openLab(page, "tariff");
   const victim = await page.getByLabel("Victim / target").inputValue();
