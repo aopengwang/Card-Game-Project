@@ -5,6 +5,8 @@ import { holdDeath, killBlow } from "../fx/killBlow";
 import { fxSpeed, Stage } from "../fx/stage";
 import { killStreak, streakAt } from "../fx/streak";
 import { holdTariff, tariffStamp } from "../fx/tariff";
+import { launch, type RenderCard } from "../fx/launch";
+import { createRoot } from "react-dom/client";
 import { getLang, t, tMaybe } from "../i18n";
 import { play, playAll, playStreak, type SoundName } from "../sound";
 import type { Card as CardData, LogEntry } from "../types";
@@ -111,6 +113,13 @@ export function revealOf(e: LogEntry, you: number, hand: CardData[], nameOf?: (s
   return null;
 }
 
+/** Draws a card face into a plain DOM element (for effects drawn outside React's tree). */
+const renderCard: RenderCard = (el, card) => {
+  const root = createRoot(el);
+  root.render(<Card card={card} size="sm" tip={false} />); // (drawn by the time it's shown)
+  return () => window.setTimeout(() => root.unmount()); // (never during another render)
+};
+
 /** Centre of an element, relative to the effects layer. */
 function centreIn(layer: HTMLElement, el: Element | null): Pt | null {
   if (!el) return null;
@@ -201,11 +210,13 @@ export function Effects({
     const deaths: number[] = [];
     const judged: number[] = [];
     const tariffs: number[] = []; // a Tariff put on a player: the stamp falls on them
+    const launches: number[] = []; // SpaceX: a rocket lifts off from the seat
     for (let i = start; i < log.length; i++) {
       const e = log[i];
       if (e.type === "death") deaths.push(i);
       if (e.type === "judge_result") judged.push(i);
       if (e.type === "token" && e.token === "tariff" && e.delta > 0) tariffs.push(i);
+      if (e.type === "skill" && e.skill === "spacex") launches.push(i); // Yilong Ma lifts off
     }
     // Sounds play even with reduced motion (that setting is about movement, not audio).
     // A killing blow sounds its own gong when it lands; a kill streak its own fanfare.
@@ -232,12 +243,20 @@ export function Effects({
       for (const i of judged) play(log[i].hit ? "judgeHit" : "judgeMiss", 0.15);
       for (const i of deaths) if (streakAt(log, i) >= 2) playStreak(streakAt(log, i), 0.4);
       if (tariffs.length) play("tariff", 0.1);
+      if (launches.length) play("launch", 0.1);
       return;
     }
     // Big moments take the stage in the order they happened (a Lightning judgment, then
     // the death it caused).
-    for (const i of [...judged, ...deaths, ...tariffs].sort((a, b) => a - b)) {
+    for (const i of [...judged, ...deaths, ...tariffs, ...launches].sort((a, b) => a - b)) {
       const d = log[i];
+      if (d.type === "skill") {
+        // the equipment it gave up (logged just after), to show flying off the rocket
+        const gave = log.slice(i + 1, i + 8).find((e) => e.type === "discard" && e.reason === "spacex" && e.seat === d.seat);
+        const gear: CardData[] = Array.isArray(gave?.cards) ? gave.cards : [];
+        stage.current!.add({ run: () => launch(el, d.seat, gear, renderCard), skip: () => play("launch") });
+        continue;
+      }
       if (d.type === "token") {
         const release = holdTariff(d.seat); // before this paints: the chip appears on impact
         const show = { seat: d.seat, label: t("token.tariff"), release };
@@ -321,7 +340,8 @@ export function Effects({
       }
       if (e.type === "give") transfer([e.card ?? null], seat(e.seat), seat(e.target));
       if (e.type === "pick" && e.card) transfer([e.card], middle(), seat(e.seat)); // a Harvest pick
-      if (e.type === "skill" && typeof e.skill === "string") cast(e.seat, e.skill);
+      // (SpaceX gets its rocket instead of a seal)
+      if (e.type === "skill" && typeof e.skill === "string" && e.skill !== "spacex") cast(e.seat, e.skill);
       if ((e.type === "use" || e.type === "respond") && typeof e.via === "string") cast(e.seat, e.via);
       if (e.type === "use" || e.type === "respond") {
         const from = seat(e.seat);

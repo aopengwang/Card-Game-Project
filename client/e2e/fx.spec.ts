@@ -205,6 +205,37 @@ test("the deck runs out: the discards are shuffled into a new deck before the dr
   expect(await sounds(page)).toContain("shuffle");
 });
 
+test("SpaceX: a rocket rises from the seat, lights up and climbs off the top of the table", async ({ page }) => {
+  await openLab(page, "launch");
+  const seat = page.locator(`[data-seat="${await page.getByLabel("Victim / target").inputValue()}"]`);
+  await page.getByRole("button", { name: /^Play/ }).click(); // (the click also unlocks audio)
+  const rocket = page.locator(".launch-fx .launch-rocket");
+  await expect(rocket).toHaveCount(1);
+  // on the pad: over the hero card
+  const face = (await seat.locator(".hero-face").boundingBox())!;
+  await page.waitForTimeout(500);
+  const pad = (await rocket.boundingBox())!;
+  expect(Math.abs(pad.x + pad.width / 2 - (face.x + face.width / 2))).toBeLessThan(10);
+  expect(pad.y).toBeLessThan(face.y + face.height);
+  // As it lifts off, the equipment it gave up is jettisoned: the real cards, one each side.
+  const gear = page.locator(".launch-fx .launch-eject");
+  await expect(gear).toHaveCount(2);
+  expect(await gear.evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.card))).toEqual(["plus_horse", "eight_trigrams"]);
+  await page.waitForTimeout(1000); // ≈ 1.5 s: hanging there, face up, to be read
+  await expect(gear.nth(0).locator(".card")).toBeVisible();
+  await expect(gear.nth(0).locator(".card")).toHaveAttribute("aria-label", /^\+1 Horse/);
+  const [left, right] = [(await gear.nth(0).locator(".card").boundingBox())!, (await gear.nth(1).locator(".card").boundingBox())!];
+  const mid = face.x + face.width / 2;
+  expect(left.x + left.width).toBeLessThan(mid); // blown out to the left...
+  expect(right.x).toBeGreaterThan(mid); // ...and to the right
+  // then it climbs away: higher and higher, off the top
+  await page.waitForTimeout(600);
+  const up = await rocket.boundingBox();
+  expect(up === null || up.y + up.height < pad.y).toBe(true);
+  await expect(page.locator(".launch-fx")).toHaveCount(0, { timeout: 3000 });
+  expect(await sounds(page)).toContain("launch");
+});
+
 test("tariff: a giant stamp falls on the target; their Tariff chip shows on impact, with a thud", async ({ page }) => {
   await openLab(page, "tariff");
   const victim = await page.getByLabel("Victim / target").inputValue();

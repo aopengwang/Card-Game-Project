@@ -1,4 +1,4 @@
-// Animation lab (developer tool): /?fx[=effect]&lang=zh (effects: kill, streak, double, fate, strike, heal, skill, skillCard, judge, judgeMiss, judgeKill, transfer, draw, reshuffle, tariff, turn). Replays table effects on a real
+// Animation lab (developer tool): /?fx[=effect]&lang=zh (effects: kill, streak, double, fate, strike, heal, skill, skillCard, judge, judgeMiss, judgeKill, transfer, draw, reshuffle, launch, tariff, turn). Replays table effects on a real
 // captured table, with the seats and speed you choose, so an animation can be tuned in
 // seconds instead of playing games until the moment comes up. Press P to replay.
 import { useEffect, useRef, useState } from "react";
@@ -202,6 +202,24 @@ const EFFECTS: Record<string, Effect> = {
         entries: [
           { type: "reshuffle", draw_pile: 92 },
           { type: "draw", seat: victim, count: 2, reason: "draw" },
+        ],
+      },
+    ],
+  },
+  launch: {
+    label: "SpaceX: a rocket lifts off from the seat",
+    uses: ["victim"],
+    steps: ({ victim }) => [
+      {
+        entries: [
+          { type: "skill", seat: victim, skill: "spacex" },
+          {
+            type: "discard", seat: victim, reason: "spacex",
+            cards: [
+              { id: nextCardId++, name: "plus_horse", suit: "spade", rank: 5 },
+              { id: nextCardId++, name: "eight_trigrams", suit: "club", rank: 2 },
+            ],
+          },
         ],
       },
     ],

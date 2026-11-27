@@ -236,10 +236,56 @@ def test_spacex_trades_the_equipment_for_an_extra_play_phase_of_strikes():
     drive(g.take_turn(0), script(Play(s1, (1,)), None, Play(s2, (1,)), Play(s3, (1,)), None, confirm=True))
     hits = [e["amount"] for e in g.log if e["type"] == "damage"]
     assert hits == [1, 2, 2]  # +1 damage, and no Strike limit, in the extra phase
-    assert g.players[0].equips == [] and "spacex" in g.players[0].marks
+    assert g.players[0].equips == [] and "spacex" not in g.players[0].marks  # not once per game
     assert sum(1 for e in g.log if e["type"] == "phase" and e["phase"] == "play") == 2
     assert g.players[0].tokens == {}
     assert_cards_conserved(g)
+
+
+@pytest.mark.parametrize("gear", [2, 3, 4])
+def test_spacex_raises_the_strike_limit_by_the_equipment_discarded(gear):
+    g = heroes("yilong_ma", None, None, None)
+    for name in ("plus_horse", "eight_trigrams", "minus_horse", "crossbow")[:gear]:
+        equip(g, 0, name)
+    strikes = give(g, 0, *["strike"] * 6)
+    g.players[1].max_hp = g.players[1].hp = 30
+    used = []
+
+    def play(req):  # strike for as long as the game lets us
+        s = next((i for i in req.options if i in strikes), None)
+        if g.players[0].turn_usage.get("_launch") != 2 or s is None:
+            return None  # (save them all for the extra phase)
+        used.append(s)
+        return Play(s, (1,))
+
+    def answer(req):
+        if req.kind == "play":
+            return play(req)
+        return True if req.kind == "confirm" else req.default()
+
+    drive(g.take_turn(0), answer)
+    assert len(used) == 1 + gear  # the usual 1, plus one per card discarded
+
+
+def test_spacex_once_per_turn_and_again_on_a_later_turn():
+    g = heroes("yilong_ma", None, None, None)
+    equip(g, 0, "plus_horse")
+    equip(g, 0, "eight_trigrams")
+    asked = []
+
+    def answer(req):
+        if req.kind == "confirm" and req.reason == "spacex":
+            asked.append(g.turn_number)
+            return True
+        if req.kind == "play" and not g.players[0].equips and g.players[0].turn_usage.get("_launch") == 1:
+            equip(g, 0, "crossbow")  # re-equipped before the extra phase...
+            equip(g, 0, "minus_horse")
+        return req.default()
+
+    drive(g.take_turn(0), answer)
+    assert asked == [1]  # ...which doesn't allow a second launch this turn
+    drive(g.take_turn(0), answer)
+    assert asked == [1, 2]  # but the next turn does
 
 
 def test_spacex_needs_two_pieces_of_equipment():

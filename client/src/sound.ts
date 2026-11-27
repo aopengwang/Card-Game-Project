@@ -23,6 +23,8 @@ export type SoundName =
   | "judgeMiss"
   | "tariff"
   | "shuffle"
+  | "launch"
+  | "eject"
   | "death"
   | "victory"
   | "defeat";
@@ -186,6 +188,20 @@ const SOUNDS: Record<SoundName, (c: AudioContext, t: number) => void> = {
       for (let i = 0; i < n; i++) noise(c, t + start + i * 0.018, 0.03, 0.12, 5200 - i * 120, 2600, 1.4);
     }
     tone(c, t + 1.12, 210, 0.08, 0.16, "triangle", 140);
+  },
+  // a rocket launch: ignition crackle, a deep rumble, then a roar that climbs away
+  launch: (c, t) => {
+    for (let i = 0; i < 6; i++) noise(c, t + i * 0.05, 0.06, 0.25, 3000, 1200, 1.2); // ignition
+    tone(c, t + 0.1, 46, 2.2, 0.7, "sine", 70); // the rumble
+    noise(c, t + 0.1, 2.3, 0.55, 160, 120, 0.5);
+    noise(c, t + 0.6, 1.9, 0.4, 500, 2600, 0.6); // the roar, rising as it climbs
+  },
+  // gear jettisoned from the rocket: separation charges popping, a metal clunk each
+  eject: (c, t) => {
+    for (let i = 0; i < 3; i++) {
+      noise(c, t + i * 0.09, 0.09, 0.35, 2400, 600, 0.8);
+      tone(c, t + i * 0.09, 320 - i * 40, 0.12, 0.18, "square", 140);
+    }
   },
   // a player falls: a deep gong
   death: (c, t) => {

@@ -1278,12 +1278,13 @@ class Tesla(ViewAs):
 
 
 class SpaceX(Skill):
-    """Limited. At the start of your play phase, you may discard all your equipment (at least
-    2 cards) to Launch: after this play phase you take an extra one, in which your Strikes have
-    no limit and deal +1 damage."""
+    """Once per turn, at the start of your play phase, you may discard all your equipment (at
+    least 2 cards) to Launch: after this play phase you take an extra one, in which your Strike
+    limit is raised by the number of cards you discarded (2 to 4) and your Strikes deal +1
+    damage."""
 
     name = "spacex"
-    limited = True
+    per_turn = 1  # (the extra play phase starts a play phase too: no second launch in it)
     events = (Event.PHASE_START, Event.PHASE_END, Event.DAMAGE_CAUSED)
 
     def can_trigger(self, game, owner, event, data):
@@ -1312,10 +1313,12 @@ class SpaceX(Skill):
         game.note_skill_used(owner, self)
         _announce(game, owner, self)
         owner.turn_usage["_launch"] = 1
+        owner.turn_usage["_launch_gear"] = len(owner.equips)
         yield from game.discard(owner.seat, [c.id for c in owner.equips], reason=self.name)
 
     def extra_strikes(self, game, owner):
-        return 999 if owner.turn_usage.get("_launch") == 2 else 0
+        # Strikes used earlier in the turn still count against the raised limit.
+        return owner.turn_usage.get("_launch_gear", 0) if owner.turn_usage.get("_launch") == 2 else 0
 
 
 class DeepSeek(ActiveSkill):

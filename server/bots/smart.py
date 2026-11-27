@@ -799,8 +799,9 @@ class SmartBot:
             return self._lowest(game, me, req.options, 1)[0]  # show our least useful card
         if req.about is None:  # harvest-style pick from revealed cards
             return max(req.options, key=lambda i: (self._value(game, me, i), -i))
-        if req.about == me:  # giving away one of our own cards
-            return self._lowest(game, me, req.options, 1)[0]
+        if req.about == me:  # giving away one of our own cards (or losing one: our own Frost
+            # Blade through an Iron Chain, where only our face-down hand is on offer)
+            return self._lowest(game, me, req.options, 1)[0] if req.options else HAND
         target = game.players[req.about]
         r = self.rel(game, me, req.about)
         judge = [c.id for c in target.judge if c.id in req.options]
