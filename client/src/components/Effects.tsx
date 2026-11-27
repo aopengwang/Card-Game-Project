@@ -4,9 +4,10 @@ import { judgment, type JudgmentShow } from "../fx/judgment";
 import { holdDeath, killBlow } from "../fx/killBlow";
 import { fxSpeed, Stage } from "../fx/stage";
 import { killStreak, streakAt } from "../fx/streak";
-import { getLang, t } from "../i18n";
+import { holdTariff, tariffStamp } from "../fx/tariff";
+import { getLang, t, tMaybe } from "../i18n";
 import { play, playAll, playStreak, type SoundName } from "../sound";
-import type { LogEntry } from "../types";
+import type { Card as CardData, LogEntry } from "../types";
 import { Card } from "../ui/Card";
 import s from "./Effects.module.css";
 
@@ -62,6 +63,41 @@ export function soundsFor(entries: LogEntry[], you: number): SoundName[] {
   return out;
 }
 
+/** Cards a player shows the whole table, held up in the middle for a moment. */
+export interface Reveal {
+  title: string;
+  cards: CardData[];
+  /** A word for you alone (e.g. "you have no ♥ card"), or null. */
+  note: string | null;
+}
+
+/** How long a reveal stays up (ms; the CSS animation uses the same number). */
+export const REVEAL_MS = 3000;
+
+/** The reveal a log entry calls for, if any (exported for unit tests). */
+export function revealOf(e: LogEntry, you: number, hand: CardData[], nameOf?: (seat: number) => string): Reveal | null {
+  const who = nameOf ? nameOf(e.seat) : "";
+  const reason = reasonTitle(String(e.reason ?? ""));
+  if (e.type === "show" && e.card) {
+    const suit = String(e.card.suit);
+    // Fire Attack: you need a card of the shown suit to go on. Say so when you have none.
+    const stuck = e.reason === "fire_attack" && e.source === you && !hand.some((c) => c.suit === suit);
+    return {
+      title: t("reveal.shows", { name: who, reason }),
+      cards: [e.card],
+      note: stuck ? t("reveal.noSuit", { suit: tMaybe(`opt.${suit}`) ?? suit }) : null,
+    };
+  }
+  if (e.type === "show_hand" && Array.isArray(e.cards)) {
+    return {
+      title: t("reveal.hand", { name: who, reason }),
+      cards: e.cards as CardData[],
+      note: e.cards.length ? null : t("reveal.emptyHand"),
+    };
+  }
+  return null;
+}
+
 /** Centre of an element, relative to the effects layer. */
 function centreIn(layer: HTMLElement, el: Element | null): Pt | null {
   if (!el) return null;
@@ -87,18 +123,33 @@ function strokePath(from: Pt, to: Pt): string {
 export function Effects({
   log,
   you,
+  aimFrom = you,
   aim,
   playSize = "sm",
   nameOf,
+  hand = [],
 }: {
   log: LogEntry[];
   you: number;
+  /** Where your aim lines start: your seat, or the bot you're playing for (test room). */
+  aimFrom?: number;
   aim: number[];
   playSize?: "sm" | "md";
   /** A seat's display name (the kill streak banner names the killer). */
   nameOf?: (seat: number) => string;
+  /** Your hand (a Fire Attack reveal tells you when you have no card of the shown suit). */
+  hand?: CardData[];
 }) {
   const layer = useRef<HTMLDivElement>(null);
+  const [reveal, setReveal] = useState<(Reveal & { id: number }) | null>(null);
+  const revealTimer = useRef<number | undefined>(undefined);
+  const showReveal = (r: Reveal) => {
+    const id = nextId.current++;
+    setReveal({ ...r, id });
+    window.clearTimeout(revealTimer.current);
+    revealTimer.current = window.setTimeout(() => setReveal((cur) => (cur?.id === id ? null : cur)), REVEAL_MS * Math.max(1, 1 / fxSpeed()));
+  };
+  useEffect(() => () => window.clearTimeout(revealTimer.current), []);
   const seen = useRef(log.length); // entries already on the table when we mounted
   const nextId = useRef(1);
   const [fx, setFx] = useState<Fx[]>([]);
@@ -119,14 +170,14 @@ export function Effects({
   useLayoutEffect(() => {
     const el = layer.current;
     if (!el) return;
-    const from = centreIn(el, document.querySelector(`[data-seat="${you}"]`));
+    const from = centreIn(el, document.querySelector(`[data-seat="${aimFrom}"]`));
     const paths: string[] = [];
     for (const seat of aimKey ? aimKey.split(",").map(Number) : []) {
       const to = centreIn(el, document.querySelector(`[data-seat="${seat}"]`));
-      if (from && to && seat !== you) paths.push(strokePath(from, to));
+      if (from && to && seat !== aimFrom) paths.push(strokePath(from, to));
     }
     setAimPaths((old) => (old.join("|") === paths.join("|") ? old : paths));
-  }, [aimKey, you, resizes]);
+  }, [aimKey, aimFrom, resizes]);
 
   useLayoutEffect(() => {
     const start = seen.current;
@@ -136,13 +187,23 @@ export function Effects({
     const motion = !!el && !reducedMotion();
     const deaths: number[] = [];
     const judged: number[] = [];
+    const tariffs: number[] = []; // a Tariff put on a player: the stamp falls on them
     for (let i = start; i < log.length; i++) {
-      if (log[i].type === "death") deaths.push(i);
-      if (log[i].type === "judge_result") judged.push(i);
+      const e = log[i];
+      if (e.type === "death") deaths.push(i);
+      if (e.type === "judge_result") judged.push(i);
+      if (e.type === "token" && e.token === "tariff" && e.delta > 0) tariffs.push(i);
     }
     // Sounds play even with reduced motion (that setting is about movement, not audio).
     // A killing blow sounds its own gong when it lands; a kill streak its own fanfare.
-    playAll(soundsFor(log.slice(start), you).filter((n) => !(motion && deaths.length && n === "death")));    const judgeOf = (i: number): JudgmentShow => {
+    playAll(soundsFor(log.slice(start), you).filter((n) => !(motion && deaths.length && n === "death")));
+    // Cards shown to everyone (Fire Attack, What's up Beijing!) go up in the middle of the
+    // table for a few seconds, motion or not: it's information, not decoration.
+    for (let i = start; i < log.length; i++) {
+      const r = revealOf(log[i], you, hand, nameOf);
+      if (r) showReveal(r);
+    }
+    const judgeOf = (i: number): JudgmentShow => {
       const e = log[i];
       const reason = String(e.reason ?? "");
       return {
@@ -157,12 +218,19 @@ export function Effects({
     if (!motion || !el) {
       for (const i of judged) play(log[i].hit ? "judgeHit" : "judgeMiss", 0.15);
       for (const i of deaths) if (streakAt(log, i) >= 2) playStreak(streakAt(log, i), 0.4);
+      if (tariffs.length) play("tariff", 0.1);
       return;
     }
     // Big moments take the stage in the order they happened (a Lightning judgment, then
     // the death it caused).
-    for (const i of [...judged, ...deaths].sort((a, b) => a - b)) {
+    for (const i of [...judged, ...deaths, ...tariffs].sort((a, b) => a - b)) {
       const d = log[i];
+      if (d.type === "token") {
+        const release = holdTariff(d.seat); // before this paints: the chip appears on impact
+        const show = { seat: d.seat, label: t("token.tariff"), release };
+        stage.current!.add({ run: () => tariffStamp(el, show), skip: release });
+        continue;
+      }
       if (d.type === "judge_result") {
         // Copy the card now: the battlefield may have moved on by the time it plays.
         const show = judgeOf(i);
@@ -303,6 +371,19 @@ export function Effects({
         }
         return null;
       })}
+      {reveal && (
+        <div key={reveal.id} className={`${s.reveal} card-reveal`} style={{ "--reveal": `${REVEAL_MS}ms` } as CSSProperties}>
+          <span className={`${s.revealTitle} reveal-title`}>{reveal.title}</span>
+          {reveal.cards.length > 0 && (
+            <span className={s.revealCards}>
+              {reveal.cards.map((c) => (
+                <Card key={c.id} card={c} size="md" tip={false} />
+              ))}
+            </span>
+          )}
+          {reveal.note && <span className={`${s.revealNote} reveal-note`}>{reveal.note}</span>}
+        </div>
+      )}
     </div>
   );
 }

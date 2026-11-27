@@ -3,7 +3,7 @@ from collections import Counter
 import pytest
 
 from bots import SmartBot
-from content.heroes import HEROES
+from content.heroes import HEROES, MODERN
 from content.standard import new_game
 from engine import CardType, ChooseHeroRequest, Convert, Event, Phase, Play, PlayRequest, Suit, Zone
 from engine.driver import drive, play_game
@@ -67,13 +67,14 @@ def start_phase(g):
 # ---------------------------------------------------------------- roster & draft
 
 
-def test_roster_is_the_standard_set_plus_two_extras():
-    assert len({h.id for h in HEROES}) == len(HEROES) == 27
+def test_roster_is_the_standard_set_plus_extras():
+    assert len({h.id for h in HEROES}) == len(HEROES) == 33
     names = [s.name for h in HEROES for s in h.skills]
     assert len(names) == len(set(names))
     assert all((type(s).__doc__ or "").strip() for h in HEROES for s in h.skills)
-    assert sorted(h.id for h in HEROES if h.has_lord_skill) == ["cao_cao", "liu_bei", "sun_quan", "wei_lie"]
-    standard = [h for h in HEROES if h.id not in ("wei_lie", "yu_ji")]
+    lords = ["cao_cao", "chairman", "donald", "liu_bei", "sun_quan", "wei_lie"]
+    assert sorted(h.id for h in HEROES if h.has_lord_skill) == lords
+    standard = [h for h in HEROES if h.id not in ("wei_lie", "yu_ji", *MODERN)]
     assert Counter(str(h.kingdom) for h in standard) == {"wei": 7, "shu": 7, "wu": 8, "qun": 3}
     assert {h.id for h in HEROES if h.gender == "female"} == {"zhen_ji", "huang_yueying", "da_qiao", "sun_shangxiang", "diaochan"}
 
@@ -83,7 +84,7 @@ def test_draft_lord_picks_first_then_others_from_untaken():
     gen = g.run()
     req = next(gen)
     assert isinstance(req, ChooseHeroRequest) and req.seat == g.lord_seat
-    assert {"cao_cao", "liu_bei", "sun_quan", "wei_lie"} <= set(req.options) and len(req.options) == 6
+    assert {"cao_cao", "liu_bei", "sun_quan", "wei_lie", "chairman", "donald"} <= set(req.options) and len(req.options) == 8
     req = gen.send("liu_bei")
     taken = {"liu_bei"}
     while isinstance(req, ChooseHeroRequest):

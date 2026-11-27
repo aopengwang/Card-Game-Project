@@ -21,6 +21,7 @@ export type SoundName =
   | "emote"
   | "judgeHit"
   | "judgeMiss"
+  | "tariff"
   | "death"
   | "victory"
   | "defeat";
@@ -169,6 +170,14 @@ const SOUNDS: Record<SoundName, (c: AudioContext, t: number) => void> = {
     tone(c, t, 120, 0.4, 0.6, "sine", 52);
     noise(c, t, 0.12, 0.4, 1600, 300);
     tone(c, t + 0.05, N.E4, 0.5, 0.09, "triangle", N.D4 * 0.7);
+  },
+  // a Tariff stamp lands: a heavy wooden thud, then a cash-register ching
+  tariff: (c, t) => {
+    tone(c, t, 82, 0.6, 1.0, "sine", 30);
+    tone(c, t, 170, 0.16, 0.45, "triangle", 85);
+    noise(c, t, 0.26, 0.6, 2000, 220, 0.7);
+    bell(c, t + 0.16, N.E6, 0.55, 0.09, [[1, 1], [2.76, 0.3]]);
+    bell(c, t + 0.24, N.A6, 0.7, 0.08, [[1, 1], [2.76, 0.3]]);
   },
   // a player falls: a deep gong
   death: (c, t) => {

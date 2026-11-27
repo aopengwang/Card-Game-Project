@@ -30,7 +30,8 @@ def view_for(game: Game, seat: int) -> dict[str, Any]:
                 "kingdom": p.kingdom,
                 "gender": p.gender,
                 "skills": [skill_info(s) for s in p.skills if not s.lord or p.role == Role.LORD],
-                "spent": sorted(k for k, v in p.marks.items() if v),  # limited used / awakened
+                "spent": sorted(k for k, v in p.marks.items() if v is True),  # limited used / awakened
+                "tokens": dict(p.tokens),
                 "skill_uses": {k: v for k, v in p.turn_usage.items() if not k.startswith("_")},
                 # your distance to them (None for yourself or the dead)
                 "distance": game.distance(seat, p.seat) if me.alive and p.alive and p.seat != seat else None,

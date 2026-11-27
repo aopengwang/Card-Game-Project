@@ -14,7 +14,7 @@ from engine import Card, CardDef, Game, Role, Ruleset, Suit
 
 from .basic import BASIC_DEFS
 from .equipment import EQUIPMENT_DEFS
-from .heroes import HERO_MAP
+from .heroes import HERO_MAP, STATUSES
 from .tricks import TRICK_DEFS
 
 S, H, C, D = Suit.SPADE, Suit.HEART, Suit.CLUB, Suit.DIAMOND
@@ -127,8 +127,10 @@ def build_deck(battle: bool = False) -> list[Card]:
     return cards
 
 
-STANDARD = Ruleset(name="standard", card_defs=CARD_DEFS, build_deck=build_deck, heroes=HERO_MAP)
-BATTLE = Ruleset(name="battle", card_defs=CARD_DEFS, build_deck=lambda: build_deck(battle=True), heroes=HERO_MAP)
+STANDARD = Ruleset(name="standard", card_defs=CARD_DEFS, build_deck=build_deck, heroes=HERO_MAP, statuses=STATUSES)
+BATTLE = Ruleset(
+    name="battle", card_defs=CARD_DEFS, build_deck=lambda: build_deck(battle=True), heroes=HERO_MAP, statuses=STATUSES
+)
 
 
 def new_game(

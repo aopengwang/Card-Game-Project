@@ -70,12 +70,15 @@ function title(r: GameRequest, name: NameFn, you: number): string {
           ? t("fireAttack.show", { name: name(ctx.source) })
           : t("fireAttack.discard", { name: name(ctx.target), suit: tMaybe(`opt.${ctx.suit}`) ?? String(ctx.suit) });
       }
-      return r.about != null && r.about !== you
-        ? t("act.chooseTheirCard", { reason: reasonTitle(r.reason), name: name(r.about) })
-        : t("act.chooseCard", { reason: reasonTitle(r.reason) });
+      return (
+        tMaybe(`chooseCard.${r.reason}`, { card: cardTitle(String(r.context?.card ?? "")), name: name(r.about) }) ??
+        (r.about != null && r.about !== you
+          ? t("act.chooseTheirCard", { reason: reasonTitle(r.reason), name: name(r.about) })
+          : t("act.chooseCard", { reason: reasonTitle(r.reason) }))
+      );
     case "confirm":
       if ((r.context as { again?: boolean }).again) return t("act.again", { reason: reasonTitle(r.reason) });
-      return tMaybe(`confirm.${r.reason}`) ?? t("act.useConfirm", { reason: reasonTitle(r.reason) });
+      return tMaybe(`confirm.${r.reason}`, { name: name(r.about) }) ?? t("act.useConfirm", { reason: reasonTitle(r.reason) });
     case "choose_player":
       return (
         tMaybe(`choose.${r.reason}`, { name: name(r.about) }) ??

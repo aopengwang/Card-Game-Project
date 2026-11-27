@@ -147,6 +147,26 @@ test("judgment: the card turns over the judged seat and a seal stamps the outcom
   }
 });
 
+test("tariff: a giant stamp falls on the target; their Tariff chip shows on impact, with a thud", async ({ page }) => {
+  await openLab(page, "tariff");
+  const victim = await page.getByLabel("Victim / target").inputValue();
+  const seat = page.locator(`[data-seat="${victim}"]`);
+  const chip = seat.locator('.token[data-token="tariff"]');
+  await page.getByRole("button", { name: /^Play/ }).click(); // (the click also unlocks audio)
+  const fx = page.locator(".tariff-fx");
+  await expect(fx).toHaveCount(1);
+  await expect(chip).toHaveCount(1); // already in the game...
+  await expect(chip).toBeHidden(); // ...but held back while the stamp is in the air
+  // It lands on the target's hero card, and the chip appears.
+  await expect(chip).toBeVisible({ timeout: 3000 });
+  await expect(fx.locator(".tariff-imprint")).toContainText("税");
+  const face = (await seat.locator(".hero-face").boundingBox())!;
+  const imprint = (await fx.locator(".tariff-imprint").boundingBox())!;
+  expect(Math.abs(imprint.x + imprint.width / 2 - (face.x + face.width / 2))).toBeLessThan(12);
+  await expect(fx).toHaveCount(0, { timeout: 3000 });
+  expect(await sounds(page)).toContain("tariff");
+});
+
 test("judgment before the death it causes (Lightning)", async ({ page }) => {
   await watchBlows(page);
   await openLab(page, "judgeKill");

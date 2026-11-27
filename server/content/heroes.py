@@ -1,5 +1,5 @@
 """Hero roster: the 25 heroes of the standard set (Wei 7, Shu 7, Wu 8, Qun 3), plus two
-extras of our own (Wei Lie, Yu Ji).
+extras of our own (Wei Lie, Yu Ji) and six modern parody heroes designed at our table (Qun).
 
 Each skill plays like its counterpart in the classic game, under our own name and rules
 text (the docstring, sent to clients as-is; Chinese in content/i18n.py).
@@ -15,6 +15,7 @@ from engine import (
     ChoosePlayerRequest,
     ConfirmRequest,
     DiscardRequest,
+    EquipSlot,
     Event,
     Hero,
     Kingdom,
@@ -983,6 +984,418 @@ class Hermit(Skill):
         return 1
 
 
+# ================================================================= modern heroes (designed at our table)
+
+
+CHILL_MAX = 4
+
+
+def _basics(game, p) -> list[int]:
+    return [c.id for c in p.hand if game.card_def(c).type == CardType.BASIC]
+
+
+class DoNothingWin(Skill):
+    """Locked. When your turn ends, if you didn't use or play a Strike this turn, gain 1 Chill
+    token (at most 4)."""
+
+    name = "do_nothing_win"
+    locked = True
+    events = (Event.TURN_END,)
+
+    def can_trigger(self, game, owner, event, p):
+        return p is owner and not owner.turn_usage.get("_strikes") and owner.tokens.get("chill", 0) < CHILL_MAX
+
+    def on_trigger(self, game, owner, event, p) -> Gen:
+        game.set_token(owner.seat, "chill", owner.tokens.get("chill", 0) + 1)
+        yield from ()
+
+
+class ChillGuy(ActiveSkill):
+    """In your play phase, any number of times: spend 1 Chill token to look at the top 2 cards
+    of the deck. Take 1 of them into your hand and discard the other."""
+
+    name = "chill_guy"
+    harmful = False
+    per_turn = None
+
+    def can_activate(self, game, owner):
+        return owner.tokens.get("chill", 0) > 0
+
+    def activate(self, game, owner, cards, targets) -> Gen:
+        game.set_token(owner.seat, "chill", owner.tokens.get("chill", 0) - 1)
+        ids = game._take_from_pile(2)
+        cid = yield from game.ask(
+            ChooseCardRequest(seat=owner.seat, reason=self.name, options=list(ids),
+                              shown=[game.cards[i].to_dict() for i in ids])
+        )
+        game._log("draw", seat=owner.seat, count=1, reason=self.name,
+                  private=([owner.seat], {"cards": [game.cards[cid].to_dict()]}))
+        yield from game.move_cards([cid], Zone.HAND, owner.seat, reason=self.name)
+        rest = [i for i in ids if i != cid and game.location[i][0] == Zone.DRAW_PILE]
+        if rest:
+            yield from game.discard(owner.seat, rest, reason=self.name)
+
+
+class WhatsUpBeijing(ActiveSkill, Skill):
+    """Lord, limited. In your play phase, if you haven't used a card yet this turn: show your
+    whole hand. Until your next turn starts, your distance to every other player is 1, and
+    everyone else's distance to you is +99."""
+
+    name = "whats_up_beijing"
+    lord = limited = True
+    harmful = False
+    events = (Event.TURN_START,)
+
+    def can_activate(self, game, owner):
+        return not owner.turn_usage.get("_cards_used")
+
+    def activate(self, game, owner, cards, targets) -> Gen:
+        game._log("show_hand", seat=owner.seat, cards=[c.to_dict() for c in owner.hand], reason=self.name)
+        game.set_token(owner.seat, "beijing", 1)
+        yield from ()
+
+    def can_trigger(self, game, owner, event, p):  # it wears off as your next turn starts
+        return p is owner and bool(owner.tokens.get("beijing"))
+
+    def on_trigger(self, game, owner, event, p) -> Gen:
+        game.set_token(owner.seat, "beijing", 0)
+        yield from ()
+
+    def distance_out(self, game, owner):
+        return -999 if owner.tokens.get("beijing") else 0  # (distances never go below 1)
+
+    def distance_in(self, game, owner):
+        return 99 if owner.tokens.get("beijing") else 0
+
+
+class Communism(_Conversion):
+    """Once per turn, you may use a red basic card as a Bountiful Harvest."""
+
+    name = "communism"
+    as_name = "harvest"
+    per_turn = 1
+    in_response = False
+
+    def cards(self, game, owner):
+        return [c.id for c in owner.hand if c.is_red and game.card_def(c).type == CardType.BASIC]
+
+
+class Sharing(ActiveSkill):
+    """Once per turn, in your play phase: choose a player with the most hand cards, then a
+    player with the fewest (you may be either). The first gives the second a random hand card."""
+
+    name = "sharing"
+    min_targets = max_targets = 2
+
+    @staticmethod
+    def _extremes(game) -> tuple[int, int]:
+        counts = [len(p.hand) for p in game.alive_players()]
+        return max(counts), min(counts)
+
+    def can_activate(self, game, owner):
+        return self._extremes(game)[0] > 0
+
+    def target_options(self, game, owner):
+        hi, lo = self._extremes(game)
+        return [s for s in game.seats_from(owner.seat) if game.players[s].alive and len(game.players[s].hand) in (hi, lo)]
+
+    def check(self, game, owner, cards, targets):
+        if len(targets) != 2:
+            return None
+        hi, lo = self._extremes(game)
+        giver, taker = targets
+        if len(game.players[giver].hand) != hi:
+            return "the first player must have the most hand cards"
+        if len(game.players[taker].hand) != lo:
+            return "the second player must have the fewest hand cards"
+        return None
+
+    def activate(self, game, owner, cards, targets) -> Gen:
+        giver, taker = (game.players[s] for s in targets)
+        if giver.hand and giver.alive and taker.alive:
+            yield from _give(game, giver.seat, taker.seat, game.rng.choice(giver.hand).id, self.name)
+
+
+TARIFF_CHOICES = ("tariff_give", "tariff_shortage")
+
+
+class Tariffs(ActiveSkill, Skill):
+    """Once per turn, in your play phase: put a Tariff on another player who has none. At the
+    start of their turn, you may remove it and discard a card (hand or equipment). They then
+    choose: give you a random hand card, or take the card you discarded into their judgment
+    area as a Supply Shortage (not if they already have one)."""
+
+    name = "tariffs"
+    min_targets = max_targets = 1
+    events = (Event.TURN_START,)
+
+    def target_options(self, game, owner):
+        return [s for s in _others(game, owner) if not game.players[s].tokens.get("tariff")]
+
+    def activate(self, game, owner, cards, targets) -> Gen:
+        (t,) = targets
+        game.players[t].marks["tariff_by"] = owner.seat
+        game.set_token(t, "tariff", 1)
+        yield from ()
+
+    @staticmethod
+    def _choices(game, p) -> list[str]:
+        out = []
+        if p.hand:
+            out.append("tariff_give")
+        if not game.has_in_judge(p, "supply_shortage"):
+            out.append("tariff_shortage")
+        return out
+
+    def can_trigger(self, game, owner, event, p):
+        return (
+            p is not owner and bool(p.tokens.get("tariff")) and p.marks.get("tariff_by") == owner.seat
+            and bool(_owned(owner)) and bool(self._choices(game, p))
+        )
+
+    def on_trigger(self, game, owner, event, p) -> Gen:
+        if not (yield from _ask_yes(game, owner, self, about=p.seat)):
+            return  # the Tariff stays for later
+        _announce(game, owner, self)
+        game.set_token(p.seat, "tariff", 0)
+        p.marks.pop("tariff_by", None)
+        (cid,) = yield from game.ask(
+            DiscardRequest(seat=owner.seat, count=1, options=_owned(owner), reason=self.name, about=p.seat)
+        )
+        yield from game.discard(owner.seat, [cid], reason=self.name)
+        choices = self._choices(game, p)
+        if not choices or not p.alive:
+            return
+        pick = yield from game.ask(ChooseOptionRequest(seat=p.seat, reason=self.name, about=owner.seat, choices=choices))
+        game._log("chose", seat=p.seat, choice=pick, reason=self.name)
+        if pick == "tariff_give":
+            if p.hand and owner.alive:
+                yield from _give(game, p.seat, owner.seat, game.rng.choice(p.hand).id, self.name)
+        elif game.location[cid][0] == Zone.DISCARD_PILE:
+            game.judge_as[cid] = "supply_shortage"
+            game._log("placed", seat=p.seat, card=game.cards[cid].to_dict(), as_name="supply_shortage", reason=self.name)
+            yield from game.move_cards([cid], Zone.JUDGE, p.seat, reason=self.name)
+
+
+class DodgedABullet(Skill):
+    """Lord, limited. When you are dying and nobody saves you, you may go back to 1 HP and draw
+    1 card."""
+
+    name = "dodged_a_bullet"
+    lord = limited = True
+    events = (Event.UNSAVED,)
+
+    def can_trigger(self, game, owner, event, seat):
+        return seat == owner.seat and game.skill_ready(owner, self)
+
+    def on_trigger(self, game, owner, event, seat) -> Gen:
+        if not (yield from _ask_yes(game, owner, self)):
+            return
+        game.note_skill_used(owner, self)
+        _announce(game, owner, self)
+        yield from game.recover(owner.seat, 1 - owner.hp, source=owner.seat)
+        yield from game.draw(owner.seat, 1, reason=self.name)
+
+
+class BabyOil(ActiveSkill, Skill):
+    """Once per turn, in your play phase: discard a card (hand or equipment) to put a Slippery
+    marker on another player. After you take damage, you may also put one on the player who
+    dealt it (at most 1 marker per player). Slippery: whenever the marked player uses a card
+    during their turn, they must judge. If it's black, that card has no effect (it goes to the
+    discard pile) and the marker is removed. Otherwise, the marker is removed at the end of
+    their turn."""
+
+    name = "baby_oil"
+    min_cards = max_cards = 1
+    min_targets = max_targets = 1
+    events = (Event.DAMAGED,)
+
+    def card_options(self, game, owner):
+        return _owned(owner)
+
+    def target_options(self, game, owner):
+        return [s for s in _others(game, owner) if not game.players[s].tokens.get("slippery")]
+
+    def activate(self, game, owner, cards, targets) -> Gen:
+        yield from game.discard(owner.seat, cards, reason=self.name)
+        if game.players[targets[0]].alive:
+            game.set_token(targets[0], "slippery", 1)
+
+    def can_trigger(self, game, owner, event, dmg):
+        if dmg.target != owner.seat or dmg.source is None or dmg.source == owner.seat:
+            return False
+        src = game.players[dmg.source]
+        return src.alive and not src.tokens.get("slippery")
+
+    def on_trigger(self, game, owner, event, dmg) -> Gen:
+        if (yield from _ask_yes(game, owner, self, about=dmg.source)):
+            _announce(game, owner, self)
+            game.set_token(dmg.source, "slippery", 1)
+
+
+class Slippery(Skill):
+    """Whenever you use a card during your turn, judge: if it's black, the card has no effect
+    (it goes to the discard pile) and you're no longer Slippery. Otherwise it wears off when
+    your turn ends."""
+
+    name = "slippery"
+    events = (Event.CARD_USED, Event.TURN_END)
+
+    def can_trigger(self, game, owner, event, data):
+        if not owner.tokens.get("slippery"):
+            return False
+        if event == Event.TURN_END:
+            return data is owner
+        return data.source == owner.seat and game.current == owner.seat and not data.data.get("void")
+
+    def on_trigger(self, game, owner, event, data) -> Gen:
+        if event == Event.TURN_END:
+            game.set_token(owner.seat, "slippery", 0)
+            return
+        _announce(game, owner, self)
+        j = yield from game.judge(owner.seat, self.name, lambda c: c.is_black)
+        if j.hit:
+            data.data["void"] = self.name
+            if data.card.name == "strike" and not data.data.get("free"):
+                owner.strikes_used += 1  # a Strike that slipped still counts as used
+            game.set_token(owner.seat, "slippery", 0)
+
+
+def _has_horse(game, p) -> bool:
+    return any(game.equip_in(p, slot) is not None for slot in (EquipSlot.PLUS_HORSE, EquipSlot.MINUS_HORSE))
+
+
+class Tesla(ViewAs):
+    """Once per turn, while you have a +1 or -1 Horse equipped, you may use or play any hand
+    card as a Strike or a Dodge."""
+
+    name = "tesla"
+    as_names = ("strike", "dodge")
+    per_turn = 1
+
+    def enabled(self, game, owner):
+        return _has_horse(game, owner)
+
+
+class SpaceX(Skill):
+    """Limited. At the start of your play phase, you may discard all your equipment (at least
+    2 cards) to Launch: after this play phase you take an extra one, in which your Strikes have
+    no limit and deal +1 damage."""
+
+    name = "spacex"
+    limited = True
+    events = (Event.PHASE_START, Event.PHASE_END, Event.DAMAGE_CAUSED)
+
+    def can_trigger(self, game, owner, event, data):
+        launch = owner.turn_usage.get("_launch")
+        if event == Event.PHASE_START:
+            return _my_phase(game, owner, event, data, Phase.PLAY) and game.skill_ready(owner, self) and len(owner.equips) >= 2
+        if event == Event.PHASE_END:
+            return data == Phase.PLAY and game.current == owner.seat and launch in (1, 2)
+        return launch == 2 and data.source == owner.seat and data.card is not None and data.card.name == "strike"
+
+    def on_trigger(self, game, owner, event, data) -> Gen:
+        if event == Event.DAMAGE_CAUSED:
+            data.amount += 1
+            return
+        if event == Event.PHASE_END:
+            if owner.turn_usage["_launch"] == 1:  # lift-off: the extra play phase comes next
+                owner.turn_usage["_launch"] = 2
+                game.set_token(owner.seat, "launch", 1)
+                game.add_phase(Phase.PLAY)
+            else:  # the extra play phase is over
+                owner.turn_usage["_launch"] = 3
+                game.set_token(owner.seat, "launch", 0)
+            return
+        if not (yield from _ask_yes(game, owner, self)):
+            return
+        game.note_skill_used(owner, self)
+        _announce(game, owner, self)
+        owner.turn_usage["_launch"] = 1
+        yield from game.discard(owner.seat, [c.id for c in owner.equips], reason=self.name)
+
+    def extra_strikes(self, game, owner):
+        return 999 if owner.turn_usage.get("_launch") == 2 else 0
+
+
+class DeepSeek(ActiveSkill):
+    """Once per turn, in your play phase: discard a card (hand or equipment) to reveal the top
+    3 cards of the deck. Take 1 of them into your hand and put the rest on the bottom of the
+    deck."""
+
+    name = "deepseek"
+    harmful = False
+    min_cards = max_cards = 1
+
+    def card_options(self, game, owner):
+        return _owned(owner)
+
+    def activate(self, game, owner, cards, targets) -> Gen:
+        yield from game.discard(owner.seat, cards, reason=self.name)
+        ids = game._take_from_pile(3)
+        faces = [game.cards[i].to_dict() for i in ids]
+        game._log("reveal", reason=self.name, cards=faces)
+        cid = yield from game.ask(ChooseCardRequest(seat=owner.seat, reason=self.name, options=list(ids), shown=faces))
+        game._log("pick", seat=owner.seat, card=game.cards[cid].to_dict())
+        yield from game.move_cards([cid], Zone.HAND, owner.seat, reason=self.name)
+        rest = [i for i in ids if i != cid and game.location[i][0] == Zone.DRAW_PILE]
+        moving = set(rest)
+        game.draw_pile[:] = [*(game.cards[i] for i in rest), *(c for c in game.draw_pile if c.id not in moving)]
+        game._log("arrange", seat=owner.seat, top=0, bottom=len(rest), reason=self.name)
+
+
+class Distillation(Skill):
+    """Once per turn, after another player uses a trick in their play phase, you may discard a
+    basic hand card to use a copy of that trick yourself (you choose its targets)."""
+
+    name = "distillation"
+    per_turn = 1
+    events = (Event.CARD_FINISHED,)
+
+    def _spec(self, game, owner, use):
+        d = game.card_def(use.card)
+        if d.type != CardType.TRICK or use.card.name == "nullify":
+            return None
+        return game._target_spec(owner, d, whole_hand=False)
+
+    def can_trigger(self, game, owner, event, use):
+        return (
+            use.source != owner.seat and game.current == use.source and game.phase == Phase.PLAY
+            and game.skill_ready(owner, self) and bool(_basics(game, owner))
+            and self._spec(game, owner, use) is not None
+        )
+
+    def on_trigger(self, game, owner, event, use) -> Gen:
+        name = use.card.name
+        cid = yield from game.ask(
+            ChooseCardRequest(seat=owner.seat, reason=self.name, about=owner.seat, options=_basics(game, owner),
+                              optional=True, context={"card": name, "source": use.source})
+        )
+        if cid is None:
+            return
+        spec = self._spec(game, owner, use)
+        if spec is None:
+            return
+        most, least, cands = spec
+        targets: list[int] = []
+        need = 0 if not most else max(1, most if least is None else least)
+        while len(targets) < most:
+            left = [s for s in cands if s not in targets]
+            if not left:
+                break
+            pick = yield from game.ask(
+                ChoosePlayerRequest(seat=owner.seat, reason=self.name, about=use.source, options=left,
+                                    optional=len(targets) >= need)
+            )
+            if pick is None:
+                break
+            targets.append(pick)
+        game.note_skill_used(owner, self)
+        card = game.make_virtual(name, [cid], use.card.nature)
+        game._virtual_via[card.id] = self.name
+        yield from game.use_card(owner.seat, card, targets, subcards=[cid])
+
+
 # ================================================================= roster
 
 
@@ -1019,9 +1432,20 @@ HEROES: list[Hero] = [
     # extras: our own designs
     Hero("wei_lie", "Wei Lie", W, 4, "male", (SpoilsOfWar(), ShieldWall())),
     Hero("yu_ji", "Yu Ji", Q, 3, "male", (Omen(), Hermit())),
+    # modern heroes: designed at our table
+    Hero("chairman", "The Chairman", Q, 4, "male", (DoNothingWin(), ChillGuy(), WhatsUpBeijing()), custom=True),
+    Hero("marks", "Marks", Q, 3, "male", (Communism(), Sharing()), custom=True),
+    Hero("donald", "Donald", Q, 4, "male", (Tariffs(), DodgedABullet()), custom=True),
+    Hero("diddy", "Diddy", Q, 4, "male", (BabyOil(),), custom=True),
+    Hero("yilong_ma", "Yilong Ma", Q, 4, "male", (Tesla(), SpaceX()), custom=True),
+    Hero("mr_liang", "Mr. Liang", Q, 3, "male", (DeepSeek(), Distillation()), custom=True),
 ]
 
 HERO_MAP: dict[str, Hero] = {h.id: h for h in HEROES}
+MODERN = ("chairman", "marks", "donald", "diddy", "yilong_ma", "mr_liang")
+
+# Status skills that come with a token on a player (Baby Oil's "slippery" marker).
+STATUSES = {"slippery": Slippery()}
 
 # Skills a hero can gain during play (not on any starting kit), listed for clients.
-GAINED_SKILLS: list = []
+GAINED_SKILLS: list = [*STATUSES.values()]

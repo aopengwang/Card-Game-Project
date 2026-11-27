@@ -148,6 +148,11 @@ class Pending:
     seat: int
     deadline: float  # loop time
     future: asyncio.Future
+    # Test room: the player answering for a bot seat (None: the seat's own player).
+    by: Member | None = None
+
+    def answerer(self, room: Room) -> Member:
+        return self.by or room.members[self.seat]
 
 
 _BOT = object()  # "let the bot answer" (seat went AFK while being asked)
@@ -166,6 +171,9 @@ class Room:
         # cards and HP mid-game (engine/sandbox.py). Bots sit still unless told to play.
         self.sandbox = False
         self.passive_bots = True
+        # Test room: the player who plays the bots' turns and answers their requests (each
+        # sent to them with the bot's own view), or None to let the bots play.
+        self.controller: Member | None = None
         self._waiting: Request | None = None  # the request the game is paused on
         # Optional: new players must give it to join (reconnecting with your token never
         # needs it). Only the host is ever sent it back.
@@ -322,6 +330,8 @@ class Room:
             "battle": self.battle,
             "sandbox": self.sandbox,
             "passive_bots": self.passive_bots,
+            "control_bots": self.controller is not None,
+            "you_control": viewer is not None and self.controller is viewer,
             "locked": self.password is not None,
             **({"password": self.password} if is_host and self.password is not None else {}),
         }
@@ -337,7 +347,7 @@ class Room:
         if self.game is not None:
             await self._push(m, conn)
             p = self.pending
-            if p is not None and self.members[p.seat] is m:
+            if p is not None and p.answerer(self) is m:
                 await self._send_request(conn, p)
         return conn
 
@@ -346,7 +356,7 @@ class Room:
         m.conns.discard(conn)
         self.last_activity = time.monotonic()
         p = self.pending
-        if p is not None and self.members[p.seat] is m and not m.connected and not p.future.done():
+        if p is not None and p.answerer(self) is m and not m.connected and not p.future.done():
             p.future.set_result(_BOT)  # AFK: a bot answers for them
         await self.broadcast_room()
 
@@ -417,7 +427,7 @@ class Room:
             self.sandbox = on
             await self.broadcast_room()
         elif t == "test":
-            await self._on_test(msg)
+            await self._on_test(m, msg)
         elif t == "start":
             self._need(host, "only the host can start the game")
             await self.start()
@@ -433,7 +443,7 @@ class Room:
 
     async def _on_answer(self, m: Member, conn: Conn, msg: dict[str, Any]) -> None:
         p = self.pending
-        if p is None or msg.get("id") != p.id or self.members[p.seat] is not m:
+        if p is None or msg.get("id") != p.id or p.answerer(self) is not m:
             await conn.send({"type": "error", "message": "that request is no longer active"})
             return
         try:
@@ -444,13 +454,23 @@ class Room:
         if not p.future.done():
             p.future.set_result(answer)
 
-    async def _on_test(self, msg: dict[str, Any]) -> None:
+    async def _on_test(self, m: Member, msg: dict[str, Any]) -> None:
         """A test-room action (any player may use them: it's a practice table)."""
         self._need(self.sandbox, "this isn't a test room")
         if msg.get("action") == "bots":
             passive = msg.get("passive")
             self._need(isinstance(passive, bool), "passive must be true or false")
             self.passive_bots = passive
+            await self.broadcast_room()
+            return
+        if msg.get("action") == "control":  # play the bots' turns yourself
+            on = msg.get("on")
+            self._need(isinstance(on, bool), "on must be true or false")
+            self._need(not m.is_bot, "only a player can control the bots")
+            self.controller = m if on else (None if self.controller is m else self.controller)
+            p = self.pending
+            if p is not None and not p.future.done() and self.members[p.seat].is_bot and p.by is not self.controller:
+                p.future.set_result(_BOT)  # the bot's current question goes to its new answerer
             await self.broadcast_room()
             return
         game = self.game
@@ -528,11 +548,20 @@ class Room:
         assert game is not None
         m = self.members[req.seat]
         bot = self.bots[req.seat]
-        if not m.connected or m.is_bot:
-            await asyncio.sleep(self.options.bot_delay)  # always yield: never starve other rooms
+        # Test room: a player may be answering for the bots (see "control").
+        by = self.controller if self.sandbox and m.is_bot and self.controller is not None else None
+        if by is not None and not by.connected:
+            by = None
+
+        def bot_answer() -> Any:
             if self.sandbox and self.passive_bots and m.is_bot:
                 return req.default()  # test room: bots end their turns and never respond
             return bot(game, req)
+
+        if by is None and (not m.connected or m.is_bot):
+            await asyncio.sleep(self.options.bot_delay)  # always yield: never starve other rooms
+            return bot_answer()
+        answerer = by or m
         loop = asyncio.get_running_loop()
         # The engine re-asks the same Request object after an invalid answer: keep its deadline.
         if req is not self._last_req:
@@ -540,9 +569,9 @@ class Room:
             self._last_deadline = loop.time() + self.options.timeout_for(req)
         deadline = self._last_deadline
         self._req_seq += 1
-        p = Pending(self._req_seq, req, req.seat, deadline, loop.create_future())
+        p = Pending(self._req_seq, req, req.seat, deadline, loop.create_future(), by=by)
         self.pending = p
-        for c in list(m.conns):
+        for c in list(answerer.conns):
             await self._send_request(c, p)
         try:
             await asyncio.wait({p.future}, timeout=max(0.0, deadline - loop.time()))
@@ -550,15 +579,19 @@ class Room:
             self.pending = None
         if not p.future.done():
             p.future.cancel()
-            for c in list(m.conns):
+            for c in list(answerer.conns):
                 await c.send({"type": "timeout", "id": p.id})
             return req.default()
         result = p.future.result()
-        return bot(game, req) if result is _BOT else result
+        return bot_answer() if result is _BOT else result
 
     async def _send_request(self, conn: Conn, p: Pending) -> None:
         remaining = max(0.0, p.deadline - asyncio.get_running_loop().time())
-        await conn.send({"type": "request", "id": p.id, "request": request_to_dict(p.req), "timeout": remaining})
+        msg: dict[str, Any] = {"type": "request", "id": p.id, "request": request_to_dict(p.req), "timeout": remaining}
+        if p.by is not None and self.game is not None:
+            # Answering for a bot: what that bot sees (its hand), to choose from.
+            msg["as_view"] = view_for(self.game, p.seat)
+        await conn.send(msg)
 
     # ------------------------------------------------------------ outgoing state
 

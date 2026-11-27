@@ -25,10 +25,14 @@ export function TestPanel({ room, view, name }: { room: RoomInfo; view: GameView
   const [card, setCard] = useState("strike");
   const [suit, setSuit] = useState("any");
   const [hp, setHp] = useState(target.hp);
+  const chill = target.tokens?.chill ?? 0;
+  const [tokens, setTokens] = useState(chill);
+  const hasChill = target.skills.some((sk) => sk.id === "chill_guy");
 
-  // Show the chosen player's current hero and HP whenever they (or the player) change.
+  // Show the chosen player's current hero, HP and tokens whenever they (or the player) change.
   useEffect(() => setHero(target.hero), [target.hero, seat]);
   useEffect(() => setHp(target.hp), [target.hp, seat]);
+  useEffect(() => setTokens(chill), [chill, seat]);
   useEffect(() => {
     if (!open) return;
     const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
@@ -155,11 +159,41 @@ export function TestPanel({ room, view, name }: { room: RoomInfo; view: GameView
             </Button>
           </div>
 
+          {hasChill && (
+            <div className={s.row}>
+              <label className={`${s.field} ${s.narrow}`}>
+                <span>{t("test.tokens")}</span>
+                <input
+                  type="number"
+                  name="test-tokens"
+                  min={0}
+                  max={4}
+                  value={tokens}
+                  onChange={(e) => setTokens(Number(e.target.value))}
+                />
+              </label>
+              <Button shape="small" onClick={() => test({ action: "tokens", seat, token: "chill", count: tokens })}>
+                {t("test.setTokens")}
+              </Button>
+            </div>
+          )}
+
+          <label className={s.check}>
+            <input
+              type="checkbox"
+              name="test-control"
+              checked={!!room.you_control}
+              onChange={(e) => test({ action: "control", on: e.target.checked })}
+            />
+            <span>{t("test.control")}</span>
+          </label>
+          {room.control_bots && !room.you_control && <p className={s.note}>{t("test.controlledByOther")}</p>}
           <label className={s.check}>
             <input
               type="checkbox"
               name="test-passive"
               checked={room.passive_bots ?? true}
+              disabled={!!room.control_bots}
               onChange={(e) => test({ action: "bots", passive: e.target.checked })}
             />
             <span>{t("test.passive")}</span>

@@ -1,4 +1,4 @@
-import { cardText, heroName, reasonTitle, roleName, skillTitle } from "./content";
+import { cardText, cardTitle, heroName, reasonTitle, roleName, skillTitle } from "./content";
 import { joinList, t, tMaybe } from "./i18n";
 import type { Card, LogEntry } from "./types";
 
@@ -98,8 +98,29 @@ export function describe(e: LogEntry, name: (seat: number | null | undefined) =>
           return line(t("log.sandboxTop", { card: cardText(e.card) }), "skill");
         case "hp":
           return line(t("log.sandboxHp", { name: name(e.seat), hp: e.hp }), "skill");
+        case "tokens":
+          return line(t("log.sandboxTokens", { name: name(e.seat), n: e.count }), "skill");
       }
       return null;
+    case "token": {
+      const token = tMaybe(`token.${e.token}`) ?? e.token;
+      return line(t(e.delta > 0 ? "log.tokenGain" : "log.tokenLose", { name: name(e.seat), token, n: e.count }), "skill");
+    }
+    case "show_hand":
+      return line(
+        e.cards.length
+          ? t("log.showHand", { name: name(e.seat), cards: cards(e.cards) })
+          : t("log.showEmptyHand", { name: name(e.seat) }),
+        "skill",
+      );
+    case "voided":
+      return line(t("log.voided", { reason: reasonTitle(e.reason), card: cardText(e.card) }), "skill");
+    case "placed":
+      return line(t("log.placed", { name: name(e.seat), card: cardText(e.card), as: cardTitle(e.as_name) }));
+    case "chose":
+      return line(t("log.chose", { name: name(e.seat), choice: tMaybe(`opt.${e.choice}`) ?? e.choice }));
+    case "extra_phase":
+      return line(t("log.extraPhase", { name: name(e.seat), phase: phaseName(e.phase) }), "turn");
     case "phase_skipped":
       return line(t("log.skip", { name: name(e.seat), phase: phaseName(e.phase) }));
     case "reveal":

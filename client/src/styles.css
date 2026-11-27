@@ -312,6 +312,26 @@ select:focus-visible {
 }
 /* your hero card: as wide as fits the dock's height (5:7 card + 52px of rows, 20px padding) */
 .dock-self { width: calc((var(--dock-h, 280px) - 20px - 52px) * 5 / 7); }
+/* test room: you're choosing from a bot's hand (it shows in your dock while you answer for it) */
+.hand.acting {
+  position: relative;
+  border-radius: 10px;
+  outline: 2px dashed var(--ik-vermilion-bright);
+  outline-offset: -2px;
+  background: rgba(227, 98, 75, 0.06);
+}
+.acting-tag {
+  position: absolute;
+  top: 0;
+  right: 12px;
+  z-index: 50; /* over a lifted (selected) card */
+  padding: 1px 8px;
+  border-radius: 0 0 6px 6px;
+  background: var(--ik-vermilion-bright);
+  color: var(--ik-on-vermilion);
+  font: 700 var(--ik-text-xs) / 1.5 var(--ik-font-body);
+  white-space: nowrap;
+}
 .dock-main { display: grid; grid-template-rows: 108px calc(var(--hand-h, 124px) + 20px); gap: 8px; min-width: 0; }
 .hand {
   box-sizing: border-box;

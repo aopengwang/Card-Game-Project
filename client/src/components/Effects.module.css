@@ -60,6 +60,63 @@
   }
 }
 
+/* cards a player shows the whole table (Fire Attack, What's up Beijing!), held up in the
+   middle for a few seconds */
+.reveal {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  max-width: min(86%, 760px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ik-space-2);
+  padding: var(--ik-space-3) var(--ik-space-4, 20px);
+  border: 1px solid var(--ik-gold-line-strong);
+  border-radius: var(--ik-radius-lg);
+  background: rgba(20, 10, 8, 0.9);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  transform: translate(-50%, -50%);
+  animation: reveal calc(var(--reveal) * var(--fx-slow, 1)) var(--ik-ease-out) forwards;
+}
+
+.revealTitle {
+  font: 700 var(--ik-text-md) var(--ik-font-display);
+  color: var(--ik-gold);
+  text-align: center;
+}
+
+.revealCards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--ik-space-2);
+}
+
+.revealNote {
+  font: 600 var(--ik-text-sm) var(--ik-font-body);
+  color: var(--ik-vermilion-bright);
+  text-align: center;
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+  8% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  88% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
 /* a played card flying from the seat to its spot on the battlefield */
 .flight {
   position: absolute;

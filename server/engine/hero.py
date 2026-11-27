@@ -21,6 +21,7 @@ class Hero:
     max_hp: int
     gender: str  # "male" | "female"
     skills: tuple[SkillBase, ...] = ()
+    custom: bool = False  # one of our table's own heroes (grouped apart in the lobby)
 
     @property
     def has_lord_skill(self) -> bool:
@@ -33,6 +34,7 @@ class Hero:
             "kingdom": str(self.kingdom),
             "max_hp": self.max_hp,
             "gender": self.gender,
+            "custom": self.custom,
             "skills": [skill_info(s) for s in self.skills],
         }
 

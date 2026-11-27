@@ -106,7 +106,7 @@ test("host chooses the heroes in the draft; guests see it; the hero pick only of
   await guest.getByRole("button", { name: "Join" }).click();
 
   const heroes = host.locator(".hero-pool button.pool-hero");
-  const total = 27; // the standard 25 + our 2 extras
+  const total = 33; // the standard 25 + our 2 extras + 6 modern heroes
   await expect(heroes).toHaveCount(total);
   await expect(host.locator(".hero-pool button.pool-hero[aria-pressed=false]")).toHaveCount(0);
   const ids = await heroes.evaluateAll((els) => els.map((el) => el.getAttribute("data-hero")!));
@@ -156,6 +156,37 @@ test("host chooses the heroes in the draft; guests see it; the hero pick only of
   for (const id of await host.locator(".hero-card").evaluateAll((els) => els.map((el) => el.getAttribute("data-hero")!))) offered.add(id);
   expect(offered.size).toBeGreaterThan(0);
   for (const id of offered) expect(allowed, `${id} was offered`).toContain(id);
+  expect(errors).toEqual([]);
+});
+
+test("hero pool: classic and custom heroes in their own groups, each selectable on its own", async ({ page }) => {
+  const errors: string[] = [];
+  collectErrors(page, errors);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/?lang=en");
+  await page.getByPlaceholder("e.g. Jason").fill("Alice");
+  await page.getByRole("button", { name: "Create a room" }).click();
+  const classic = page.locator('.hero-group[data-group="classic"]');
+  const custom = page.locator('.hero-group[data-group="custom"]');
+  await expect(classic.locator(".pool-hero")).toHaveCount(27);
+  await expect(custom.locator(".pool-hero")).toHaveCount(6);
+  await expect(custom).toContainText("Custom heroes");
+
+  // Only the custom heroes...
+  await custom.getByRole("button", { name: "Only these" }).click();
+  await expect(classic.locator(".pool-hero[aria-pressed=true]")).toHaveCount(0);
+  await expect(custom.locator(".pool-hero[aria-pressed=true]")).toHaveCount(6);
+  await expect(custom.getByRole("button", { name: "Only these" })).toHaveCount(0); // already just these
+  // ...then only the classic ones...
+  await classic.getByRole("button", { name: "Only these" }).click();
+  await expect(classic.locator(".pool-hero[aria-pressed=true]")).toHaveCount(27);
+  await expect(custom.locator(".pool-hero[aria-pressed=true]")).toHaveCount(0);
+  // ...then add the custom group back, and remove the classic one.
+  await custom.getByRole("button", { name: "Add all" }).click();
+  await expect(custom.locator(".pool-hero[aria-pressed=true]")).toHaveCount(6);
+  await classic.getByRole("button", { name: "Remove all" }).click();
+  await expect(classic.locator(".pool-hero[aria-pressed=true]")).toHaveCount(0);
+  await expect(page.locator(".hero-pool h2")).toContainText("6 of 33");
   expect(errors).toEqual([]);
 });
 

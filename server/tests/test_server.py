@@ -608,6 +608,47 @@ def test_test_room_fills_with_passive_bots_and_changes_the_table():
     run(main())
 
 
+def test_test_room_host_can_play_the_bots_turns():
+    async def main():
+        room, (host,) = await room_with(1, 0)
+        h = await FakeClient(room, host, auto=False).connect()
+        await room.handle(host, h.conn, {"type": "sandbox", "on": True})
+        await room.handle(host, h.conn, {"type": "test", "action": "control", "on": True})
+        assert h.of("room")[-1]["control_bots"] is True and h.of("room")[-1]["you_control"] is True
+        await room.handle(host, h.conn, {"type": "start"})
+        game = room.game
+
+        async def next_pending(pred):
+            for _ in range(500):
+                p = room.pending
+                if p is not None and not p.future.done():
+                    if pred(p):
+                        return p
+                    p.future.set_result(p.req.default())  # anything else: the default
+                await asyncio.sleep(0.01)
+            raise AssertionError("never asked")
+
+        # The host's own play phase first: end it; then a bot's play phase comes to the host.
+        p = await next_pending(lambda p: p.req.kind == "play" and p.seat != 0)
+        assert p.by is host
+        msg = h.of("request")[-1]
+        assert msg["id"] == p.id and msg["request"]["seat"] == p.seat
+        assert msg["as_view"]["you"] == p.seat  # the bot's own view: its hand to choose from
+        assert [c["id"] for c in msg["as_view"]["hand"]] == [c.id for c in game.players[p.seat].hand]
+        assert h.of("state")[-1]["view"]["you"] == 0  # the host's table stays their own
+        await room.handle(host, h.conn, {"type": "answer", "id": p.id, "answer": None})  # end the bot's play phase
+        assert p.future.result() is None
+
+        # Hand control back: the bot's next question goes to the bot.
+        p = await next_pending(lambda p: p.seat != 0)
+        await room.handle(host, h.conn, {"type": "test", "action": "control", "on": False})
+        assert p.future.done() and room.controller is None
+        assert h.of("room")[-1]["control_bots"] is False
+        await room.close()
+
+    run(main())
+
+
 def test_test_room_card_must_be_in_the_deck():
     async def main():
         room, (host,) = await room_with(1, 3)

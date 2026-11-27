@@ -37,6 +37,8 @@ export interface PlayerView {
   alive: boolean;
   /** Bound by an Iron Chain: fire/thunder damage to one chained player reaches all of them. */
   chained?: boolean;
+  /** Public counters and markers: "chill" tokens, a "tariff", "slippery"... (name -> count). */
+  tokens?: Record<string, number>;
   hand_count: number;
   equips: Card[];
   judge: Card[];
@@ -90,6 +92,10 @@ export interface RoomInfo {
   sandbox?: boolean;
   /** Test room: bots end their turns and never respond. */
   passive_bots?: boolean;
+  /** Test room: a player is playing the bots' turns (their requests go to that player)... */
+  control_bots?: boolean;
+  /** ...and it's you. */
+  you_control?: boolean;
   /** New players need a password to join. */
   locked?: boolean;
   /** The password itself: only ever sent to the host. */
@@ -228,6 +234,8 @@ export interface ActiveRequest {
   req: GameRequest;
   deadline: number; // Date.now() ms
   total: number; // ms
+  /** Test room: you're answering for this bot; what it sees (its hand) to choose from. */
+  asView?: GameView;
 }
 
 export type LogEntry = { type: string } & Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -251,6 +259,8 @@ export interface HeroInfo {
   kingdom: string;
   max_hp: number;
   gender: string;
+  /** One of our table's own heroes: grouped apart in the lobby. */
+  custom?: boolean;
   skills: SkillInfo[];
 }
 

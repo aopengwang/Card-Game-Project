@@ -247,7 +247,7 @@ export function onMessage(m: any): void {
       break;
     case "request": {
       const total = m.timeout * 1000;
-      set({ request: { id: m.id, req: m.request, deadline: Date.now() + total, total } });
+      set({ request: { id: m.id, req: m.request, deadline: Date.now() + total, total, asView: m.as_view ?? undefined } });
       break;
     }
     case "timeout":

@@ -9,7 +9,7 @@ from __future__ import annotations
 from .game import Game
 from .model import Card, Suit, Zone
 
-ACTIONS = ("hero", "card", "top", "hp")
+ACTIONS = ("hero", "card", "top", "hp", "tokens")
 
 
 def _player(game: Game, seat: object):
@@ -44,8 +44,25 @@ def set_hero(game: Game, seat: object, hero: object) -> None:
         raise ValueError("unknown hero")
     game.assign_hero(p.seat, hero)
     p.marks.clear()  # limited skills used, awakenings...: a fresh hero
+    p.tokens.clear()
     p.turn_usage.clear()
     game._log("sandbox", action="hero", seat=p.seat, hero=hero)
+
+
+TOKENS = {"chill": 4}  # tokens the test room can set, and their maximum
+
+
+def set_tokens(game: Game, seat: object, token: object, count: object) -> None:
+    p = _player(game, seat)
+    if token not in TOKENS:
+        raise ValueError("unknown token")
+    if not isinstance(count, int) or isinstance(count, bool) or not 0 <= count <= TOKENS[token]:
+        raise ValueError(f"tokens must be between 0 and {TOKENS[token]}")
+    if count:
+        p.tokens[token] = count
+    else:
+        p.tokens.pop(token, None)
+    game._log("sandbox", action="tokens", seat=p.seat, token=token, count=count)
 
 
 def give_card(game: Game, seat: object, name: object, suit: object = None) -> Card:
@@ -84,5 +101,7 @@ def apply(game: Game, msg: dict) -> None:
         stack_card(game, msg.get("name"), msg.get("suit"))
     elif action == "hp":
         set_hp(game, msg.get("seat"), msg.get("hp"))
+    elif action == "tokens":
+        set_tokens(game, msg.get("seat"), msg.get("token"), msg.get("count"))
     else:
         raise ValueError("unknown test-room action")

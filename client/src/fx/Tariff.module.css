@@ -1,0 +1,264 @@
+/* Tariffs (tariff.ts): a giant stamp falls onto the seat, lands at 62% (TARIFF.impact),
+   lifts away and leaves an imprint. --life is the whole length, --w the stamp's width,
+   --fall how far above the seat it starts. */
+.tariff {
+  position: absolute;
+  z-index: 4;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  --ink: var(--ik-vermilion-bright, #e3624b);
+}
+
+/* while the stamp is in the air, the seat's Tariff chip waits */
+:global([data-fx-tariff] .token[data-token="tariff"]) {
+  visibility: hidden;
+}
+
+/* ---------------------------------------------------------------- the falling stamp */
+.scene {
+  position: absolute;
+  left: calc(var(--w) * -0.5);
+  top: calc(var(--w) * -1.05);
+  width: var(--w);
+  height: calc(var(--w) * 1.1);
+  perspective: 700px;
+  perspective-origin: 50% 0%;
+}
+
+.stamp {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.55));
+  animation: fall var(--life) linear forwards;
+}
+
+@keyframes fall {
+  0% {
+    opacity: 0;
+    transform: translateY(calc(-1 * var(--fall))) scale(1.9, 1.9) rotateX(40deg) rotateZ(-18deg);
+    animation-timing-function: cubic-bezier(0.55, 0, 1, 0.75); /* gathers speed */
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(calc(-0.82 * var(--fall))) scale(1.75, 1.75) rotateX(34deg) rotateZ(-15deg);
+    animation-timing-function: cubic-bezier(0.55, 0, 1, 0.75);
+  }
+  62% {
+    opacity: 1;
+    transform: translateY(0) scale(1, 1) rotateX(6deg) rotateZ(-5deg);
+    animation-timing-function: ease-out;
+  }
+  66% {
+    transform: translateY(0) scale(1.1, 0.84) rotateX(0deg) rotateZ(-4deg); /* squash */
+    animation-timing-function: ease-out;
+  }
+  72% {
+    transform: translateY(0) scale(0.97, 1.04) rotateX(0deg) rotateZ(-4deg);
+  }
+  78% {
+    opacity: 1;
+    transform: translateY(0) scale(1, 1) rotateX(0deg) rotateZ(-4deg);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(calc(var(--w) * -0.9)) scale(1.06, 1.06) rotateX(-10deg) rotateZ(-2deg); /* lifts away */
+  }
+}
+
+.knob {
+  flex: none;
+  width: calc(var(--w) * 0.4);
+  height: calc(var(--w) * 0.32);
+  border-radius: 50% 50% 44% 44%;
+  background: radial-gradient(circle at 35% 30%, #b9884c, #6d4220 60%, #3d220f);
+  box-shadow: inset 0 -4px 8px rgba(0, 0, 0, 0.45);
+}
+
+.neck {
+  flex: none;
+  width: calc(var(--w) * 0.2);
+  height: calc(var(--w) * 0.24);
+  margin-top: -2px;
+  background: linear-gradient(90deg, #4a2a13, #8a5a2c 45%, #4a2a13);
+}
+
+.block {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: calc(var(--w) * 0.44);
+  border-radius: 6px 6px 3px 3px;
+  background: linear-gradient(90deg, #5a3317, #a06a35 35%, #b57c41 50%, #8a5a2c 70%, #4a2a13);
+  box-shadow: inset 0 3px 0 rgba(255, 230, 190, 0.25), inset 0 -6px 10px rgba(0, 0, 0, 0.4);
+}
+
+.blockMark {
+  color: rgba(40, 20, 8, 0.6);
+  font: calc(var(--w) * 0.28) / 1 var(--ik-font-brush);
+  text-shadow: 0 1px 0 rgba(255, 230, 190, 0.3);
+}
+
+/* the inked face, seen edge-on under the block */
+.pad {
+  flex: none;
+  width: 94%;
+  height: calc(var(--w) * 0.06);
+  border-radius: 0 0 3px 3px;
+  background: linear-gradient(#b8321f, var(--ink));
+}
+
+/* ---------------------------------------------------------------- shadow, imprint, impact */
+.shadow {
+  position: absolute;
+  left: calc(var(--w) * -0.5);
+  top: calc(var(--w) * -0.02);
+  width: var(--w);
+  height: calc(var(--w) * 0.24);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.65), transparent);
+  animation: shadow var(--life) linear forwards;
+}
+
+@keyframes shadow {
+  0% {
+    opacity: 0;
+    transform: scale(0.2);
+    animation-timing-function: cubic-bezier(0.55, 0, 1, 0.75);
+  }
+  62% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+  68% {
+    transform: scale(1.12);
+  }
+  78% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+.imprint {
+  position: absolute;
+  left: calc(var(--w) * -0.36);
+  top: calc(var(--w) * -0.4);
+  width: calc(var(--w) * 0.72);
+  height: calc(var(--w) * 0.72);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 4px double var(--ink);
+  border-radius: 8px;
+  background: rgba(227, 98, 75, 0.12);
+  box-shadow: 0 0 18px rgba(227, 98, 75, 0.45);
+  color: var(--ink);
+  transform: rotate(-4deg);
+  opacity: 0;
+  animation: imprint var(--life) ease-out forwards;
+}
+
+@keyframes imprint {
+  0%,
+  61% {
+    opacity: 0;
+    scale: 1.12;
+  }
+  63% {
+    opacity: 1;
+    scale: 1.06;
+  }
+  70%,
+  88% {
+    opacity: 1;
+    scale: 1;
+  }
+  100% {
+    opacity: 0;
+    scale: 1;
+  }
+}
+
+.mark {
+  font: calc(var(--w) * 0.4) / 1 var(--ik-font-brush);
+  text-shadow: 0 0 10px rgba(227, 98, 75, 0.5);
+}
+
+.label {
+  margin-top: 2px;
+  font: 700 calc(var(--w) * 0.1) / 1 var(--ik-font-display);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.label:lang(zh-CN) {
+  text-transform: none;
+}
+
+.ring {
+  position: absolute;
+  left: calc(var(--w) * -0.6);
+  top: calc(var(--w) * -0.2);
+  width: calc(var(--w) * 1.2);
+  height: calc(var(--w) * 0.4);
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  opacity: 0;
+  animation: ring var(--life) ease-out forwards;
+}
+
+@keyframes ring {
+  0%,
+  61% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  63% {
+    opacity: 0.9;
+  }
+  82%,
+  100% {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+}
+
+.dust {
+  position: absolute;
+  left: -4px;
+  top: calc(var(--w) * 0.08);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d8c4a0;
+  opacity: 0;
+  animation: dust var(--life) ease-out forwards;
+}
+
+@keyframes dust {
+  0%,
+  61% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.6);
+  }
+  64% {
+    opacity: 0.9;
+  }
+  84%,
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) scale(1.3);
+  }
+}

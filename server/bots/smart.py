@@ -65,6 +65,7 @@ HERO_TIER = {
     "lu_xun": 7, "sun_shangxiang": 7, "da_qiao": 7, "zhen_ji": 7, "huang_gai": 7, "lu_bu": 7,
     "xiahou_dun": 6, "zhang_fei": 6, "ma_chao": 6, "gan_ning": 6, "lu_meng": 6, "guan_yu": 6,
     "xu_chu": 5, "yu_ji": 6,
+    "chairman": 6, "marks": 6, "donald": 7, "diddy": 6, "yilong_ma": 6, "mr_liang": 7,
 }
 # How strongly a public action reveals allegiance (weight of "acting against X").
 HOSTILE_WEIGHT = {
@@ -76,7 +77,7 @@ HARMFUL_TRICKS = {
     "fire_attack", "supply_shortage",
 }
 HELPFUL_TRICKS = {"ex_nihilo", "peach_garden", "harvest"}
-HARMFUL_SKILLS = {"false_letter", "call_to_arms"}
+HARMFUL_SKILLS = {"false_letter", "call_to_arms", "tariffs", "baby_oil"}
 FRIENDLY_SKILLS = {"open_hand", "wedding_vow", "healing_herbs"}
 # Judgments where a hit is good for the judged player (others: a hit is bad for them).
 GOOD_JUDGMENTS = {"eight_trigrams", "rippling_steps", "blood_for_blood", "headlong_charge"}
@@ -89,6 +90,7 @@ JUDGE_RULES = {
     "headlong_charge": lambda c: c["suit"] in ("heart", "diamond"),
     "rippling_steps": lambda c: c["suit"] in ("spade", "club"),
     "blood_for_blood": lambda c: c["suit"] != "heart",
+    "slippery": lambda c: c["suit"] in ("spade", "club"),
 }
 ASK_FOR_LORD = {"shield_wall", "guard_the_throne", "call_to_arms"}  # play a card for the Lord
 
@@ -589,6 +591,27 @@ class SmartBot:
                 return None
             attacker = max(attackers, key=lambda t: (self.rel(game, me, t) <= ENEMY, self._hand_count(game, t)))
             return Play(skill=s, cards=cheap(1), targets=(attacker, victim))
+        if s == "chill_guy":  # a free look at the deck for each token
+            return Play(skill=s)
+        if s == "whats_up_beijing":  # hide when hurt: nobody can reach us until our next turn
+            return Play(skill=s) if p.hp <= 2 else None
+        if s == "sharing":  # an enemy with the most cards hands one to a friend (or us) with the fewest
+            counts = [self._hand_count(game, t) for t in self._alive(game)]
+            hi, lo = max(counts), min(counts)
+            givers = [t for t in opt.candidates if self._hand_count(game, t) == hi and self.rel(game, me, t) <= ENEMY]
+            takers = [t for t in opt.candidates if self._hand_count(game, t) == lo and self.rel(game, me, t) >= FRIEND]
+            pairs = [(a, b) for a in givers for b in takers if a != b]
+            return Play(skill=s, targets=pairs[0]) if pairs else None
+        if s == "tariffs":
+            es = self._enemies(game, me, opt.candidates)
+            return Play(skill=s, targets=(max(es, key=lambda t: self._hand_count(game, t)),)) if es else None
+        if s == "baby_oil":  # a cheap card to make an enemy slip
+            es = self._enemies(game, me, opt.candidates)
+            if not es or self._value(game, me, cheap(1)[0]) > 4:
+                return None
+            return Play(skill=s, cards=cheap(1), targets=(max(es, key=lambda t: self._hand_count(game, t)),))
+        if s == "deepseek":  # trade a weak card for the best of three
+            return Play(skill=s, cards=cheap(1)) if self._value(game, me, cheap(1)[0]) <= 4 else None
         return None
 
     def _weigh(self, game: Game, me: int, req: PlayRequest) -> Play | None:
@@ -624,6 +647,8 @@ class SmartBot:
         if conv.as_name == "dismantle" and single:
             target = self._dismantle_target(game, me, conv.candidates)
             return Play(skill=conv.skill, cards=tuple(single), targets=(target,)) if target is not None else None
+        if conv.as_name == "harvest" and single and sum(self.rel(game, me, s) for s in self._alive(game)) > 0.5:
+            return Play(skill=conv.skill, cards=tuple(single))
         if conv.as_name == "indulgence" and single:
             es = self._enemies(game, me, conv.candidates)
             if es:
@@ -744,9 +769,30 @@ class SmartBot:
         keep = [i for i in left if self._value(game, me, i) >= 4]
         return (tuple(top + keep), tuple(i for i in left if i not in keep))
 
+    def _distill(self, game: Game, me: int, req: ChooseCardRequest) -> int | None:
+        """Copy another player's trick when the copy would help us (paying a spare basic card)."""
+        name = req.context.get("card")
+        others = [s for s in self._alive(game) if s != me]
+        if name == "ex_nihilo":
+            worth = True
+        elif name in ("barbarians", "arrows"):
+            worth = self._aoe_worth(game, me)
+        elif name == "peach_garden":
+            worth = self._garden_worth(game, me)
+        elif name == "harvest":
+            worth = sum(self.rel(game, me, s) for s in self._alive(game)) > 0.5
+        elif name == "lightning":
+            worth = False
+        else:  # aimed at someone: only with an enemy to aim it at
+            worth = bool(self._enemies(game, me, others))
+        cheapest = self._lowest(game, me, req.options, 1)[0]
+        return cheapest if worth and self._value(game, me, cheapest) <= 6 else None
+
     def _choose_card(self, game: Game, me: int, req: ChooseCardRequest) -> Any:
         if req.reason == "bend_fate":
             return self._bend_fate(game, me, req)
+        if req.reason == "distillation":
+            return self._distill(game, me, req)
         if req.reason == "fire_attack":
             if req.context.get("step") == "discard":  # pay a card to burn them, unless they're a friend
                 return self._lowest(game, me, req.options, 1)[0] if self.rel(game, me, req.context.get("target")) < FRIEND else None
@@ -793,8 +839,12 @@ class SmartBot:
         if req.reason == "stone_axe":
             t = game.players[req.about]
             return r <= ENEMY and (t.hp <= 2 or len(game.players[me].hand) >= 4)
-        if req.reason in ("tit_for_tat", "blood_for_blood", "headlong_charge"):
+        if req.reason in ("tit_for_tat", "blood_for_blood", "headlong_charge", "baby_oil"):
             return r < FRIEND  # aimed at the other player: not at a friend
+        if req.reason == "tariffs":  # cash in a Tariff on an enemy (it costs us a card)
+            return r <= ENEMY
+        if req.reason == "spacex":  # launch with Strikes to fire
+            return sum(1 for c in game.players[me].hand if c.name == "strike") >= 2
         if req.reason == "reckless_fury":
             return any(c.name in ("strike", "duel") for c in game.players[me].hand)
         return True  # eight_trigrams, guard the throne, profit from loss, rippling steps...
@@ -823,6 +873,8 @@ class SmartBot:
             return "discard_two" if p.hp <= 2 or two <= 8 else "take_damage"
         if req.reason == "false_letter":
             return self.rng.choice(req.choices)  # it can't see the cards: any suit is a guess
+        if req.reason == "tariffs":  # one random card beats probably skipping a draw phase
+            return "tariff_give" if "tariff_give" in req.choices else req.choices[0]
         if req.reason == "twin_swords" and "discard" in req.choices:
             cheap = min((self._value(game, me, c.id) for c in p.hand), default=99)
             return "let_draw" if r >= FRIEND or cheap > 3 else "discard"

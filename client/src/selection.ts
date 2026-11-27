@@ -1,6 +1,6 @@
 // Pure selection logic for answering requests: what's clickable, what's selected,
 // when an answer is complete, and the JSON answer to send. No React here (unit-tested).
-import { t } from "./i18n";
+import { t, tMaybe } from "./i18n";
 import type { GameRequest, PlayReq, RespondReq } from "./types";
 
 export type Mode = { type: "card"; cardId: number } | { type: "skill"; skill: string } | null;
@@ -173,5 +173,7 @@ export function hint(r: GameRequest, sel: Selection): string {
     const need = s.minTargets === s.maxTargets ? `${s.maxTargets}` : `${s.minTargets}-${s.maxTargets}`;
     parts.push(t("act.targets", { have: sel.targets.length, need }));
   }
+  const how = sel.mode?.type === "skill" ? tMaybe(`hint.${sel.mode.skill}`) : null; // e.g. which target is which
+  if (how) parts.push(how);
   return parts.join(" · ");
 }

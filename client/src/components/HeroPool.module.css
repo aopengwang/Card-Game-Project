@@ -13,6 +13,29 @@
   gap: var(--ik-space-3);
 }
 
+/* a group of heroes (classic / custom), with its own buttons */
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: var(--ik-space-3);
+  border-top: 1px solid var(--ik-gold-line);
+}
+
+.groupHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--ik-space-2);
+}
+
+.groupTitle {
+  margin: 0;
+  font: 700 var(--ik-text-md) var(--ik-font-display);
+  color: var(--ik-gold);
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 110px));

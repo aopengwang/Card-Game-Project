@@ -43,6 +43,7 @@ class Event(StrEnum):
     JUDGE_CARD = "judge_card"  # data: Judgment (skills may swap .card here)
     JUDGE_RESULT = "judge_result"  # data: Judgment (.hit decided)
     DYING = "dying"  # data: seat
+    UNSAVED = "unsaved"  # data: seat; still dying after everyone was asked for a Peach
     DEATH = "death"  # data: (seat, Damage | None)
 
 

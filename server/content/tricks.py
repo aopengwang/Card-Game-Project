@@ -294,7 +294,7 @@ class FireAttack(InstantTrick):
                               context={"step": "show", "source": use.source})
         )
         card = game.cards[shown]
-        game._log("show", seat=target, card=card.to_dict(), reason="fire_attack")
+        game._log("show", seat=target, card=card.to_dict(), reason="fire_attack", source=use.source)
         user = game.players[use.source]
         same = [c.id for c in user.hand if c.suit == card.suit]
         if not same or not user.alive:

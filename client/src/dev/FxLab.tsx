@@ -1,4 +1,4 @@
-// Animation lab (developer tool): /?fx[=effect]&lang=zh (effects: kill, streak, double, fate, strike, heal, skill, skillCard, judge, judgeMiss, judgeKill, turn). Replays table effects on a real
+// Animation lab (developer tool): /?fx[=effect]&lang=zh (effects: kill, streak, double, fate, strike, heal, skill, skillCard, judge, judgeMiss, judgeKill, tariff, turn). Replays table effects on a real
 // captured table, with the seats and speed you choose, so an animation can be tuned in
 // seconds instead of playing games until the moment comes up. Press P to replay.
 import { useEffect, useRef, useState } from "react";
@@ -159,6 +159,22 @@ const EFFECTS: Record<string, Effect> = {
         after: 600,
       },
       { entries: [death(v, victim, null)], view: dies([victim]) },
+    ],
+  },
+  tariff: {
+    label: "Tariffs: a giant stamp falls on the target",
+    uses: ["killer", "victim"],
+    steps: ({ killer, victim }) => [
+      {
+        entries: [
+          { type: "skill", seat: killer, skill: "tariffs", targets: [victim] },
+          { type: "token", seat: victim, token: "tariff", count: 1, delta: 1 },
+        ],
+        view: (v) => ({
+          ...v,
+          players: v.players.map((p) => (p.seat === victim ? { ...p, tokens: { ...p.tokens, tariff: 1 } } : p)),
+        }),
+      },
     ],
   },
   turn: {

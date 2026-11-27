@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { useContent } from "../content";
+import { heroName, useContent } from "../content";
 import { recentPlays } from "../describe";
 import { memberName, t, tMaybe, useLang } from "../i18n";
 import { handFan, opponentOrder, sizeTier, tableLayout } from "../layout";
@@ -125,7 +125,14 @@ export function Table({ net }: { net: NetState }) {
   const sel = request && selState.id === request.id ? selState.sel : EMPTY;
   const setSel = (s: Selection) => setSelState({ id: request?.id ?? null, sel: s });
   const nameOf = (seat: number) => memberName(room.members[seat], seat);
-  const name = (seat: number | null | undefined) => (seat == null ? "?" : seat === view.you ? t("name.you") : nameOf(seat));
+  // Test room: answering for a bot. The table stays yours; the dock shows the bot's hand,
+  // and the prompt speaks to the bot ("you" = the bot).
+  const actor = request?.asView ?? null;
+  const acting = actor ? { ...view, you: actor.you, hand: actor.hand, attack_range: actor.attack_range } : view;
+  const nameFor = (you: number) => (seat: number | null | undefined) => (seat == null ? "?" : seat === you ? t("name.you") : nameOf(seat));
+  const name = nameFor(view.you);
+  const actName = nameFor(acting.you); // the prompt you're answering
+  const handCards = acting.hand;
 
   const n = view.players.length;
   const opponents = opponentOrder(view.you, n);
@@ -135,7 +142,7 @@ export function Table({ net }: { net: NetState }) {
   // shrunk interface would otherwise measure wide enough for the desktop layout).
   const phone = win.width <= 760;
   const layout = arena.width > 0 && !phone ? tableLayout(opponents.length, arena.width, arena.height, tier.centerH) : null;
-  const fan = handFan(view.hand.length, hand.width, tier.handW);
+  const fan = handFan(handCards.length, hand.width, tier.handW);
   /** Which side of the table a seat touches (emotes and chat bubbles there turn inward). */
   const edgeOf = (i: number): "left" | "right" | null => {
     const b = layout?.seats[i];
@@ -151,9 +158,20 @@ export function Table({ net }: { net: NetState }) {
     selected: sel.targets.includes(seat),
     onClick: req ? () => setSel(clickSeat(req, sel, seat)) : undefined,
     isCurrent: view.current === seat && !view.result,
-    isWaitedOn: waiting?.seat === seat && !request,
+    isWaitedOn: (waiting?.seat === seat && !request) || actor?.you === seat,
     offline: !room.members[seat]?.connected,
   });
+  // Your equipment as pickable cards, when a request can spend it (the bot's, when acting for one).
+  const equipPick = req
+    ? {
+        clickable: (id: number) => cardClickable(req, sel, id),
+        selected: (id: number) => sel.cards.includes(id),
+        onClick: (id: number) => {
+          play("select");
+          setSel(clickCard(req, sel, id));
+        },
+      }
+    : undefined;
 
   const waitingText = view.result
     ? t("table.over")
@@ -206,7 +224,12 @@ export function Table({ net }: { net: NetState }) {
           {opponents.map((seat, i) => (
             // The slot does the positioning, so the seat's own transforms (press, shake) can't move it.
             <div key={seat} className="seat-slot" data-seat={seat} style={layout ? boxVars("seat", layout.seats[i]) : undefined}>
-              <Plaque player={view.players[seat]} name={nameOf(seat)} {...seatProps(seat)} />
+              <Plaque
+                player={view.players[seat]}
+                name={nameOf(seat)}
+                {...seatProps(seat)}
+                equipPick={actor?.you === seat ? equipPick : undefined}
+              />
               {bubbles.get(seat) && (
                 <span className={`chat-bubble ${edgeOf(i) ? `at-${edgeOf(i)}` : ""}`}>{bubbles.get(seat)!.text}</span>
               )}
@@ -277,25 +300,23 @@ export function Table({ net }: { net: NetState }) {
             {...seatProps(view.you)}
             offline={false}
             range={view.attack_range}
-            equipPick={
-              req
-                ? {
-                    clickable: (id) => cardClickable(req, sel, id),
-                    selected: (id) => sel.cards.includes(id),
-                    onClick: (id) => {
-                      play("select");
-                      setSel(clickCard(req, sel, id));
-                    },
-                  }
-                : undefined
-            }
+            equipPick={actor ? undefined : equipPick}
           />
         </div>
         <div className="dock-main">
-          <ActionBar request={request} view={view} sel={sel} setSel={setSel} name={name} waitingText={waitingText} />
-          <div ref={handRef} className="hand" aria-label={t("table.hand")}>
-            {view.hand.length === 0 && <span className="turn-note">{t("table.noCards")}</span>}
-            {view.hand.map((c, i) => {
+          <ActionBar request={request} view={acting} sel={sel} setSel={setSel} name={actName} waitingText={waitingText} />
+          <div
+            ref={handRef}
+            className={`hand ${actor ? "acting" : ""}`}
+            aria-label={actor ? t("test.botHand", { name: nameOf(actor.you) }) : t("table.hand")}
+          >
+            {actor && (
+              <span className="acting-tag">
+                {t("test.actingAs", { name: nameOf(actor.you), hero: heroName(view.players[actor.you].hero) })}
+              </span>
+            )}
+            {handCards.length === 0 && <span className="turn-note">{t("table.noCards")}</span>}
+            {handCards.map((c, i) => {
               const clickable = cardClickable(req, sel, c.id);
               const selected = sel.cards.includes(c.id) || (sel.mode?.type === "card" && sel.mode.cardId === c.id);
               const tilt = fan.tilt(i);
@@ -325,7 +346,7 @@ export function Table({ net }: { net: NetState }) {
         </div>
       </footer>
 
-      <Effects log={log} you={view.you} aim={sel.targets} playSize={tier.playSize} nameOf={nameOf} />
+      <Effects log={log} you={view.you} aimFrom={acting.you} aim={sel.targets} playSize={tier.playSize} nameOf={nameOf} hand={view.hand} />
       {req?.kind === "choose_hero" && <HeroPick req={req} isLordPick={lordSeat === view.you} />}
       {req?.kind === "arrange" && <Arrange key={request!.id} req={req} />}
       {view.result && hideResultFor !== resultKey && (

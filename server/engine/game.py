@@ -81,6 +81,9 @@ class Player:
     skip_phases: set[Phase] = field(default_factory=set)
     turn_usage: dict[str, int] = field(default_factory=dict)  # reset at the start of every turn
     marks: dict[str, Any] = field(default_factory=dict)  # whole-game state: limited used, awakened...
+    # Public counters and markers on the player (chill tokens, a Tariff...), shown at the
+    # seat. A token the ruleset lists in `statuses` brings that status skill with it.
+    tokens: dict[str, int] = field(default_factory=dict)
 
     @property
     def is_wounded(self) -> bool:
@@ -158,6 +161,7 @@ class Game:
         self.phase: Phase | None = None
         self.turn_number = 0
         self.turn_over = False
+        self._phases: list[Phase] = []  # what's left of the current turn (add_phase can extend it)
         self.result: GameResult | None = None
         self.log: list[dict[str, Any]] = []
         self._virtual_seq = 0
@@ -224,7 +228,20 @@ class Game:
         own = [s for s in p.skills if not s.lord or p.role == Role.LORD]
         for _, d in self.equip_defs(p):
             own += [s for s in (d.skill, d.view_as) if s is not None]
+        own += [self.ruleset.statuses[k] for k, n in p.tokens.items() if n and k in self.ruleset.statuses]
         return own
+
+    def set_token(self, seat: int, token: str, count: int) -> None:
+        """Set a player's `token` counter (0 removes it); logged publicly."""
+        p = self.players[seat]
+        old = p.tokens.get(token, 0)
+        if count == old:
+            return
+        if count > 0:
+            p.tokens[token] = count
+        else:
+            p.tokens.pop(token, None)
+        self._log("token", seat=seat, token=token, count=max(count, 0), delta=max(count, 0) - old)
 
     def has_skill(self, p: Player, name: str) -> bool:
         return any(s.name == name for s in self.skills_of(p))
@@ -643,7 +660,10 @@ class Game:
         self._log("use", seat=seat, card=card.to_dict(), targets=list(targets), **extra)
         yield from self.move_cards(subcards, Zone.PROCESSING, reason="use")
         yield from self.trigger(Event.CARD_USED, use)
-        yield from d.on_use(self, use)
+        if use.data.get("void"):  # a skill took its effect away: it just goes to the discard pile
+            self._log("voided", seat=seat, card=card.to_dict(), reason=use.data["void"])
+        else:
+            yield from d.on_use(self, use)
         yield from self._flush_processing(*(self.cards[i] for i in subcards))
         yield from self.trigger(Event.CARD_FINISHED, use)
         return use
@@ -900,6 +920,8 @@ class Game:
                     break
                 bonus = sum(s.save_bonus(self, p, helper) for s in self.skills_of(p))
                 yield from self.recover(seat, 1 + bonus, source=helper)
+        if p.hp <= 0 and p.alive:
+            yield from self.trigger(Event.UNSAVED, seat)  # nobody saved them: a last resort
         if p.hp <= 0:
             yield from self.die(seat, cause)
 
@@ -977,7 +999,9 @@ class Game:
             q.turn_usage.clear()  # "once per turn" means per anyone's turn
         self._log("turn_start", seat=seat, turn=self.turn_number)
         yield from self.trigger(Event.TURN_START, p)
-        for phase in Phase:
+        self._phases = list(Phase)
+        while self._phases:
+            phase = self._phases.pop(0)
             if not p.alive or self.turn_over:
                 break
             if phase in p.skip_phases:
@@ -992,6 +1016,11 @@ class Game:
         self.phase = None
         if p.alive:
             yield from self.trigger(Event.TURN_END, p)
+
+    def add_phase(self, phase: Phase) -> None:
+        """Give the current player an extra `phase`, straight after the one in progress."""
+        self._phases.insert(0, phase)
+        self._log("extra_phase", seat=self.current, phase=str(phase))
 
     def phase_start(self, p: Player) -> Gen:
         yield from ()
