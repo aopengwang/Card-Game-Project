@@ -1,4 +1,4 @@
-// Animation lab (developer tool): /?fx[=effect]&lang=zh (effects: kill, streak, double, fate, strike, heal, skill, skillCard, judge, judgeMiss, judgeKill, transfer, draw, reshuffle, launch, tariff, turn). Replays table effects on a real
+// Animation lab (developer tool): /?fx[=effect]&lang=zh (effects: kill, streak, double, fate, strike, heal, skill, skillCard, judge, judgeMiss, judgeKill, transfer, draw, reshuffle, launch, missile, aura, auraBig, hammer, babyOil, tariff, turn). Replays table effects on a real
 // captured table, with the seats and speed you choose, so an animation can be tuned in
 // seconds instead of playing games until the moment comes up. Press P to replay.
 import { useEffect, useRef, useState } from "react";
@@ -221,6 +221,82 @@ const EFFECTS: Record<string, Effect> = {
             ],
           },
         ],
+      },
+    ],
+  },
+  missile: {
+    label: "Launched (SpaceX): a Strike fires a missile",
+    uses: ["killer", "victim"],
+    steps: ({ killer, victim }, v) => {
+      const hp = Math.max(1, v.players[victim].hp - 2);
+      return [
+        {
+          entries: [
+            { type: "token", seat: killer, token: "launch", count: 1, delta: 1 },
+            use(killer, "strike", [victim]),
+            { ...damage(killer, victim, hp), amount: 2 },
+          ],
+          view: (w) => ({
+            ...setHp([victim], hp)(w),
+            players: setHp([victim], hp)(w).players.map((p) => (p.seat === killer ? { ...p, tokens: { ...p.tokens, launch: 1 } } : p)),
+          }),
+        },
+      ];
+    },
+  },
+  aura: {
+    label: "Aura Farmer: a quick aura as the Chairman earns a token",
+    uses: ["victim"],
+    steps: ({ victim }) => [
+      {
+        entries: [
+          { type: "skill", seat: victim, skill: "aura_farmer" },
+          { type: "token", seat: victim, token: "aura", count: 2, delta: 1 },
+        ],
+        view: (v) => ({
+          ...v,
+          players: v.players.map((p) => (p.seat === victim ? { ...p, tokens: { ...p.tokens, aura: 2 } } : p)),
+        }),
+      },
+    ],
+  },
+  auraBig: {
+    label: "Do Nothing, Win: the full aura as the Chairman spends one",
+    uses: ["victim"],
+    steps: ({ victim }) => [
+      {
+        entries: [
+          { type: "skill", seat: victim, skill: "do_nothing_win", targets: [], cards: 0 },
+          { type: "token", seat: victim, token: "aura", count: 1, delta: -1 },
+        ],
+        view: (v) => ({
+          ...v,
+          players: v.players.map((p) => (p.seat === victim ? { ...p, tokens: { ...p.tokens, aura: 1 } } : p)),
+        }),
+      },
+    ],
+  },
+  hammer: {
+    label: "Marks (Sharing): the hammer and sickle flashes on his card",
+    uses: ["killer", "victim"],
+    steps: ({ killer, victim }) => [
+      { entries: [{ type: "skill", seat: killer, skill: "sharing", targets: [victim, killer], cards: 0 }] },
+    ],
+  },
+  babyOil: {
+    label: "Baby Oil: a bottle thrown at the target splashes on their card",
+    uses: ["killer", "victim"],
+    steps: ({ killer, victim }) => [
+      {
+        entries: [
+          { type: "skill", seat: killer, skill: "baby_oil", targets: [victim], cards: 1 },
+          { type: "discard", seat: killer, reason: "baby_oil", cards: [{ id: nextCardId++, name: "dodge", suit: "diamond", rank: 2 }] },
+          { type: "token", seat: victim, token: "slippery", count: 1, delta: 1 },
+        ],
+        view: (v) => ({
+          ...v,
+          players: v.players.map((p) => (p.seat === victim ? { ...p, tokens: { ...p.tokens, slippery: 1 } } : p)),
+        }),
       },
     ],
   },

@@ -37,7 +37,7 @@ export interface PlayerView {
   alive: boolean;
   /** Bound by an Iron Chain: fire/thunder damage to one chained player reaches all of them. */
   chained?: boolean;
-  /** Public counters and markers: "chill" tokens, a "tariff", "slippery"... (name -> count). */
+  /** Public counters and markers: "aura" tokens, a "tariff", "slippery"... (name -> count). */
   tokens?: Record<string, number>;
   hand_count: number;
   equips: Card[];

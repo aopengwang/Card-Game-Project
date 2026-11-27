@@ -236,6 +236,93 @@ test("SpaceX: a rocket rises from the seat, lights up and climbs off the top of 
   expect(await sounds(page)).toContain("launch");
 });
 
+test("launched Strikes fire a missile at the target; ordinary ones don't", async ({ page }) => {
+  await openLab(page, "missile");
+  const target = page.locator(`[data-seat="${await page.getByLabel("Victim / target").inputValue()}"] .hero-face`);
+  await page.getByRole("button", { name: /^Play/ }).click(); // (the click also unlocks audio)
+  const fx = page.locator(".missile-fx");
+  await expect(fx).toHaveCount(1);
+  await expect(fx.locator(".missile")).toHaveCount(1); // in the air...
+  await expect(fx.locator(".missile")).toHaveCount(0, { timeout: 2000 }); // ...then it hits
+  // the blast is on the target's card
+  const face = (await target.boundingBox())!;
+  const boom = (await fx.locator(".missile-boom").boundingBox()) ?? { x: 0, y: 0, width: 0, height: 0 }; // (a 0×0 anchor)
+  expect(Math.hypot(boom.x - (face.x + face.width / 2), boom.y - (face.y + face.height / 2))).toBeLessThan(6);
+  await expect(fx).toHaveCount(0, { timeout: 2000 });
+  const heard = await sounds(page);
+  expect(heard.indexOf("boom")).toBeGreaterThan(heard.indexOf("missile"));
+
+  // an ordinary Strike: no missile
+  await page.getByLabel("Effect").selectOption("strike");
+  await page.getByRole("button", { name: /^Play/ }).click();
+  await expect(page.locator(".fx-layer > *").first()).toBeAttached();
+  await page.waitForTimeout(400);
+  await expect(fx).toHaveCount(0);
+});
+
+test("the Chairman's aura: a quick one for Aura Farmer, a big one for Do Nothing, Win", async ({ page }) => {
+  await openLab(page, "aura");
+  const face = (await page.locator(`[data-seat="${await page.getByLabel("Victim / target").inputValue()}"] .hero-face`).boundingBox())!;
+  await page.getByRole("button", { name: /^Play/ }).click(); // (the click also unlocks audio)
+  const fx = page.locator(".aura-fx");
+  await expect(fx).toHaveCount(1);
+  await expect(fx).toHaveAttribute("data-size", "small");
+  const at = (await fx.boundingBox()) ?? { x: 0, y: 0, width: 0, height: 0 }; // (a 0×0 anchor at the card's centre)
+  expect(Math.hypot(at.x - (face.x + face.width / 2), at.y - (face.y + face.height / 2))).toBeLessThan(6);
+  await expect(page.locator(".skill-cast")).toHaveCount(0); // (the aura instead of the usual seal)
+  await expect(fx).toHaveCount(0, { timeout: 3000 }); // quick: gone in about a second
+  expect(await sounds(page)).toContain("aura");
+
+  await page.getByLabel("Effect").selectOption("auraBig");
+  await page.getByRole("button", { name: /^Play/ }).click();
+  await expect(fx).toHaveAttribute("data-size", "big");
+  await expect(fx.locator(".aura-title")).toHaveText("Do Nothing, Win");
+  await page.waitForTimeout(1300);
+  await expect(fx).toHaveCount(1); // the big one lasts longer
+  await expect(fx).toHaveCount(0, { timeout: 3000 });
+  expect(await sounds(page)).toContain("auraBig");
+});
+
+test("Marks: the hammer and sickle flashes once on his card when he uses a skill", async ({ page }) => {
+  await openLab(page, "hammer");
+  const face = (await page.locator(`[data-seat="${await page.getByLabel("Killer / source").inputValue()}"] .hero-face`).boundingBox())!;
+  await page.getByRole("button", { name: /^Play/ }).click(); // (the click also unlocks audio)
+  const fx = page.locator(".hammer-fx");
+  await expect(fx).toHaveCount(1);
+  const at = (await fx.boundingBox()) ?? { x: 0, y: 0, width: 0, height: 0 }; // (a 0×0 anchor at the card's centre)
+  expect(Math.hypot(at.x - (face.x + face.width / 2), at.y - (face.y + face.height / 2))).toBeLessThan(6);
+  await expect(fx.locator(".hammer-emblem svg")).toBeAttached();
+  await expect(page.locator(".skill-cast")).toHaveCount(0); // (instead of the usual seal)
+  await expect(fx).toHaveCount(0, { timeout: 3000 });
+  expect(await sounds(page)).toContain("anvil");
+});
+
+test("baby oil: a bottle is thrown from Diddy at the target and splashes on their card", async ({ page }) => {
+  await openLab(page, "babyOil");
+  const from = page.locator(`[data-seat="${await page.getByLabel("Killer / source").inputValue()}"] .hero-face`);
+  const seat = page.locator(`[data-seat="${await page.getByLabel("Victim / target").inputValue()}"]`);
+  const chip = seat.locator('.token[data-token="slippery"]');
+  await page.getByRole("button", { name: /^Play/ }).click(); // (the click also unlocks audio)
+  // The bottle leaves the thrower's card: it starts out nearer the thrower than the target...
+  const bottle = page.locator(".oil-fx .oil-bottle");
+  await expect(bottle).toHaveCount(1);
+  const centre = (b: { x: number; y: number; width: number; height: number }) => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
+  const dist = (p: { x: number; y: number }, q: { x: number; y: number }) => Math.hypot(p.x - q.x, p.y - q.y);
+  const [a, b] = [centre((await from.boundingBox())!), centre((await seat.locator(".hero-face").boundingBox())!)];
+  const start = centre((await bottle.boundingBox())!);
+  expect(dist(start, a)).toBeLessThan(dist(start, b));
+  await expect(chip).toBeHidden(); // (the marker waits for the oil)
+  // ...and bursts on the target's: the splash over their card, and their Slippery chip.
+  await expect(bottle).toHaveCount(0, { timeout: 3000 });
+  await expect(chip).toBeVisible();
+  const face = (await seat.locator(".hero-face").boundingBox())!;
+  const splash = (await page.locator(".oil-fx .oil-splash").boundingBox()) ?? { x: 0, y: 0, width: 0, height: 0 }; // (a 0×0 anchor)
+  expect(Math.abs(splash.x - (face.x + face.width / 2))).toBeLessThan(6);
+  await expect(page.locator(".oil-fx")).toHaveCount(0, { timeout: 3000 });
+  const heard = await sounds(page);
+  expect(heard.indexOf("splat")).toBeGreaterThan(heard.indexOf("whoosh"));
+});
+
 test("tariff: a giant stamp falls on the target; their Tariff chip shows on impact, with a thud", async ({ page }) => {
   await openLab(page, "tariff");
   const victim = await page.getByLabel("Victim / target").inputValue();

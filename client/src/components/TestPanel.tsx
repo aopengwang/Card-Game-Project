@@ -25,14 +25,14 @@ export function TestPanel({ room, view, name }: { room: RoomInfo; view: GameView
   const [card, setCard] = useState("strike");
   const [suit, setSuit] = useState("any");
   const [hp, setHp] = useState(target.hp);
-  const chill = target.tokens?.chill ?? 0;
-  const [tokens, setTokens] = useState(chill);
-  const hasChill = target.skills.some((sk) => sk.id === "chill_guy");
+  const aura = target.tokens?.aura ?? 0;
+  const [tokens, setTokens] = useState(aura);
+  const hasAura = target.skills.some((sk) => sk.id === "do_nothing_win");
 
   // Show the chosen player's current hero, HP and tokens whenever they (or the player) change.
   useEffect(() => setHero(target.hero), [target.hero, seat]);
   useEffect(() => setHp(target.hp), [target.hp, seat]);
-  useEffect(() => setTokens(chill), [chill, seat]);
+  useEffect(() => setTokens(aura), [aura, seat]);
   useEffect(() => {
     if (!open) return;
     const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
@@ -159,7 +159,7 @@ export function TestPanel({ room, view, name }: { room: RoomInfo; view: GameView
             </Button>
           </div>
 
-          {hasChill && (
+          {hasAura && (
             <div className={s.row}>
               <label className={`${s.field} ${s.narrow}`}>
                 <span>{t("test.tokens")}</span>
@@ -172,7 +172,7 @@ export function TestPanel({ room, view, name }: { room: RoomInfo; view: GameView
                   onChange={(e) => setTokens(Number(e.target.value))}
                 />
               </label>
-              <Button shape="small" onClick={() => test({ action: "tokens", seat, token: "chill", count: tokens })}>
+              <Button shape="small" onClick={() => test({ action: "tokens", seat, token: "aura", count: tokens })}>
                 {t("test.setTokens")}
               </Button>
             </div>

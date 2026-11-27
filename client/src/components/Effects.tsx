@@ -6,6 +6,10 @@ import { fxSpeed, Stage } from "../fx/stage";
 import { killStreak, streakAt } from "../fx/streak";
 import { holdTariff, tariffStamp } from "../fx/tariff";
 import { launch, type RenderCard } from "../fx/launch";
+import { babyOil, holdSlippery } from "../fx/babyOil";
+import { aura } from "../fx/aura";
+import { hammer } from "../fx/hammer";
+import { missile } from "../fx/missile";
 import { createRoot } from "react-dom/client";
 import { getLang, t, tMaybe } from "../i18n";
 import { play, playAll, playStreak, type SoundName } from "../sound";
@@ -57,6 +61,23 @@ const MAX_TRANSFER = 5;
 // lands as the last one fades), at most three in a row.
 const SKILL_STAGGER = 950;
 const MAX_CASTS = 3;
+const MISSILE_STAGGER = 180; // a Strike on several targets: one missile after another
+
+/** Is `seat` launched (SpaceX, until the end of that play phase) as log entry `i` happens? The "launch" marker
+ * is set as the phase starts and cleared as it ends; nothing carries over between turns. */
+export function launchedAt(log: LogEntry[], i: number, seat: number): boolean {
+  for (let j = i - 1; j >= 0; j--) {
+    const e = log[j];
+    if (e.type === "turn_start") return false;
+    if (e.type === "token" && e.token === "launch" && e.seat === seat) return e.count > 0;
+  }
+  return false;
+}
+
+// Skills whose own animation replaces the usual seal (SpaceX's rocket, the Chairman's aura).
+const OWN_EFFECT = new Set(["spacex", "aura_farmer", "do_nothing_win", "communism", "sharing"]);
+// Marks' skills: the hammer and sickle flashes on his card.
+const MARKS = new Set(["communism", "sharing"]);
 const MAX_LIVE = 40; // fast bot games: drop effects rather than pile them up (a deal to 8 is 32 cards)
 
 const reducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -211,12 +232,17 @@ export function Effects({
     const judged: number[] = [];
     const tariffs: number[] = []; // a Tariff put on a player: the stamp falls on them
     const launches: number[] = []; // SpaceX: a rocket lifts off from the seat
+    const oils: number[] = []; // Baby Oil: a bottle is thrown at the target
+    const auras: number[] = []; // Do Nothing, Win: the full aura (Aura Farmer's little one doesn't queue)
     for (let i = start; i < log.length; i++) {
       const e = log[i];
       if (e.type === "death") deaths.push(i);
       if (e.type === "judge_result") judged.push(i);
       if (e.type === "token" && e.token === "tariff" && e.delta > 0) tariffs.push(i);
+      // Baby Oil (thrown on purpose, or at whoever hurt Diddy): the player is made Slippery
+      if (e.type === "token" && e.token === "slippery" && e.delta > 0) oils.push(i);
       if (e.type === "skill" && e.skill === "spacex") launches.push(i); // Yilong Ma lifts off
+      if (e.type === "skill" && e.skill === "do_nothing_win") auras.push(i); // the Chairman's big aura
     }
     // Sounds play even with reduced motion (that setting is about movement, not audio).
     // A killing blow sounds its own gong when it lands; a kill streak its own fanfare.
@@ -244,12 +270,33 @@ export function Effects({
       for (const i of deaths) if (streakAt(log, i) >= 2) playStreak(streakAt(log, i), 0.4);
       if (tariffs.length) play("tariff", 0.1);
       if (launches.length) play("launch", 0.1);
+      if (oils.length) play("splat", 0.1);
+      if (auras.length) play("auraBig", 0.1);
+      if (log.slice(start).some((e) => e.type === "skill" && e.skill === "aura_farmer")) play("aura", 0.1);
+      const fired = log.slice(start).some((e, n) => e.type === "use" && e.card?.name === "strike" && launchedAt(log, start + n, e.seat));
+      if (fired) play("boom", 0.1);
+      if (log.slice(start).some((e) => MARKS.has(String(e.type === "skill" ? e.skill : e.via)))) play("anvil", 0.1);
       return;
     }
     // Big moments take the stage in the order they happened (a Lightning judgment, then
     // the death it caused).
-    for (const i of [...judged, ...deaths, ...tariffs, ...launches].sort((a, b) => a - b)) {
+    for (const i of [...judged, ...deaths, ...tariffs, ...launches, ...oils, ...auras].sort((a, b) => a - b)) {
       const d = log[i];
+      if (d.type === "skill" && d.skill === "do_nothing_win") {
+        const show = () => aura(el, d.seat, "big", skillTitle("do_nothing_win"), getLang() === "zh");
+        stage.current!.add({ run: show, skip: () => play("auraBig") });
+        continue;
+      }
+      if (d.type === "token" && d.token === "slippery") {
+        // the thrower: whoever's Baby Oil went off just before
+        let from: number | null = null;
+        for (let j = i - 1; j >= Math.max(0, i - 12) && from == null; j--) {
+          if (log[j].type === "skill" && log[j].skill === "baby_oil") from = log[j].seat;
+        }
+        const release = holdSlippery(d.seat); // before this paints: the chip shows on impact
+        stage.current!.add({ run: () => babyOil(el, { from, seat: d.seat, release }), skip: release });
+        continue;
+      }
       if (d.type === "skill") {
         // the equipment it gave up (logged just after), to show flying off the rocket
         const gave = log.slice(i + 1, i + 8).find((e) => e.type === "discard" && e.reason === "spacex" && e.seat === d.seat);
@@ -340,9 +387,17 @@ export function Effects({
       }
       if (e.type === "give") transfer([e.card ?? null], seat(e.seat), seat(e.target));
       if (e.type === "pick" && e.card) transfer([e.card], middle(), seat(e.seat)); // a Harvest pick
-      // (SpaceX gets its rocket instead of a seal)
-      if (e.type === "skill" && typeof e.skill === "string" && e.skill !== "spacex") cast(e.seat, e.skill);
-      if ((e.type === "use" || e.type === "respond") && typeof e.via === "string") cast(e.seat, e.via);
+      // Yilong Ma launched (SpaceX, for the rest of the play phase): each Strike he uses comes with a missile
+      if (e.type === "use" && e.card?.name === "strike" && launchedAt(log, i, e.seat) && Array.isArray(e.targets)) {
+        (e.targets as number[]).forEach((tg, n) => void missile(el, e.seat, tg, n * MISSILE_STAGGER));
+      }
+      // Aura Farmer: a quick aura over the Chairman's card (it doesn't wait its turn on the stage)
+      if (e.type === "skill" && e.skill === "aura_farmer") void aura(el, e.seat, "small");
+      // (these have their own effects instead of a seal)
+      if (e.type === "skill" && typeof e.skill === "string" && !OWN_EFFECT.has(e.skill)) cast(e.seat, e.skill);
+      if ((e.type === "use" || e.type === "respond") && typeof e.via === "string" && !OWN_EFFECT.has(e.via)) cast(e.seat, e.via);
+      const marks = e.type === "skill" ? e.skill : e.type === "use" || e.type === "respond" ? e.via : null;
+      if (typeof marks === "string" && MARKS.has(marks)) void hammer(el, e.seat);
       if (e.type === "use" || e.type === "respond") {
         const from = seat(e.seat);
         const to = centre(document.querySelector(`[data-play-key="${i}"]`));

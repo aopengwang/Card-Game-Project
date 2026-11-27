@@ -148,7 +148,7 @@ test("test room: Fire Attack holds the shown card up for everyone, and says when
   expect(errors).toEqual([]);
 });
 
-test("test room: the Chairman's chill tokens show on the seat and Chill Guy spends them", async ({ page }) => {
+test("test room: the Chairman's aura tokens show on the seat and Do Nothing, Win spends them", async ({ page }) => {
   test.setTimeout(90_000);
   const errors: string[] = [];
   collectErrors(page, errors);
@@ -170,19 +170,21 @@ test("test room: the Chairman's chill tokens show on the seat and Chill Guy spen
   await expect(page.locator(".dock-self")).toContainText("The Chairman");
   await panel.locator('input[name="test-tokens"]').fill("2");
   await panel.getByRole("button", { name: "Set tokens" }).click();
-  const chill = page.locator('.dock-self .token[data-token="chill"]');
-  await expect(chill).toHaveAttribute("data-count", "2");
+  const aura = page.locator('.dock-self .token[data-token="aura"]');
+  await expect(aura).toHaveAttribute("data-count", "2");
+  await expect(aura).toHaveText(/气/);
   await panel.getByRole("button", { name: "Close" }).click();
 
-  // Chill Guy: one token for the pick of the top 2 cards.
-  await page.getByRole("button", { name: /Chill Guy/ }).click();
+  // Do Nothing, Win: one aura token for the pick of the top 2 cards, with the big aura.
+  await page.getByRole("button", { name: /Do Nothing, Win/ }).click();
   await page.getByRole("button", { name: "Use", exact: true }).click();
+  await expect(page.locator('.aura-fx[data-size="big"]')).toHaveCount(1);
   const bar = page.locator(".action-bar.active");
-  await expect(bar.locator(".action-title")).toContainText("Chill Guy: keep one of the top 2 cards");
+  await expect(bar.locator(".action-title")).toContainText("Do Nothing, Win: keep one of the top 2 cards");
   await expect(bar.locator(".choice-cards .card")).toHaveCount(2);
   await bar.locator(".choice-cards .card").first().click();
-  await expect(chill).toHaveAttribute("data-count", "1");
-  await expect(page.locator(".log-panel")).toContainText("Tester loses Chill tokens (1)");
+  await expect(aura).toHaveAttribute("data-count", "1");
+  await expect(page.locator(".log-panel")).toContainText("Tester loses Aura tokens (1)");
 
   // The Lord's What's up Beijing!: shows the hand, and a marker until the next turn.
   await page.getByRole("button", { name: /What's up Beijing/ }).click();

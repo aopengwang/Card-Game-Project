@@ -25,6 +25,13 @@ export type SoundName =
   | "shuffle"
   | "launch"
   | "eject"
+  | "whoosh"
+  | "splat"
+  | "aura"
+  | "auraBig"
+  | "missile"
+  | "boom"
+  | "anvil"
   | "death"
   | "victory"
   | "defeat";
@@ -202,6 +209,47 @@ const SOUNDS: Record<SoundName, (c: AudioContext, t: number) => void> = {
       noise(c, t + i * 0.09, 0.09, 0.35, 2400, 600, 0.8);
       tone(c, t + i * 0.09, 320 - i * 40, 0.12, 0.18, "square", 140);
     }
+  },
+  // something thrown: air rushing past, rising then falling
+  whoosh: (c, t) => {
+    noise(c, t, 0.35, 0.22, 600, 2600, 1.6);
+    noise(c, t + 0.3, 0.3, 0.16, 2600, 900, 1.6);
+  },
+  // a bottle of oil bursting: a glassy pop, then a wet, low splat
+  splat: (c, t) => {
+    tone(c, t, 1700, 0.05, 0.1, "triangle", 900);
+    noise(c, t, 0.32, 0.5, 900, 140, 0.6);
+    tone(c, t + 0.01, 140, 0.25, 0.4, "sine", 60);
+    noise(c, t + 0.08, 0.2, 0.18, 500, 250, 2);
+  },
+  // a little aura: an airy shimmer rising, three high chimes climbing
+  aura: (c, t) => {
+    noise(c, t, 0.6, 0.12, 1800, 6000, 1.2);
+    [N.E5, N.A5, N.E6].forEach((f, i) => bell(c, t + 0.06 + i * 0.09, f, 0.7, 0.07, [[1, 1], [2.76, 0.25]]));
+  },
+  // the full aura: a deep swell, a long rising rush of air, a shining chord and a bright bell
+  auraBig: (c, t) => {
+    tone(c, t, 55, 1.8, 0.75, "sine", 110);
+    noise(c, t, 1.8, 0.3, 300, 5200, 0.8);
+    [N.A4, N.E5, N.A5, N.C6].forEach((f, i) => tone(c, t + 0.25 + i * 0.07, f, 1.6, 0.07, "triangle"));
+    bell(c, t + 0.4, N.A6, 1.4, 0.1, [[1, 1], [2.76, 0.3], [5.4, 0.12]]);
+  },
+  // a missile fired: a sharp ignition pop and a hiss that streaks away
+  missile: (c, t) => {
+    noise(c, t, 0.05, 0.3, 2500, 1200, 1);
+    noise(c, t + 0.02, 0.55, 0.2, 2200, 6000, 1.5);
+  },
+  // a missile hits: a crack and a deep boom
+  boom: (c, t) => {
+    noise(c, t, 0.08, 0.5, 3000, 800, 0.7);
+    tone(c, t, 70, 0.7, 0.9, "sine", 30);
+    noise(c, t + 0.02, 0.6, 0.45, 600, 90, 0.5);
+  },
+  // the hammer strikes: a metallic clang on an anvil, ringing out
+  anvil: (c, t) => {
+    noise(c, t, 0.04, 0.4, 5000, 2000, 1);
+    bell(c, t, 880, 0.9, 0.16, [[1, 1], [2.4, 0.45], [3.9, 0.3], [5.6, 0.15]]);
+    tone(c, t, 150, 0.2, 0.3, "sine", 80);
   },
   // a player falls: a deep gong
   death: (c, t) => {

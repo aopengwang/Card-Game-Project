@@ -78,6 +78,7 @@ export function launch(layer: HTMLElement, seat: number, jettisoned: Card[] = []
   root.style.setProperty("--w", `${w}px`);
   root.style.setProperty("--rise", `${y + w * 2.4}px`); // clear off the top of the table
 
+  div(root, s.vignette); // first: everything else draws over the dark
   div(root, s.trail);
   const smoke = div(root, s.smoke);
   for (let i = 0; i < PUFFS; i++) {

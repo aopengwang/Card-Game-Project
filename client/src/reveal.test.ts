@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { revealOf } from "./components/Effects";
+import { launchedAt, revealOf } from "./components/Effects";
 import { _setLangForTests } from "./i18n";
 import type { Card } from "./types";
 
@@ -25,6 +25,22 @@ describe("cards shown to the table", () => {
     expect(r.title).toMatch(/^You shows their hand \(.+\)$/);
     expect(r.cards).toHaveLength(2);
     expect(revealOf({ ...e, cards: [] }, 2, [], names)!.note).toBe("No hand cards");
+  });
+
+  it("knows when Yilong Ma is launched (his Strikes fire missiles then)", () => {
+    const strike = { type: "use", seat: 1, card: card(9, "spade"), targets: [2] };
+    const log = [
+      { type: "turn_start", seat: 1 },
+      strike, // 1: before the launch
+      { type: "token", seat: 1, token: "launch", count: 1, delta: 1 },
+      { type: "token", seat: 3, token: "launch", count: 0, delta: -1 }, // (someone else's: no matter)
+      strike, // 4: launched
+      { type: "token", seat: 1, token: "launch", count: 0, delta: -1 },
+      strike, // 6: the extra phase is over
+      { type: "turn_start", seat: 2 },
+      { ...strike, seat: 2 }, // 8: someone else's turn
+    ];
+    expect([1, 4, 6, 8].map((i) => launchedAt(log, i, log[i].seat))).toEqual([false, true, false, false]);
   });
 
   it("other entries show nothing", () => {

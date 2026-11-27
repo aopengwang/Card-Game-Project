@@ -128,9 +128,9 @@ function JudgeCards({ cards }: { cards: CardData[] }) {
 }
 
 // One seal character per token (shown in both languages, like the other seals).
-const TOKEN_CHAR: Record<string, string> = { chill: "冷", beijing: "京", tariff: "税", slippery: "滑", launch: "射" };
+const TOKEN_CHAR: Record<string, string> = { aura: "气", beijing: "京", tariff: "税", slippery: "滑", launch: "射" };
 
-/** Tokens and markers on a player (chill tokens, a Tariff...): seal chips, rules on hover. */
+/** Tokens and markers on a player (aura tokens, a Tariff...): seal chips, rules on hover. */
 function Tokens({ tokens }: { tokens?: Record<string, number> }) {
   const list = Object.entries(tokens ?? {}).filter(([, n]) => n > 0);
   if (!list.length) return null;
@@ -143,7 +143,7 @@ function Tokens({ tokens }: { tokens?: Record<string, number> }) {
           <Tip key={k} content={<TipBody title={label} text={tMaybe(`token.${k}Hint`) ?? ""} />}>
             <span className={`${s.token} token`} data-token={k} data-count={n} role="img" aria-label={label} lang="zh-CN">
               {TOKEN_CHAR[k] ?? title.slice(0, 1)}
-              {k === "chill" && <span className={s.tokenCount}>{n}</span>}
+              {k === "aura" && <span className={s.tokenCount}>{n}</span>}
             </span>
           </Tip>
         );

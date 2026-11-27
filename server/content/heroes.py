@@ -987,42 +987,42 @@ class Hermit(Skill):
 # ================================================================= modern heroes (designed at our table)
 
 
-CHILL_MAX = 4
+AURA_MAX = 4
 
 
 def _basics(game, p) -> list[int]:
     return [c.id for c in p.hand if game.card_def(c).type == CardType.BASIC]
 
 
-class DoNothingWin(Skill):
-    """Locked. When your turn ends, if you didn't use or play a Strike this turn, gain 1 Chill
+class AuraFarmer(Skill):
+    """Locked. When your turn ends, if you didn't use or play a Strike this turn, gain 1 Aura
     token (at most 4)."""
 
-    name = "do_nothing_win"
+    name = "aura_farmer"
     locked = True
     events = (Event.TURN_END,)
 
     def can_trigger(self, game, owner, event, p):
-        return p is owner and not owner.turn_usage.get("_strikes") and owner.tokens.get("chill", 0) < CHILL_MAX
+        return p is owner and not owner.turn_usage.get("_strikes") and owner.tokens.get("aura", 0) < AURA_MAX
 
     def on_trigger(self, game, owner, event, p) -> Gen:
-        game.set_token(owner.seat, "chill", owner.tokens.get("chill", 0) + 1)
+        game.set_token(owner.seat, "aura", owner.tokens.get("aura", 0) + 1)
         yield from ()
 
 
-class ChillGuy(ActiveSkill):
-    """In your play phase, any number of times: spend 1 Chill token to look at the top 2 cards
+class DoNothingWin(ActiveSkill):
+    """In your play phase, any number of times: spend 1 Aura token to look at the top 2 cards
     of the deck. Take 1 of them into your hand and discard the other."""
 
-    name = "chill_guy"
+    name = "do_nothing_win"
     harmful = False
     per_turn = None
 
     def can_activate(self, game, owner):
-        return owner.tokens.get("chill", 0) > 0
+        return owner.tokens.get("aura", 0) > 0
 
     def activate(self, game, owner, cards, targets) -> Gen:
-        game.set_token(owner.seat, "chill", owner.tokens.get("chill", 0) - 1)
+        game.set_token(owner.seat, "aura", owner.tokens.get("aura", 0) - 1)
         ids = game._take_from_pile(2)
         cid = yield from game.ask(
             ChooseCardRequest(seat=owner.seat, reason=self.name, options=list(ids),
@@ -1279,46 +1279,43 @@ class Tesla(ViewAs):
 
 class SpaceX(Skill):
     """Once per turn, at the start of your play phase, you may discard all your equipment (at
-    least 2 cards) to Launch: after this play phase you take an extra one, in which your Strike
-    limit is raised by the number of cards you discarded (2 to 4) and your Strikes deal +1
+    least 2 cards) to Launch: draw that many cards, and for the rest of this play phase your
+    Strike limit is raised by the number of cards you discarded (2 to 4) and your Strikes deal +1
     damage."""
 
     name = "spacex"
-    per_turn = 1  # (the extra play phase starts a play phase too: no second launch in it)
+    per_turn = 1
     events = (Event.PHASE_START, Event.PHASE_END, Event.DAMAGE_CAUSED)
 
     def can_trigger(self, game, owner, event, data):
-        launch = owner.turn_usage.get("_launch")
+        launched = owner.turn_usage.get("_launch") == 1
         if event == Event.PHASE_START:
             return _my_phase(game, owner, event, data, Phase.PLAY) and game.skill_ready(owner, self) and len(owner.equips) >= 2
         if event == Event.PHASE_END:
-            return data == Phase.PLAY and game.current == owner.seat and launch in (1, 2)
-        return launch == 2 and data.source == owner.seat and data.card is not None and data.card.name == "strike"
+            return data == Phase.PLAY and game.current == owner.seat and launched
+        return launched and data.source == owner.seat and data.card is not None and data.card.name == "strike"
 
     def on_trigger(self, game, owner, event, data) -> Gen:
         if event == Event.DAMAGE_CAUSED:
             data.amount += 1
             return
-        if event == Event.PHASE_END:
-            if owner.turn_usage["_launch"] == 1:  # lift-off: the extra play phase comes next
-                owner.turn_usage["_launch"] = 2
-                game.set_token(owner.seat, "launch", 1)
-                game.add_phase(Phase.PLAY)
-            else:  # the extra play phase is over
-                owner.turn_usage["_launch"] = 3
-                game.set_token(owner.seat, "launch", 0)
+        if event == Event.PHASE_END:  # touchdown: the play phase is over
+            owner.turn_usage["_launch"] = 2
+            game.set_token(owner.seat, "launch", 0)
             return
         if not (yield from _ask_yes(game, owner, self)):
             return
         game.note_skill_used(owner, self)
         _announce(game, owner, self)
-        owner.turn_usage["_launch"] = 1
-        owner.turn_usage["_launch_gear"] = len(owner.equips)
+        gear = owner.turn_usage["_launch_gear"] = len(owner.equips)
         yield from game.discard(owner.seat, [c.id for c in owner.equips], reason=self.name)
+        yield from game.draw(owner.seat, gear, reason=self.name)  # fuel for the flight
+        owner.turn_usage["_launch"] = 1  # launched, from here to the end of this play phase
+        game.set_token(owner.seat, "launch", 1)
 
     def extra_strikes(self, game, owner):
         # Strikes used earlier in the turn still count against the raised limit.
-        return owner.turn_usage.get("_launch_gear", 0) if owner.turn_usage.get("_launch") == 2 else 0
+        return owner.turn_usage.get("_launch_gear", 0) if owner.turn_usage.get("_launch") == 1 else 0
 
 
 class DeepSeek(ActiveSkill):
@@ -1436,7 +1433,7 @@ HEROES: list[Hero] = [
     Hero("wei_lie", "Wei Lie", W, 4, "male", (SpoilsOfWar(), ShieldWall())),
     Hero("yu_ji", "Yu Ji", Q, 3, "male", (Omen(), Hermit())),
     # modern heroes: designed at our table
-    Hero("chairman", "The Chairman", Q, 4, "male", (DoNothingWin(), ChillGuy(), WhatsUpBeijing()), custom=True),
+    Hero("chairman", "The Chairman", Q, 4, "male", (AuraFarmer(), DoNothingWin(), WhatsUpBeijing()), custom=True),
     Hero("marks", "Marks", Q, 3, "male", (Communism(), Sharing()), custom=True),
     Hero("donald", "Donald", Q, 4, "male", (Tariffs(), DodgedABullet()), custom=True),
     Hero("diddy", "Diddy", Q, 4, "male", (BabyOil(),), custom=True),

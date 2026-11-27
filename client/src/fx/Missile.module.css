@@ -1,0 +1,181 @@
+/* A launched Strike (missile.ts): the missile flies for --flight (after --wait), then the blast
+   plays for --blast. Children are placed in layer pixels (the root sits at the layer's corner). */
+.missile {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 4;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.body {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 54px;
+  height: 15px;
+  opacity: 0;
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.5));
+}
+
+/* the motor's flame, behind the tail */
+.exhaust {
+  position: absolute;
+  right: 92%;
+  top: 50%;
+  width: 26px;
+  height: 9px;
+  border-radius: 50% 40% 40% 50% / 50%;
+  background: radial-gradient(ellipse at 100% 50%, #fff 0 15%, #ffe07a 35%, #ff8a2a 65%, transparent 80%);
+  filter: blur(1px);
+  transform: translateY(-50%);
+  transform-origin: 100% 50%;
+  animation: exhaust calc(70ms * var(--fx-slow, 1)) linear infinite alternate;
+}
+
+@keyframes exhaust {
+  from {
+    transform: translateY(-50%) scaleX(0.75);
+  }
+  to {
+    transform: translateY(-50%) scaleX(1.15);
+  }
+}
+
+/* puffs close together, soft-edged: they read as one trail that thins and drifts away */
+.trail {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(235, 230, 220, 0.75), rgba(170, 160, 150, 0.35) 55%, transparent 72%);
+  filter: blur(1.5px);
+  opacity: 0;
+  animation: trail calc(560ms * var(--fx-slow, 1)) ease-out var(--t) forwards;
+}
+
+@keyframes trail {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  10% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.2) translateY(-5px);
+  }
+}
+
+/* ---------------------------------------------------------------- the blast */
+.boom {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.boom > * {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0;
+  animation-duration: var(--blast);
+  animation-delay: calc(var(--wait) + var(--flight));
+  animation-fill-mode: forwards;
+  animation-timing-function: ease-out;
+}
+
+.flash {
+  left: -45px;
+  top: -45px;
+  width: 90px;
+  height: 90px;
+  background: radial-gradient(circle, #fff 0 20%, rgba(255, 236, 160, 0.9) 40%, transparent 70%);
+  animation-name: flash;
+}
+
+@keyframes flash {
+  0% {
+    opacity: 1;
+    transform: scale(0.3);
+  }
+  25% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+}
+
+.fireball {
+  left: -38px;
+  top: -38px;
+  width: 76px;
+  height: 76px;
+  background: radial-gradient(circle at 45% 45%, #fff6c8 0 12%, #ffc247 30%, #ff6a1f 55%, rgba(160, 40, 10, 0.6) 70%, transparent 76%);
+  animation-name: fireball;
+}
+
+@keyframes fireball {
+  0% {
+    opacity: 0.95;
+    transform: scale(0.2);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.3) translateY(-8px);
+  }
+}
+
+.ring {
+  left: -40px;
+  top: -40px;
+  width: 80px;
+  height: 80px;
+  border: 3px solid rgba(255, 214, 130, 0.9);
+  animation-name: ring;
+}
+
+@keyframes ring {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.3);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.2);
+  }
+}
+
+.smoke {
+  left: -16px;
+  top: -16px;
+  width: 32px;
+  height: 32px;
+  background: radial-gradient(circle at 40% 40%, rgba(120, 110, 100, 0.85), rgba(60, 55, 50, 0.55) 60%, transparent 72%);
+  animation-name: smoke;
+}
+
+@keyframes smoke {
+  0%,
+  15% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.4);
+  }
+  35% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) scale(1.8);
+  }
+}

@@ -81,7 +81,7 @@ class Player:
     skip_phases: set[Phase] = field(default_factory=set)
     turn_usage: dict[str, int] = field(default_factory=dict)  # reset at the start of every turn
     marks: dict[str, Any] = field(default_factory=dict)  # whole-game state: limited used, awakened...
-    # Public counters and markers on the player (chill tokens, a Tariff...), shown at the
+    # Public counters and markers on the player (aura tokens, a Tariff...), shown at the
     # seat. A token the ruleset lists in `statuses` brings that status skill with it.
     tokens: dict[str, int] = field(default_factory=dict)
 

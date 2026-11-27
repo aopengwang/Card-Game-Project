@@ -10,6 +10,36 @@
   pointer-events: none;
 }
 
+/* the table goes dark around the launch pad, and lights up again as the rocket leaves */
+.vignette {
+  position: absolute;
+  left: -2000px;
+  top: -2000px;
+  width: 4000px;
+  height: 4000px;
+  background: radial-gradient(
+    circle at 50% 50%,
+    transparent 0,
+    transparent calc(var(--w) * 0.9),
+    rgba(0, 0, 0, 0.72) calc(var(--w) * 2.8)
+  );
+  opacity: 0;
+  animation: vignette var(--life) ease-in-out forwards;
+}
+
+@keyframes vignette {
+  0% {
+    opacity: 0;
+  }
+  14%,
+  72% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 /* ---------------------------------------------------------------- the rocket */
 .rocket {
   position: absolute;

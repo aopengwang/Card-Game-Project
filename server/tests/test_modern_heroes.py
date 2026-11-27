@@ -23,23 +23,25 @@ def active(g, seat):
 # ================================================================= The Chairman
 
 
-def test_do_nothing_win_gains_a_chill_token_per_turn_without_strikes_up_to_four():
+def test_aura_farmer_gains_an_aura_token_per_turn_without_strikes_up_to_four():
     g = heroes("chairman", None, None, None)
     for n in (1, 2, 3, 4, 4):
         drive(g.take_turn(0), pass_all)
-        assert g.players[0].tokens.get("chill") == n
-    assert view_for(g, 2)["players"][0]["tokens"] == {"chill": 4}  # everyone sees the tokens
+        assert g.players[0].tokens.get("aura") == n
+    assert view_for(g, 2)["players"][0]["tokens"] == {"aura": 4}  # everyone sees the tokens
+    farmed = [e for e in g.log if e["type"] == "skill" and e["skill"] == "aura_farmer"]
+    assert len(farmed) == 4  # (logged each time it fires: the client shows its aura)
 
     g = heroes("chairman", None, None, None)
     (s,) = give(g, 0, "strike")
     drive(g.take_turn(0), script(Play(s, (1,))))
-    assert "chill" not in g.players[0].tokens
+    assert "aura" not in g.players[0].tokens
 
 
-def test_chill_guy_spends_a_token_to_keep_one_of_the_top_two():
+def test_do_nothing_win_spends_an_aura_token_to_keep_one_of_the_top_two():
     g = heroes("chairman", None, None, None)
-    assert "chill_guy" not in active(g, 0)  # no tokens yet
-    g.players[0].tokens["chill"] = 1
+    assert "do_nothing_win" not in active(g, 0)  # no tokens yet
+    g.players[0].tokens["aura"] = 1
     a = stack_top(g, lambda c: c.name == "peach")
     b = stack_top(g, lambda c: c.name == "strike")  # b is now on top
     asked = []
@@ -48,11 +50,11 @@ def test_chill_guy_spends_a_token_to_keep_one_of_the_top_two():
         asked.append(req)
         return a
 
-    drive(g.phase_play(g.players[0]), script(Play(skill="chill_guy"), choose_card=pick))
+    drive(g.phase_play(g.players[0]), script(Play(skill="do_nothing_win"), choose_card=pick))
     (req,) = asked
     assert req.options == [b, a] and [c["id"] for c in req.shown] == [b, a]
     assert hand_ids(g, 0) == [a] and g.cards[b] in g.discard_pile
-    assert "chill" not in g.players[0].tokens and "chill_guy" not in active(g, 0)
+    assert "aura" not in g.players[0].tokens and "do_nothing_win" not in active(g, 0)
     assert_cards_conserved(g)
 
 
@@ -227,18 +229,27 @@ def test_tesla_any_hand_card_as_strike_or_dodge_while_a_horse_is_equipped():
     assert g.response_conversions(g.players[0], "dodge") == []  # once per turn
 
 
-def test_spacex_trades_the_equipment_for_an_extra_play_phase_of_strikes():
+def test_spacex_launches_straight_away_for_the_rest_of_the_play_phase():
     g = heroes("yilong_ma", None, None, None)
     equip(g, 0, "plus_horse")
     equip(g, 0, "eight_trigrams")
     s1, s2, s3 = give(g, 0, "strike", "strike", "strike")
     g.players[1].max_hp = g.players[1].hp = 10
-    drive(g.take_turn(0), script(Play(s1, (1,)), None, Play(s2, (1,)), Play(s3, (1,)), None, confirm=True))
+    launched = []
+    plays = script(Play(s1, (1,)), Play(s2, (1,)), Play(s3, (1,)), None, confirm=True)
+
+    def answer(req):
+        if req.kind == "play":
+            launched.append(g.players[0].tokens.get("launch"))
+        return plays(req)
+
+    drive(g.take_turn(0), answer)
     hits = [e["amount"] for e in g.log if e["type"] == "damage"]
-    assert hits == [1, 2, 2]  # +1 damage, and no Strike limit, in the extra phase
+    assert hits == [2, 2, 2]  # +1 damage and a raised Strike limit, in the same play phase
+    assert launched and all(n == 1 for n in launched)  # marked Launched the whole phase
     assert g.players[0].equips == [] and "spacex" not in g.players[0].marks  # not once per game
-    assert sum(1 for e in g.log if e["type"] == "phase" and e["phase"] == "play") == 2
-    assert g.players[0].tokens == {}
+    assert sum(1 for e in g.log if e["type"] == "phase" and e["phase"] == "play") == 1  # no extra phase
+    assert g.players[0].tokens == {}  # touched down at the end of the phase
     assert_cards_conserved(g)
 
 
@@ -253,8 +264,8 @@ def test_spacex_raises_the_strike_limit_by_the_equipment_discarded(gear):
 
     def play(req):  # strike for as long as the game lets us
         s = next((i for i in req.options if i in strikes), None)
-        if g.players[0].turn_usage.get("_launch") != 2 or s is None:
-            return None  # (save them all for the extra phase)
+        if s is None:
+            return None
         used.append(s)
         return Play(s, (1,))
 
@@ -265,6 +276,7 @@ def test_spacex_raises_the_strike_limit_by_the_equipment_discarded(gear):
 
     drive(g.take_turn(0), answer)
     assert len(used) == 1 + gear  # the usual 1, plus one per card discarded
+    assert [e["count"] for e in g.log if e["type"] == "draw" and e["reason"] == "spacex"] == [gear]  # and drew as many
 
 
 def test_spacex_once_per_turn_and_again_on_a_later_turn():
@@ -278,7 +290,7 @@ def test_spacex_once_per_turn_and_again_on_a_later_turn():
             asked.append(g.turn_number)
             return True
         if req.kind == "play" and not g.players[0].equips and g.players[0].turn_usage.get("_launch") == 1:
-            equip(g, 0, "crossbow")  # re-equipped before the extra phase...
+            equip(g, 0, "crossbow")  # re-equipped while launched...
             equip(g, 0, "minus_horse")
         return req.default()
 
@@ -368,16 +380,25 @@ def test_modern_heroes_have_names_in_both_languages():
     assert en["skills"]["whats_up_beijing"]["title"] == "What's up Beijing!"
     assert en["skills"]["whats_up_beijing"]["tags"] == ["lord", "limited"]
     assert zh["skills"]["slippery"]["title"] == "润滑"  # the status a Baby Oil marker gives
+    # The Chairman: Aura Farmer earns the aura tokens, Do Nothing, Win spends them.
+    assert [s["id"] for s in {h["id"]: h for h in en["heroes"]}["chairman"]["skills"]] == [
+        "aura_farmer", "do_nothing_win", "whats_up_beijing",
+    ]
+    assert en["skills"]["aura_farmer"]["title"] == "Aura Farmer" and en["skills"]["do_nothing_win"]["title"] == "Do Nothing, Win"
+    assert zh["skills"]["aura_farmer"]["title"] == "刷气场" and zh["skills"]["do_nothing_win"]["title"] == "躺赢"
+    assert "气场" in zh["skills"]["do_nothing_win"]["text"] and "Aura" in en["skills"]["do_nothing_win"]["text"]
 
 
-def test_test_room_sets_chill_tokens():
+def test_test_room_sets_aura_tokens():
     g = heroes("chairman", None, None, None)
-    set_tokens(g, 0, "chill", 3)
-    assert g.players[0].tokens == {"chill": 3}
-    set_tokens(g, 0, "chill", 0)
+    set_tokens(g, 0, "aura", 3)
+    assert g.players[0].tokens == {"aura": 3}
+    set_tokens(g, 0, "aura", 0)
     assert g.players[0].tokens == {}
     with pytest.raises(ValueError):
-        set_tokens(g, 0, "chill", 5)
+        set_tokens(g, 0, "aura", 5)
+    with pytest.raises(ValueError):
+        set_tokens(g, 0, "chill", 1)  # (the old name)
     with pytest.raises(ValueError):
         set_tokens(g, 0, "tariff", 1)
 

@@ -1,0 +1,150 @@
+/* Baby Oil (babyOil.ts): the bottle (animated from code, along an arc) lands at 42%
+   (OIL.impact); then the splat, droplets and drips. --life is the whole length; --w / --h the
+   target's hero card. */
+.oil {
+  position: absolute;
+  z-index: 4;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* while the bottle is in the air, the target's Slippery chip waits */
+:global([data-fx-slippery] .token[data-token="slippery"]) {
+  visibility: hidden;
+}
+
+.bottle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 30px;
+  height: 60px;
+  opacity: 0;
+  filter: drop-shadow(0 8px 8px rgba(0, 0, 0, 0.5));
+}
+
+/* ---------------------------------------------------------------- the splash */
+.splash {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.splat {
+  position: absolute;
+  left: calc(var(--w) * -0.4);
+  top: calc(var(--w) * -0.48);
+  width: calc(var(--w) * 0.8);
+  height: calc(var(--w) * 0.8);
+  filter: drop-shadow(0 2px 4px rgba(120, 70, 10, 0.45));
+  opacity: 0;
+  animation: splat var(--life) linear forwards;
+}
+
+@keyframes splat {
+  0%,
+  41% {
+    opacity: 0;
+    transform: scale(0.2, 0.2);
+  }
+  44% {
+    opacity: 1;
+    transform: scale(1.18, 0.86); /* hits flat... */
+    animation-timing-function: ease-out;
+  }
+  50% {
+    transform: scale(0.95, 1.06); /* ...wobbles... */
+  }
+  56%,
+  80% {
+    opacity: 0.95;
+    transform: scale(1, 1); /* ...and sits there, glistening */
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.04, 1.06) translateY(4px);
+  }
+}
+
+/* droplets flung out from the splat, landing round it */
+.drop {
+  position: absolute;
+  left: calc(var(--size) / -2);
+  top: calc(var(--w) * -0.1 - var(--size) / 2);
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff6d6, #f2bd57 55%, #c98222);
+  opacity: 0;
+  animation: drop var(--life) linear forwards;
+}
+
+@keyframes drop {
+  0%,
+  42% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.4);
+  }
+  44% {
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.15, 0.8, 0.3, 1);
+  }
+  54%,
+  82% {
+    opacity: 0.95;
+    transform: translate(var(--dx), var(--dy)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), calc(var(--dy) + 6px)) scale(0.9);
+  }
+}
+
+/* oil running down the card under the splat: each drip grows downward with a bead at its tip */
+.drip {
+  position: absolute;
+  left: calc(var(--x) - 4px);
+  top: calc(var(--w) * -0.12);
+  width: 8px;
+  height: var(--len);
+  border-radius: 4px 4px 6px 6px;
+  background: linear-gradient(90deg, rgba(201, 130, 34, 0.75), rgba(255, 226, 150, 0.9) 45%, rgba(201, 130, 34, 0.8));
+  transform-origin: 50% 0;
+  transform: scaleY(0);
+  opacity: 0;
+  animation: drip var(--life) linear forwards;
+  animation-delay: calc(var(--life) * var(--d));
+}
+
+.drip::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  bottom: -5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+  background: radial-gradient(circle at 40% 35%, #fff2c4, #e9ab45 60%, #c47518);
+}
+
+@keyframes drip {
+  0%,
+  46% {
+    opacity: 0;
+    transform: scaleY(0);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scaleY(0.15);
+    animation-timing-function: cubic-bezier(0.3, 0, 0.6, 1); /* slow, then running */
+  }
+  84% {
+    opacity: 0.95;
+    transform: scaleY(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleY(1.05);
+  }
+}

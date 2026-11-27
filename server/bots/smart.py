@@ -591,7 +591,7 @@ class SmartBot:
                 return None
             attacker = max(attackers, key=lambda t: (self.rel(game, me, t) <= ENEMY, self._hand_count(game, t)))
             return Play(skill=s, cards=cheap(1), targets=(attacker, victim))
-        if s == "chill_guy":  # a free look at the deck for each token
+        if s == "do_nothing_win":  # a free look at the deck for each aura token
             return Play(skill=s)
         if s == "whats_up_beijing":  # hide when hurt: nobody can reach us until our next turn
             return Play(skill=s) if p.hp <= 2 else None

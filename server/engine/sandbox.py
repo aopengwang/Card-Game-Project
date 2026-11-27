@@ -49,7 +49,7 @@ def set_hero(game: Game, seat: object, hero: object) -> None:
     game._log("sandbox", action="hero", seat=p.seat, hero=hero)
 
 
-TOKENS = {"chill": 4}  # tokens the test room can set, and their maximum
+TOKENS = {"aura": 4}  # tokens the test room can set, and their maximum
 
 
 def set_tokens(game: Game, seat: object, token: object, count: object) -> None:
