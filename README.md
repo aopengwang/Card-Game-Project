@@ -59,7 +59,8 @@ Without a build, "/" falls back to the plain test client, which is always at `/d
   dying, 8 players, game over, and more. Regenerate the moments from seeded hard-bot
   games with `cd server; python -m tools.dump_fixtures`.
 - **Animation lab**: open `/?fx` (or `/?fx=kill`, `streak`, `double`, `fate`, `strike`,
-  `heal`, `judge`, `judgeGood`, `judgeMiss`, `judgeKill`, `turn`; add `&lang=zh`). It replays one effect on a real table: pick the effect, who
+  `heal`, `skill`, `skillCard`, `judge`, `judgeMiss`, `judgeKill`, `turn`; add
+  `&lang=zh`). It replays one effect on a real table: pick the effect, who
   kills whom and the speed (1x / 0.5x / 0.25x), then press Play or `P`. Use it to tune a
   new animation in seconds instead of playing games. To add an effect, add an entry to
   `EFFECTS` in `client/src/dev/FxLab.tsx` listing the log entries a game would send.

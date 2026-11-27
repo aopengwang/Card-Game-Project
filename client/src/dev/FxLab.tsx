@@ -1,4 +1,4 @@
-// Animation lab (developer tool): /?fx[=effect]&lang=zh (effects: kill, streak, double, fate, strike, heal, judge, judgeGood, judgeMiss, judgeKill, turn). Replays table effects on a real
+// Animation lab (developer tool): /?fx[=effect]&lang=zh (effects: kill, streak, double, fate, strike, heal, skill, skillCard, judge, judgeMiss, judgeKill, turn). Replays table effects on a real
 // captured table, with the seats and speed you choose, so an animation can be tuned in
 // seconds instead of playing games until the moment comes up. Press P to replay.
 import { useEffect, useRef, useState } from "react";
@@ -121,18 +121,31 @@ const EFFECTS: Record<string, Effect> = {
       return [{ entries: [use(victim, "peach", []), { type: "recover", seat: victim, amount: 1, hp }], view: setHp([victim], hp) }];
     },
   },
+  skill: {
+    label: "Skill goes off (their hero's first skill)",
+    uses: ["victim"],
+    steps: ({ victim }, v) => [{ entries: [{ type: "skill", seat: victim, skill: v.players[victim].skills[0]?.id ?? "dashing" }] }],
+  },
+  skillCard: {
+    label: "Skill makes a card, then gear helps (two seals)",
+    uses: ["killer", "victim"],
+    steps: ({ killer, victim }, v) => [
+      {
+        entries: [
+          { type: "use", seat: killer, card: { id: nextCardId++, name: "strike", suit: "diamond", rank: 9, virtual: true }, targets: [victim], via: v.players[killer].skills[0]?.id ?? "warrior_saint" },
+          { type: "respond", seat: victim, card: { id: nextCardId++, name: "dodge", suit: "heart", rank: 4 }, via: "eight_trigrams" },
+          { type: "skill", seat: victim, skill: v.players[victim].skills[0]?.id ?? "dashing" },
+        ],
+      },
+    ],
+  },
   judge: {
-    label: "Judgment: Indulgence hits (bad news)",
+    label: "Judgment hits (Indulgence): green",
     uses: ["victim"],
     steps: ({ victim }) => [{ entries: [judged(victim, "indulgence", "spade", 9, true)] }],
   },
-  judgeGood: {
-    label: "Judgment: Eight Trigrams hits (good news)",
-    uses: ["victim"],
-    steps: ({ victim }) => [{ entries: [judged(victim, "eight_trigrams", "heart", 4, true)] }],
-  },
   judgeMiss: {
-    label: "Judgment: Lightning misses (good news)",
+    label: "Judgment misses (Lightning): red",
     uses: ["victim"],
     steps: ({ victim }) => [{ entries: [judged(victim, "lightning", "heart", 12, false)] }],
   },

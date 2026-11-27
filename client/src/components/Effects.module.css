@@ -155,3 +155,106 @@
     opacity: 0;
   }
 }
+
+/* A skill going off: its seal stamps onto the player's hero card with a ring of light,
+   the skill's name on a ribbon beneath; then both rise and fade. Gear (Eight Trigrams,
+   Serpent Spear...) in bronze instead of vermilion. */
+.cast {
+  --ink: var(--ik-vermilion-bright, #e3624b);
+  --glow: rgba(227, 98, 75, 0.65);
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0;
+  animation: cast calc(1500ms * var(--fx-slow, 1)) var(--ik-ease-out) var(--delay, 0ms) forwards;
+}
+
+.gear {
+  --ink: #e2b866;
+  --glow: rgba(226, 184, 102, 0.6);
+}
+
+/* the ring of light the seal lands in */
+.cast::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 28px;
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 -28px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  box-shadow: 0 0 18px var(--glow);
+  opacity: 0;
+  animation: castRing calc(900ms * var(--fx-slow, 1)) ease-out calc(var(--delay, 0ms) + 120ms * var(--fx-slow, 1)) forwards;
+}
+
+.castSeal {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--ink) 35%, #2a140e), #1c0d0a 75%);
+  color: var(--ink);
+  font: 34px / 1 var(--ik-font-brush);
+  box-shadow: 0 0 0 3px rgba(16, 8, 6, 0.85), 0 0 22px var(--glow);
+  transform: rotate(-6deg);
+}
+
+.castName {
+  padding: 2px 10px;
+  border-radius: 4px;
+  background: rgba(16, 8, 6, 0.92);
+  border: 1px solid var(--ink);
+  color: var(--ik-text-strong, #f4ead8);
+  font: 700 13px / 1.3 var(--ik-font-body);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.castName:lang(zh-CN) {
+  font: 17px / 1.2 var(--ik-font-brush);
+  letter-spacing: 0.12em;
+}
+
+@keyframes cast {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2.2);
+  }
+  14% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.92);
+  }
+  22% {
+    transform: translate(-50%, -50%) scale(1.04);
+  }
+  30%,
+  72% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% - 22px)) scale(1);
+  }
+}
+
+@keyframes castRing {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.2);
+  }
+}

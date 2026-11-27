@@ -1,18 +1,21 @@
 /* A judgment (judgment.ts): the card flips face up over the judged seat, then a seal stamps
-   onto it. --life is the whole length. .good = jade (good news for the judged player),
-   .bad = vermilion. Keyframe percentages line up with JUDGE.stamp (46%). */
+   onto it. --life is the whole length. .hit = green, .miss = red, whatever was judged.
+   Keyframe percentages line up with JUDGE.stamp (46%). */
 .judgment {
   position: absolute;
   z-index: 3;
   width: 0;
   height: 0;
   pointer-events: none;
+}
+
+.hit {
   --ink: #5fb391;
   --glow: rgba(95, 179, 145, 0.6);
   --deep: #12302a;
 }
 
-.bad {
+.miss {
   --ink: var(--ik-vermilion-bright);
   --glow: rgba(227, 98, 75, 0.6);
   --deep: #3a120c;
@@ -150,7 +153,7 @@
   animation: stamp var(--life) cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
-.good .seal {
+.hit .seal {
   transform: translate(-50%, 0) rotate(6deg);
 }
 
@@ -197,7 +200,7 @@
 }
 
 /* ---------------------------------------------------------------- the ring */
-/* good news: a jade ring spreads out; bad news: a sharper red one */
+/* a ring in the result's colour spreads out */
 .ring {
   position: absolute;
   left: -60px;

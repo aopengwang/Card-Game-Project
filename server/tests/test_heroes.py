@@ -276,6 +276,9 @@ def test_graceful_evasion_black_card_as_dodge():
     assert g.play_conversions(g.players[1]) == []  # only as a response
     drive(g.use_card(0, s, [1]), script(respond=lambda r: Convert("graceful_evasion", (b,))))
     assert g.players[1].hp == 3 and g.players[1].hand == []
+    # the log names the skill, so players see (and hear) it was used
+    (resp,) = [e for e in g.log if e["type"] == "respond"]
+    assert resp["via"] == "graceful_evasion" and resp["card"]["name"] == "dodge"
 
 
 def test_rippling_steps_keeps_black_cards_until_a_red():
@@ -509,6 +512,8 @@ def test_captivate_diamond_as_indulgence():
     g = heroes("da_qiao", None, None, None)
     dm = give_where(g, 0, lambda c: c.suit == Suit.DIAMOND and c.name != "indulgence")
     drive(g.phase_play(g.players[0]), script(Play(skill="captivate", cards=(dm,), targets=(1,))))
+    (use,) = [e for e in g.log if e["type"] == "use"]
+    assert use["via"] == "captivate" and use["card"]["name"] == "indulgence"
     t = g.players[1]
     assert [c.id for c in t.judge] == [dm] and g.has_in_judge(t, "indulgence")
     shown = view_for(g, 2)["players"][1]["judge"][0]

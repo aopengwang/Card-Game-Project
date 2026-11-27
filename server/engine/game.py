@@ -162,6 +162,9 @@ class Game:
         self.log: list[dict[str, Any]] = []
         self._virtual_seq = 0
         self._virtual_subcards: dict[int, list[int]] = {}
+        # Virtual card id -> the skill (or equipment) that converted it: logged as "via", so
+        # players see (and hear) which skill was used.
+        self._virtual_via: dict[int, str] = {}
         # A physical card placed in a judgment area *as* a delayed trick (e.g. a Diamond used
         # as Indulgence) acts as that trick while it stays there: card id -> trick name.
         self.judge_as: dict[int, str] = {}
@@ -634,7 +637,9 @@ class Game:
         usage["_cards_used"] = usage.get("_cards_used", 0) + 1
         if card.name == "strike":
             usage["_strikes"] = usage.get("_strikes", 0) + 1  # used or played, this turn
-        extra = {"subcards": [self.cards[i].to_dict() for i in subcards]} if card.is_virtual else {}
+        extra: dict[str, Any] = {"subcards": [self.cards[i].to_dict() for i in subcards]} if card.is_virtual else {}
+        if card.id in self._virtual_via:
+            extra["via"] = self._virtual_via[card.id]
         self._log("use", seat=seat, card=card.to_dict(), targets=list(targets), **extra)
         yield from self.move_cards(subcards, Zone.PROCESSING, reason="use")
         yield from self.trigger(Event.CARD_USED, use)
@@ -774,7 +779,9 @@ class Game:
             subs = list(answer.cards)
             skill = self.find_skill(p, answer.skill)
             self.note_skill_used(p, skill)  # type: ignore[arg-type]
-            return self.make_virtual(card_name, subs, getattr(skill, "as_nature", "normal")), subs
+            card = self.make_virtual(card_name, subs, getattr(skill, "as_nature", "normal"))
+            self._virtual_via[card.id] = answer.skill
+            return card, subs
         return self.cards[answer], [answer]
 
     def respond(
@@ -811,7 +818,9 @@ class Game:
         card, subs = picked
         if card.name == "strike":
             p.turn_usage["_strikes"] = p.turn_usage.get("_strikes", 0) + 1
-        extra = {"subcards": [self.cards[i].to_dict() for i in subs]} if card.is_virtual else {}
+        extra: dict[str, Any] = {"subcards": [self.cards[i].to_dict() for i in subs]} if card.is_virtual else {}
+        if card.id in self._virtual_via:
+            extra["via"] = self._virtual_via[card.id]
         self._log("respond", seat=seat, card=card.to_dict(), reason=reason, **extra)
         yield from self.move_cards(subs, Zone.PROCESSING, reason="respond")
         yield from self.trigger(Event.CARD_RESPONDED, (seat, card))
@@ -1034,6 +1043,7 @@ class Game:
             conv = req.conversion(answer.skill)
             if conv is not None:
                 card = self.make_virtual(conv.as_name, cards, getattr(skill, "as_nature", "normal"))
+                self._virtual_via[card.id] = answer.skill
                 yield from self.use_card(p.seat, card, targets, subcards=cards, data={"skill": answer.skill})
             else:
                 self._log(

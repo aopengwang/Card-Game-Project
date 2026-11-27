@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
-import { reasonTitle } from "../content";
-import { judgment, judgmentGood, type JudgmentShow } from "../fx/judgment";
+import { cardInfo, cardTitle, reasonTitle, sealChar, skillTitle } from "../content";
+import { judgment, type JudgmentShow } from "../fx/judgment";
 import { holdDeath, killBlow } from "../fx/killBlow";
 import { fxSpeed, Stage } from "../fx/stage";
 import { killStreak, streakAt } from "../fx/streak";
@@ -31,13 +31,18 @@ type Fx =
   | { id: number; kind: "flight"; card: LogEntry["card"]; from: Pt; to: Pt }
   | { id: number; kind: "line"; from: Pt; to: Pt }
   | { id: number; kind: "number"; at: Pt; text: string; heal: boolean }
+  | { id: number; kind: "skill"; at: Pt; char: string; title: string; delay: number; gear: boolean }
   | { id: number; kind: "banner"; text: string };
 
 /** An effect before it has an id (Omit applied to each member of the union). */
 type NewFx = Fx extends infer F ? (F extends Fx ? Omit<F, "id"> : never) : never;
 
 /** Effect lengths (ms); the CSS animations use the same numbers. */
-const LIFE = { flight: 520, line: 1100, number: 1200, banner: 1500 } as const;
+const LIFE = { flight: 520, line: 1100, number: 1200, banner: 1500, skill: 1500 } as const;
+// Two skills of the same player in one moment take turns in the same spot (the next one
+// lands as the last one fades), at most three in a row.
+const SKILL_STAGGER = 950;
+const MAX_CASTS = 3;
 const MAX_LIVE = 16; // fast bot games: drop effects rather than pile them up
 
 const reducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -137,14 +142,12 @@ export function Effects({
     }
     // Sounds play even with reduced motion (that setting is about movement, not audio).
     // A killing blow sounds its own gong when it lands; a kill streak its own fanfare.
-    playAll(soundsFor(log.slice(start), you).filter((n) => !(motion && deaths.length && n === "death")));
-    const judgeOf = (i: number): JudgmentShow => {
+    playAll(soundsFor(log.slice(start), you).filter((n) => !(motion && deaths.length && n === "death")));    const judgeOf = (i: number): JudgmentShow => {
       const e = log[i];
       const reason = String(e.reason ?? "");
       return {
         seat: e.seat,
         hit: !!e.hit,
-        good: judgmentGood(reason, !!e.hit),
         word: t(e.hit ? "fx.judgeHit" : "fx.judgeMiss"),
         reason: reason ? reasonTitle(reason) : "",
         zh: getLang() === "zh",
@@ -152,7 +155,7 @@ export function Effects({
       };
     };
     if (!motion || !el) {
-      for (const i of judged) play(judgeOf(i).good ? "judgeGood" : "judgeBad", 0.15);
+      for (const i of judged) play(log[i].hit ? "judgeHit" : "judgeMiss", 0.15);
       for (const i of deaths) if (streakAt(log, i) >= 2) playStreak(streakAt(log, i), 0.4);
       return;
     }
@@ -168,7 +171,7 @@ export function Effects({
         const zoom = el.offsetWidth ? el.getBoundingClientRect().width / el.offsetWidth : 1;
         show.cardEl = face ? (face.cloneNode(true) as Element) : null;
         show.cardSize = box?.width ? { w: box.width / zoom, h: box.height / zoom } : null;
-        stage.current!.add({ run: () => judgment(el, show), skip: () => play(show.good ? "judgeGood" : "judgeBad") });
+        stage.current!.add({ run: () => judgment(el, show), skip: () => play(show.hit ? "judgeHit" : "judgeMiss") });
         continue;
       }
       const release = holdDeath(d.seat); // before this paints: the victim falls on impact
@@ -186,8 +189,28 @@ export function Effects({
 
     const made: Fx[] = [];
     const add = (f: NewFx) => made.push({ ...f, id: nextId.current++ } as Fx);
+    // A skill (or a piece of gear) going off: its seal stamps onto the player's hero card.
+    const castsAt = new Map<number, number>(); // seat -> skills already shown this moment
+    const cast = (who: number, id: string) => {
+      const at = centre(document.querySelector(`[data-seat="${who}"] .hero-face`)) ?? seat(who);
+      if (!at) return;
+      const n = castsAt.get(who) ?? 0;
+      if (n >= MAX_CASTS) return;
+      castsAt.set(who, n + 1);
+      const gear = !!cardInfo(id);
+      add({
+        kind: "skill",
+        at,
+        char: sealChar(gear ? "card" : "skill", id, "last"),
+        title: gear ? cardTitle(id) : skillTitle(id),
+        delay: n * SKILL_STAGGER,
+        gear,
+      });
+    };
     for (let i = start; i < log.length; i++) {
       const e = log[i];
+      if (e.type === "skill" && typeof e.skill === "string") cast(e.seat, e.skill);
+      if ((e.type === "use" || e.type === "respond") && typeof e.via === "string") cast(e.seat, e.via);
       if (e.type === "use" || e.type === "respond") {
         const from = seat(e.seat);
         const to = centre(document.querySelector(`[data-play-key="${i}"]`));
@@ -210,7 +233,7 @@ export function Effects({
     if (!made.length) return;
     setFx((live) => [...live, ...made].slice(-MAX_LIVE));
     const ids = new Set(made.map((f) => f.id));
-    const longest = Math.max(...made.map((f) => LIFE[f.kind]));
+    const longest = Math.max(...made.map((f) => LIFE[f.kind] + (f.kind === "skill" ? f.delay : 0)));
     window.setTimeout(() => setFx((live) => live.filter((f) => !ids.has(f.id))), longest / fxSpeed() + 50);
   }, [log, you]);
 
@@ -253,6 +276,19 @@ export function Effects({
           return (
             <span key={f.id} className={`${s.number} ${f.heal ? s.heal : ""}`} style={{ left: f.at.x, top: f.at.y }}>
               {f.text}
+            </span>
+          );
+        }
+        if (f.kind === "skill") {
+          const style = { left: f.at.x, top: f.at.y, "--delay": `${f.delay / fxSpeed()}ms` } as CSSProperties;
+          return (
+            <span key={f.id} className={`${s.cast} ${f.gear ? s.gear : ""} skill-cast`} style={style} data-title={f.title}>
+              <span className={s.castSeal} lang="zh-CN">
+                {f.char}
+              </span>
+              <span className={s.castName} lang={getLang() === "zh" ? "zh-CN" : undefined}>
+                {f.title}
+              </span>
             </span>
           );
         }

@@ -5,21 +5,12 @@ import s from "./Judgment.module.css";
 /*
  * A judgment: the judgment card rises over the judged player's hero card face down, flips
  * face up, and a seal stamps onto it: "Hit" or "Miss", with what was judged underneath.
- * The colour says whether that's good or bad news *for the judged player*: a Lightning
- * miss is good (jade, a chime), an Eight Trigrams miss is bad (vermilion, a thud, a shake).
+ * Always the same colours, whatever was judged: a hit is green (with a chime), a miss is
+ * red (with a thud, and the seat shakes).
  *
  * Drawn on the effects layer with a copy of the judgment card from the battlefield, so the
  * table itself never moves.
  */
-
-/** Delayed tricks: a hit punishes the judged player. Every other judgment (Eight Trigrams,
- *  hero skills) is one they asked for, so a hit is good for them. */
-const BAD_ON_HIT = new Set(["indulgence", "supply_shortage", "lightning"]);
-
-/** Is this judgment's outcome good for the judged player? */
-export function judgmentGood(reason: string, hit: boolean): boolean {
-  return BAD_ON_HIT.has(reason) ? !hit : hit;
-}
 
 /** Timings at speed 1 (ms); `stamp` is when the seal lands (fraction of `total`). */
 export const JUDGE = { total: 1500, stamp: 0.46 } as const;
@@ -46,7 +37,6 @@ function div(parent: HTMLElement, cls: string, text?: string): HTMLElement {
 export interface JudgmentShow {
   seat: number;
   hit: boolean;
-  good: boolean;
   /** "Hit" / "Miss" in the current language. */
   word: string;
   /** What was judged ("Indulgence", "Eight Trigrams"...). */
@@ -64,9 +54,8 @@ export function judgment(layer: HTMLElement, j: JudgmentShow): Promise<void> {
   const at = rectIn(layer, seatEl?.querySelector(".hero-face") ?? seatEl ?? null);
   if (!at) return Promise.resolve();
   const total = JUDGE.total * k;
-  const root = div(layer, `${s.judgment} ${j.good ? s.good : s.bad} judgment-fx`);
+  const root = div(layer, `${s.judgment} ${j.hit ? s.hit : s.miss} judgment-fx`);
   root.dataset.result = j.hit ? "hit" : "miss";
-  root.dataset.good = String(j.good);
   Object.assign(root.style, { left: `${at.x}px`, top: `${at.y}px` });
   root.style.setProperty("--life", `${total}ms`);
 
@@ -96,8 +85,8 @@ export function judgment(layer: HTMLElement, j: JudgmentShow): Promise<void> {
 
   return new Promise((done) => {
     window.setTimeout(() => {
-      play(j.good ? "judgeGood" : "judgeBad");
-      if (!j.good) {
+      play(j.hit ? "judgeHit" : "judgeMiss");
+      if (!j.hit) {
         seatEl?.querySelector(".seat")?.animate(
           [
             { transform: "none" },

@@ -108,21 +108,36 @@ test("kill streak in Chinese", async ({ page }) => {
   await expect(page.locator(".kill-streak .streak-title")).toHaveText("三杀", { timeout: 5000 });
 });
 
+test("skills stamp their seal on the hero card", async ({ page }) => {
+  await openLab(page, "skillCard");
+  const killer = await page.getByLabel("Killer / source").inputValue();
+  await page.getByRole("button", { name: /^Play/ }).click();
+  const casts = page.locator(".skill-cast");
+  await expect(casts).toHaveCount(3); // the converting skill, the armour, the victim's own skill
+  await expect(casts.nth(1)).toHaveAttribute("data-title", "Eight Trigrams");
+  // over the user's hero card
+  const face = (await page.locator(`[data-seat="${killer}"] .hero-face`).boundingBox())!;
+  const seal = (await casts.first().boundingBox())!;
+  expect(Math.abs(seal.x + seal.width / 2 - (face.x + face.width / 2))).toBeLessThan(4);
+  await expect(casts).toHaveCount(0, { timeout: 5000 });
+});
+
 test("judgment: the card turns over the judged seat and a seal stamps the outcome", async ({ page }) => {
   await openLab(page, "judge");
   const victim = await page.getByLabel("Victim / target").inputValue();
   const seatBox = (await page.locator(`[data-seat="${victim}"] .hero-face`).boundingBox())!;
-  for (const [effect, word, good, sound] of [
-    ["judge", "Hit!", "false", "judgeBad"], // Indulgence hits: bad news
-    ["judgeGood", "Hit!", "true", "judgeGood"], // Eight Trigrams hits: good news
-    ["judgeMiss", "Miss", "true", "judgeGood"], // Lightning misses: good news
+  // Always green for a hit and red for a miss, whatever was judged.
+  for (const [effect, word, result, colour, sound] of [
+    ["judge", "Hit!", "hit", "rgb(95, 179, 145)", "judgeHit"],
+    ["judgeMiss", "Miss", "miss", "rgb(227, 98, 75)", "judgeMiss"],
   ] as const) {
     await page.getByLabel("Effect").selectOption(effect);
     await page.getByRole("button", { name: /^Play/ }).click(); // (the click also unlocks audio)
     const fx = page.locator(".judgment-fx"); // (a 0×0 anchor at the seat's centre)
     await expect(fx).toHaveCount(1);
-    await expect(fx).toHaveAttribute("data-good", good);
+    await expect(fx).toHaveAttribute("data-result", result);
     await expect(fx.locator(".judgment-seal")).toContainText(word);
+    await expect(fx.locator(".judgment-seal")).toHaveCSS("border-top-color", colour);
     const card = fx.locator(".card"); // a copy of the judgment card...
     await expect(card).toHaveCount(1);
     const box = (await card.boundingBox())!; // ...over the judged player's hero card
