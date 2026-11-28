@@ -50,7 +50,7 @@ from .ruleset import Ruleset
 
 L, Y, R, S = Role.LORD, Role.LOYALIST, Role.REBEL, Role.SPY
 ROLE_TABLE: dict[int, tuple[Role, ...]] = {
-    4: (L, Y, R, S),
+    4: (L, Y, R, R),  # house rule: two Rebels and no Spy
     5: (L, Y, R, R, S),
     6: (L, Y, R, R, R, S),
     7: (L, Y, Y, R, R, R, S),

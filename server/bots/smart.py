@@ -25,7 +25,6 @@ from typing import Any
 
 from engine import (
     HAND,
-    ROLE_TABLE,
     ArrangeRequest,
     ChooseCardRequest,
     ChooseHeroRequest,
@@ -141,10 +140,15 @@ class SmartBot:
         return [p.seat for p in game.alive_players()]
 
     def _rebels_left(self, game: Game, me: int) -> int:
-        """Rebels still alive, from the role table minus revealed dead rebels (public info)."""
-        total = ROLE_TABLE[len(game.players)].count(Role.REBEL)
+        """Rebels still alive: how many were dealt minus revealed dead rebels (public info)."""
+        total = self._dealt(game, Role.REBEL)
         dead = sum(1 for p in game.players if not p.alive and self._known_role(game, me, p.seat) == Role.REBEL)
         return total - dead
+
+    @staticmethod
+    def _dealt(game: Game, role: Role) -> int:
+        """How many players were dealt `role`. The mix of roles is public; who holds them isn't."""
+        return sum(1 for p in game.players if p.role == role)
 
     def _hand(self, game: Game, me: int):  # only ever our OWN hand
         return game.players[me].hand
@@ -270,10 +274,10 @@ class SmartBot:
 
     def _hidden_allies(self, game: Game, me: int) -> int:
         """Allies of `me` that could still be hiding among the unrevealed players, from the
-        public role table: Loyalists for the Lord's side, other Rebels for a Rebel."""
+        public mix of roles: Loyalists for the Lord's side, other Rebels for a Rebel."""
         my_role = game.players[me].role
         ally = Role.REBEL if my_role == Role.REBEL else Role.LOYALIST
-        total = ROLE_TABLE[len(game.players)].count(ally)
+        total = self._dealt(game, ally)
         dead = sum(1 for p in game.players if not p.alive and self._known_role(game, me, p.seat) == ally)
         return total - dead - (1 if my_role == ally else 0)
 
