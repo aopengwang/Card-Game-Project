@@ -24,7 +24,8 @@ export default defineConfig({
     cwd: "../server",
     url: `http://127.0.0.1:${PORT}/api/content`,
     // An empty art folder: screenshots use the built-in art, not whatever you've added.
-    env: { SGS_BOT_DELAY: "0.1", SGS_ART_DIR: "../client/e2e/art" },
+    // Likewise the music: two short silent test tracks, not your library.
+    env: { SGS_BOT_DELAY: "0.1", SGS_ART_DIR: "../client/e2e/art", SGS_MUSIC_DIR: "../client/e2e/music" },
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
   },

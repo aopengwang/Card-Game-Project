@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
@@ -34,6 +35,9 @@ ART_DIR = Path(os.environ.get("SGS_ART_DIR") or Path(__file__).resolve().parents
 # (SGS_ART_DIR: the browser tests point this at an empty folder, so their screenshots
 # show the built-in art whatever images you've added.)
 ART_EXTS = (".png", ".webp", ".jpg", ".jpeg")
+# Background music, the same way: drop a file in and players can pick it in Settings.
+MUSIC_DIR = Path(os.environ.get("SGS_MUSIC_DIR") or Path(__file__).resolve().parents[2] / "client" / "public" / "music")
+MUSIC_EXTS = (".mp3", ".ogg", ".opus", ".m4a", ".aac", ".wav", ".flac")
 
 
 def art_manifest(art_dir: Path) -> dict[str, dict[str, str]]:
@@ -48,6 +52,22 @@ def art_manifest(art_dir: Path) -> dict[str, dict[str, str]]:
             if f.suffix.lower() in ART_EXTS and f.stem not in out[kind]:
                 out[kind][f.stem] = f"/art/{kind}/{f.name}?v={int(f.stat().st_mtime)}"
     return out
+
+
+def music_manifest(music_dir: Path) -> list[dict[str, str]]:
+    """[{"id", "name", "url"}] for every audio file present, by file name. The name shown to
+    players is the file name without its extension ("_" reads as a space)."""
+    if not music_dir.is_dir():
+        return []
+    files = (f for f in music_dir.iterdir() if f.is_file() and f.suffix.lower() in MUSIC_EXTS)
+    return [
+        {
+            "id": f.name,
+            "name": f.stem.replace("_", " ").strip() or f.name,
+            "url": f"/music/{quote(f.name)}?v={int(f.stat().st_mtime)}",
+        }
+        for f in sorted(files, key=lambda f: f.name.lower())
+    ]
 
 
 def settings_from_env() -> Settings:
@@ -67,7 +87,12 @@ class NameBody(BaseModel):
     password: str | None = None  # joining a room that has one
 
 
-def create_app(settings: Settings | None = None, client_dist: Path = CLIENT_DIST, art_dir: Path = ART_DIR) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    client_dist: Path = CLIENT_DIST,
+    art_dir: Path = ART_DIR,
+    music_dir: Path = MUSIC_DIR,
+) -> FastAPI:
     app = FastAPI(title="Cardgame server")
     manager = RoomManager(settings or settings_from_env())
     app.state.rooms = manager
@@ -84,6 +109,10 @@ def create_app(settings: Settings | None = None, client_dist: Path = CLIENT_DIST
     @app.get("/api/art")
     async def get_art() -> dict:
         return art_manifest(art_dir)
+
+    @app.get("/api/music")
+    async def get_music() -> list:
+        return music_manifest(music_dir)
 
     @app.post("/api/rooms")
     async def create_room(body: NameBody) -> dict:
@@ -141,6 +170,8 @@ def create_app(settings: Settings | None = None, client_dist: Path = CLIENT_DIST
 
     if art_dir.is_dir():
         app.mount("/art", StaticFiles(directory=art_dir), name="art")
+    if music_dir.is_dir():
+        app.mount("/music", StaticFiles(directory=music_dir), name="music")
 
     # The real client (client/dist from `npm run build`) at "/"; without a build, the
     # plain test client stands in. Mounted last so /api and /ws routes win.

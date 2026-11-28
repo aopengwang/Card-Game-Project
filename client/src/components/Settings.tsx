@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { t, useLang } from "../i18n";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 import { play, setMuted, setVolume, useSoundPrefs } from "../sound";
+import { ALL, OFF, loadMusic, setMusicVolume, setTrack, useMusic } from "../music";
 import { SCALE, autoScale, setScaleChoice, useScaleChoice, useUiScale } from "../uiScale";
 import { LangToggle } from "./LangToggle";
 import { KEY } from "./shortcuts";
@@ -22,7 +23,9 @@ const SpeakerIcon = ({ muted }: { muted: boolean }) => (
 export function MuteButton() {
   useLang();
   const { muted, volume } = useSoundPrefs();
-  const off = muted || volume === 0;
+  const music = useMusic();
+  // (silent effects with music playing isn't "off": the button still mutes the music)
+  const off = muted || (volume === 0 && (music.choice === OFF || music.volume === 0));
   return (
     <Button
       shape="pill"
@@ -65,6 +68,62 @@ function SoundSettings() {
         </Button>
       </div>
       <p className={s.hint}>{t("settings.soundHint")}</p>
+    </section>
+  );
+}
+
+/** Background music: which track this player hears (files in client/public/music). */
+function MusicSettings() {
+  const { muted } = useSoundPrefs();
+  const { tracks, choice, volume } = useMusic();
+  useEffect(() => void loadMusic(), []); // newly added files show up without a refresh
+  const picked = choice === ALL || tracks.some((tr) => tr.id === choice) ? choice : OFF;
+  const option = (id: string, name: string) => (
+    <Button
+      key={id}
+      shape="small"
+      aria-pressed={picked === id}
+      className={`${picked === id ? s.on : ""} bgm-option`}
+      onClick={() => {
+        if (id !== OFF && muted) setMuted(false); // asking for music means wanting to hear it
+        setTrack(id);
+      }}
+    >
+      {name}
+    </Button>
+  );
+  return (
+    <section className={`${s.section} bgm-settings`}>
+      <h3 className={s.label}>
+        {t("settings.music")} <span className={s.value}>{muted || picked === OFF ? "—" : `${Math.round(volume * 100)}%`}</span>
+      </h3>
+      {tracks.length === 0 ? (
+        <p className={s.hint}>{t("settings.musicEmpty")}</p>
+      ) : (
+        <>
+          <div className={`${s.presets} ${s.tracks}`} role="group" aria-label={t("settings.music")}>
+            {option(OFF, t("settings.musicOff"))}
+            {tracks.length > 1 && option(ALL, t("settings.musicAll"))}
+            {tracks.map((tr) => option(tr.id, tr.name))}
+          </div>
+          <div className={s.sliderRow}>
+            <input
+              type="range"
+              className={`${s.slider} music-volume`}
+              min={0}
+              max={1}
+              step={0.05}
+              value={volume}
+              aria-label={t("settings.musicVolume")}
+              aria-valuetext={`${Math.round(volume * 100)}%`}
+              onChange={(e) => {
+                if (muted) setMuted(false);
+                setMusicVolume(Number(e.target.value));
+              }}
+            />
+          </div>
+        </>
+      )}
     </section>
   );
 }
@@ -137,6 +196,8 @@ function SettingsDialog({ onClose }: { onClose: () => void }) {
       </section>
 
       <SoundSettings />
+
+      <MusicSettings />
 
       <section className={s.section}>
         <h3 className={s.label}>{t("settings.language")}</h3>

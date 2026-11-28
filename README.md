@@ -189,6 +189,10 @@ generator or artist; the gallery's "Card art" section shows which cards have ima
 equipment, damage, healing, your-turn bell, last-seconds ticks, deaths, victory/defeat.
 Volume and mute are in Settings, and there's a speaker button in the table's top bar.
 
+**Background music** (`client/src/music.ts`): drop audio files in `client/public/music/`
+and each player can pick one, or "Play all", under Settings (see the README there). Off by
+default.
+
 **Settings** (gear button, any screen): interface size scales the whole app. "Auto"
 (the default) grows it on big monitors and shrinks it to fit small screens: a phone on its
 side gets the whole table at about 60%, a portrait phone's table 75% (three seats to a

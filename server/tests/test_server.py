@@ -681,6 +681,26 @@ def test_art_manifest_lists_dropped_in_images(tmp_path):
         assert "peach" in client.get("/api/art").json()["cards"]
 
 
+def test_music_manifest_lists_dropped_in_tracks(tmp_path):
+    music = tmp_path / "music"
+    music.mkdir()
+    (music / "Mountain_Rain.mp3").write_bytes(b"ID3....")
+    (music / "高山流水.ogg").write_bytes(b"OggS")
+    (music / "README.md").write_text("not a track")
+    (music / "albums").mkdir()
+    app = create_app(Settings(**FAST), client_dist=tmp_path / "nodist", music_dir=music)
+    with TestClient(app) as client:
+        tracks = client.get("/api/music").json()
+        assert [t["name"] for t in tracks] == ["Mountain Rain", "高山流水"]
+        assert [client.get(t["url"]).content for t in tracks] == [b"ID3....", b"OggS"]  # served, no rebuild
+        (music / "calm.m4a").write_bytes(b"....ftyp")  # a new file needs no restart
+        assert [t["id"] for t in client.get("/api/music").json()][0] == "calm.m4a"
+    # no folder at all: just no music
+    app = create_app(Settings(**FAST), client_dist=tmp_path / "nodist", music_dir=tmp_path / "missing")
+    with TestClient(app) as client:
+        assert client.get("/api/music").json() == []
+
+
 def test_serves_built_client_when_present(tmp_path):
     (tmp_path / "index.html").write_text("<html>built client</html>")
     (tmp_path / "art").mkdir()

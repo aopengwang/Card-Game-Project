@@ -253,3 +253,42 @@ test("host sets the game's timers; everyone sees them; the game uses them", asyn
   expect(checked).not.toBe("");
   expect(errors).toEqual([]);
 });
+
+test("background music: pick a track, mute silences it, and the choice is remembered", async ({ page }) => {
+  const errors: string[] = [];
+  collectErrors(page, errors);
+  await page.goto("/?gallery=play_strike&lang=en");
+  await page.locator(".table-screen").waitFor();
+  const bgm = page.locator("audio.bgm");
+  const state = () => bgm.evaluate((a: HTMLAudioElement) => ({ track: a.dataset.track ?? null, paused: a.paused, loop: a.loop, volume: a.volume }));
+  await expect(bgm).toHaveCount(0); // off by default
+
+  await page.getByRole("button", { name: "Settings" }).click();
+  const music = page.locator(".bgm-settings");
+  await expect(music.locator(".bgm-option")).toHaveText(["Off", "Play all", "First Song", "Second Song"]);
+  await music.getByRole("button", { name: "Second Song" }).click();
+  await expect.poll(state).toMatchObject({ track: "Second_Song.wav", paused: false, loop: true });
+  await music.locator(".music-volume").fill("0.2");
+  await expect.poll(state).toMatchObject({ volume: 0.2 });
+
+  // "Play all" moves on when a track ends
+  await music.getByRole("button", { name: "Play all" }).click();
+  await expect.poll(state).toMatchObject({ track: "First_Song.wav", loop: false });
+  await expect.poll(async () => (await state()).track).toBe("Second_Song.wav");
+
+  await page.getByRole("button", { name: "Done" }).click();
+  await page.locator(".mute-toggle").click();
+  await expect.poll(state).toMatchObject({ paused: true });
+  await page.locator(".mute-toggle").click();
+  await expect.poll(state).toMatchObject({ paused: false });
+
+  await page.reload();
+  await page.locator(".table-screen").waitFor();
+  await page.locator(".table-screen").click({ position: { x: 5, y: 5 } }); // (sound needs a click)
+  await expect.poll(state).toMatchObject({ paused: false, volume: 0.2 });
+
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.locator(".bgm-settings").getByRole("button", { name: "Off", exact: true }).click();
+  await expect.poll(state).toMatchObject({ track: null, paused: true });
+  expect(errors).toEqual([]);
+});

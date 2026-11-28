@@ -20,9 +20,10 @@ WORKDIR /app/server
 COPY server/pyproject.toml ./
 RUN python -c "import subprocess, sys, tomllib; deps = tomllib.load(open('pyproject.toml', 'rb'))['project']['dependencies']; subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-cache-dir', *deps])"
 COPY server/ ./
-# The server finds these next to itself: ../client/dist and ../client/public/art.
+# The server finds these next to itself: ../client/dist, ../client/public/art and /music.
 COPY --from=client /app/client/dist /app/client/dist
 COPY client/public/art /app/client/public/art
+COPY client/public/music /app/client/public/music
 
 # Render tells the app which port to use in $PORT; 8000 otherwise.
 ENV PORT=8000 PYTHONUNBUFFERED=1

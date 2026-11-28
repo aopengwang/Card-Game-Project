@@ -333,6 +333,10 @@ const subscribe = (l: () => void) => {
   return () => listeners.delete(l);
 };
 
+/** For the background music (music.ts), which the mute button silences too. */
+export const soundMuted = (): boolean => prefs.muted;
+export const onSoundChange = subscribe;
+
 export function useSoundPrefs(): Prefs {
   return useSyncExternalStore(subscribe, () => prefs);
 }

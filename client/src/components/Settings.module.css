@@ -46,6 +46,12 @@
   gap: var(--ik-space-2);
 }
 
+/* a long music list scrolls instead of stretching the dialog */
+.tracks {
+  max-height: 140px;
+  overflow-y: auto;
+}
+
 .on {
   border-color: var(--ik-gold);
   background: rgba(217, 179, 108, 0.18);
