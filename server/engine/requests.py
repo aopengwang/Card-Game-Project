@@ -14,13 +14,15 @@ class Play:
     """Answer to PlayRequest: use `card_id` on `targets`. Answer None to end the play phase.
 
     To use a conversion instead, leave `card_id` None and set `skill` (a
-    ConvertOption.skill) plus the physical `cards` to spend.
+    ConvertOption.skill) plus the physical `cards` to spend. A skill that can make more
+    than one card (a Peach or a Duel) takes `as_name` too; without it, the first is meant.
     """
 
     card_id: int | None = None
     targets: tuple[int, ...] = ()
     skill: str | None = None
     cards: tuple[int, ...] = ()
+    as_name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -115,8 +117,8 @@ class PlayRequest(Request):
     conversions: list[ConvertOption] = field(default_factory=list)
     skills: list[SkillOption] = field(default_factory=list)
 
-    def conversion(self, skill: str | None) -> ConvertOption | None:
-        return next((c for c in self.conversions if c.skill == skill), None)
+    def conversion(self, skill: str | None, as_name: str | None = None) -> ConvertOption | None:
+        return next((c for c in self.conversions if c.skill == skill and as_name in (None, c.as_name)), None)
 
     def active(self, skill: str | None) -> SkillOption | None:
         return next((s for s in self.skills if s.skill == skill), None)
@@ -128,7 +130,7 @@ class PlayRequest(Request):
             return "expected a Play or None"
         opt: Any
         if answer.skill is not None:
-            opt = self.conversion(answer.skill) or self.active(answer.skill)
+            opt = self.conversion(answer.skill, answer.as_name) or self.active(answer.skill)
             if opt is None:
                 return "that skill cannot be used now"
             err = opt.check_cards(answer.cards)

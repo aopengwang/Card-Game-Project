@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import math
 import random
+from dataclasses import replace
 from typing import Any
 
 from engine import (
@@ -537,7 +538,7 @@ class SmartBot:
         for conv in req.conversions:
             play = self._convert_play(game, me, conv)
             if play is not None:
-                return play
+                return replace(play, as_name=conv.as_name)
         return None
 
     def _active(self, game: Game, me: int, opt) -> Play | None:
@@ -651,8 +652,14 @@ class SmartBot:
         if conv.as_name == "dismantle" and single:
             target = self._dismantle_target(game, me, conv.candidates)
             return Play(skill=conv.skill, cards=tuple(single), targets=(target,)) if target is not None else None
-        if conv.as_name == "harvest" and single and sum(self.rel(game, me, s) for s in self._alive(game)) > 0.5:
+        if conv.as_name == "peach" and single and p.hp < p.max_hp:  # a spare weapon heals us
             return Play(skill=conv.skill, cards=tuple(single))
+        if conv.as_name == "duel" and single:  # ...or picks a fight we're likely to win
+            es = self._enemies(game, me, conv.candidates)
+            if es:
+                weakest = min(es, key=lambda s: self._hand_count(game, s))
+                if self._hand_count(game, weakest) == 0 or any(c.name == "strike" for c in p.hand):
+                    return Play(skill=conv.skill, cards=tuple(single), targets=(weakest,))
         if conv.as_name == "indulgence" and single:
             es = self._enemies(game, me, conv.candidates)
             if es:
@@ -773,8 +780,8 @@ class SmartBot:
         keep = [i for i in left if self._value(game, me, i) >= 4]
         return (tuple(top + keep), tuple(i for i in left if i not in keep))
 
-    def _distill(self, game: Game, me: int, req: ChooseCardRequest) -> int | None:
-        """Copy another player's trick when the copy would help us (paying a spare basic card)."""
+    def _distill(self, game: Game, me: int, req: ConfirmRequest) -> bool:
+        """Copy another player's trick when the copy would help us (paying two spare cards)."""
         name = req.context.get("card")
         others = [s for s in self._alive(game) if s != me]
         if name == "ex_nihilo":
@@ -789,14 +796,13 @@ class SmartBot:
             worth = False
         else:  # aimed at someone: only with an enemy to aim it at
             worth = bool(self._enemies(game, me, others))
-        cheapest = self._lowest(game, me, req.options, 1)[0]
-        return cheapest if worth and self._value(game, me, cheapest) <= 6 else None
+        p = game.players[me]
+        pair = self._lowest(game, me, [c.id for c in (*p.hand, *p.equips)], 2)
+        return bool(worth) and sum(self._value(game, me, c) for c in pair) <= 8
 
     def _choose_card(self, game: Game, me: int, req: ChooseCardRequest) -> Any:
         if req.reason == "bend_fate":
             return self._bend_fate(game, me, req)
-        if req.reason == "distillation":
-            return self._distill(game, me, req)
         if req.reason == "fire_attack":
             if req.context.get("step") == "discard":  # pay a card to burn them, unless they're a friend
                 return self._lowest(game, me, req.options, 1)[0] if self.rel(game, me, req.context.get("target")) < FRIEND else None
@@ -830,6 +836,8 @@ class SmartBot:
 
     def _confirm(self, game: Game, me: int, req: ConfirmRequest) -> bool:
         r = self.rel(game, me, req.about)
+        if req.reason == "distillation":
+            return self._distill(game, me, req)
         if req.reason == "omen":
             good_hit = req.context["judge_reason"] in GOOD_JUDGMENTS
             good_for_them = req.context["would_hit"] == good_hit

@@ -75,6 +75,24 @@ group("selection: play phase", () => {
     expect(buildAnswer(play, s)).toEqual({ skill: "burning_fleet", cards: [10, 13], targets: [] });
   });
 
+  it("a skill with two conversions: each keeps its own targets, and the answer says which", () => {
+    const base = { skill: "live_by_the_sword", count: 1, cards: [13], min_targets: null };
+    const r: PlayReq = {
+      ...play,
+      conversions: [
+        { ...base, as_name: "peach", target_count: 0, candidates: [] },
+        { ...base, as_name: "duel", target_count: 1, candidates: [2] },
+      ],
+    };
+    const peach = clickCard(r, chooseSkill(EMPTY, "live_by_the_sword", "peach"), 13);
+    expect(complete(r, peach)).toBe(true);
+    let duel = chooseSkill(peach, "live_by_the_sword", "duel"); // switches, doesn't toggle off
+    duel = clickCard(r, duel, 13);
+    expect(complete(r, duel)).toBe(false); // needs a target
+    expect(buildAnswer(r, clickSeat(r, duel, 2))).toEqual({ skill: "live_by_the_sword", cards: [13], targets: [2], as_name: "duel" });
+    expect(chooseSkill(duel, "live_by_the_sword", "duel")).toEqual(EMPTY);
+  });
+
   it("active skills need cards and targets", () => {
     let s = chooseSkill(EMPTY, "iron_edict");
     s = clickSeat(play, clickCard(play, s, 13), 2);

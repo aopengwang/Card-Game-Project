@@ -131,7 +131,7 @@ class SimpleBot:
             for _ in range(10):
                 cards = tuple(self.rng.sample(conv.cards, conv.count))
                 if game.check_skill_use(me, conv.skill, list(cards), []) is None:
-                    return Play(skill=conv.skill, cards=cards)
+                    return Play(skill=conv.skill, cards=cards, as_name=conv.as_name)
         return None
 
     def _play(self, game: Game, me: Player, req: PlayRequest) -> Play | None:

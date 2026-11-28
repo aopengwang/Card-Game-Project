@@ -3,7 +3,8 @@
 import { t, tMaybe } from "./i18n";
 import type { GameRequest, PlayReq, RespondReq } from "./types";
 
-export type Mode = { type: "card"; cardId: number } | { type: "skill"; skill: string } | null;
+/** `as`: which card a conversion makes, for a skill with more than one (a Peach or a Duel). */
+export type Mode = { type: "card"; cardId: number } | { type: "skill"; skill: string; as?: string } | null;
 
 export interface Selection {
   mode: Mode;
@@ -38,7 +39,7 @@ function playSpec(r: PlayReq, sel: Selection): Spec | null {
       maxTargets: o.target_count,
     };
   }
-  const c = r.conversions.find((x) => x.skill === m.skill);
+  const c = r.conversions.find((x) => x.skill === m.skill && (m.as === undefined || x.as_name === m.as));
   if (c) {
     return {
       cardPool: c.cards,
@@ -124,9 +125,9 @@ export function clickSeat(r: GameRequest, sel: Selection, seat: number): Selecti
   return targets.length > s.maxTargets ? sel : { ...sel, targets };
 }
 
-export function chooseSkill(sel: Selection, skill: string): Selection {
-  if (sel.mode?.type === "skill" && sel.mode.skill === skill) return EMPTY;
-  return { mode: { type: "skill", skill }, cards: [], targets: [] };
+export function chooseSkill(sel: Selection, skill: string, as?: string): Selection {
+  if (sel.mode?.type === "skill" && sel.mode.skill === skill && sel.mode.as === as) return EMPTY;
+  return { mode: { type: "skill", skill, ...(as === undefined ? {} : { as }) }, cards: [], targets: [] };
 }
 
 export function complete(r: GameRequest, sel: Selection): boolean {
@@ -145,7 +146,10 @@ export function buildAnswer(r: GameRequest, sel: Selection): unknown {
   switch (r.kind) {
     case "play":
       if (sel.mode?.type === "card") return { card_id: sel.mode.cardId, targets: sel.targets };
-      if (sel.mode?.type === "skill") return { skill: sel.mode.skill, cards: sel.cards, targets: sel.targets };
+      if (sel.mode?.type === "skill") {
+        const as_name = sel.mode.as;
+        return { skill: sel.mode.skill, cards: sel.cards, targets: sel.targets, ...(as_name === undefined ? {} : { as_name }) };
+      }
       return null;
     case "respond":
       if (sel.mode?.type === "skill") return { skill: sel.mode.skill, cards: sel.cards };

@@ -47,6 +47,7 @@ SKILL_NAMES: dict[str, str] = {
     "spoils_of_war": "Spoils of War",
     "do_nothing_win": "Do Nothing, Win", "whats_up_beijing": "What's up Beijing!",
     "dodged_a_bullet": "Dodged a Bullet", "spacex": "SpaceX", "deepseek": "DeepSeek",
+    "live_by_the_sword": "Live and Die by the Sword",
 }
 
 

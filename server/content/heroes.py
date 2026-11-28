@@ -330,7 +330,8 @@ class FinalStratagem(Skill):
                 return
             _announce(game, owner, self)
             left = game._take_from_pile(2)
-            while left := [i for i in left if game.location[i][0] == Zone.DRAW_PILE]:  # (a draw may take one)
+            game.held.update(left)  # no other draw takes these while they're being given out
+            while left := [i for i in left if game.location[i][0] == Zone.DRAW_PILE]:
                 cid = left[0] if len(left) == 1 else (yield from game.ask(
                     ChooseCardRequest(
                         seat=owner.seat, reason=self.name, about=owner.seat, options=list(left),
@@ -990,10 +991,6 @@ class Hermit(Skill):
 AURA_MAX = 4
 
 
-def _basics(game, p) -> list[int]:
-    return [c.id for c in p.hand if game.card_def(c).type == CardType.BASIC]
-
-
 class AuraFarmer(Skill):
     """Locked. When your turn ends, if you didn't use or play a Strike this turn, gain 1 Aura
     token (at most 4)."""
@@ -1024,6 +1021,7 @@ class DoNothingWin(ActiveSkill):
     def activate(self, game, owner, cards, targets) -> Gen:
         game.set_token(owner.seat, "aura", owner.tokens.get("aura", 0) - 1)
         ids = game._take_from_pile(2)
+        game.held.update(ids)  # (a draw set off by taking one must not take the other)
         cid = yield from game.ask(
             ChooseCardRequest(seat=owner.seat, reason=self.name, options=list(ids),
                               shown=[game.cards[i].to_dict() for i in ids])
@@ -1068,16 +1066,24 @@ class WhatsUpBeijing(ActiveSkill, Skill):
         return 99 if owner.tokens.get("beijing") else 0
 
 
-class Communism(_Conversion):
-    """Once per turn, you may use a red basic card as a Bountiful Harvest."""
+class Communism(Skill):
+    """Locked. Whenever another player gains cards in any way (after the opening deal), if you
+    have fewer hand cards than your HP, draw 1 card."""
 
     name = "communism"
-    as_name = "harvest"
-    per_turn = 1
-    in_response = False
+    locked = True
+    events = (Event.CARDS_MOVED,)
 
-    def cards(self, game, owner):
-        return [c.id for c in owner.hand if c.is_red and game.card_def(c).type == CardType.BASIC]
+    def can_trigger(self, game, owner, event, moved):
+        return (
+            moved.to == Zone.HAND and moved.owner != owner.seat and moved.reason != "deal"
+            # (taking back a card of their own, e.g. their equipment, isn't gaining one)
+            and any(seat != moved.owner for _, seat in moved.sources)
+            and len(owner.hand) < owner.hp
+        )
+
+    def on_trigger(self, game, owner, event, moved) -> Gen:
+        yield from game.draw(owner.seat, 1, reason=self.name)
 
 
 class Sharing(ActiveSkill):
@@ -1261,20 +1267,19 @@ class Slippery(Skill):
             game.set_token(owner.seat, "slippery", 0)
 
 
-def _has_horse(game, p) -> bool:
-    return any(game.equip_in(p, slot) is not None for slot in (EquipSlot.PLUS_HORSE, EquipSlot.MINUS_HORSE))
+class LiveByTheSword(_Conversion):
+    """You may discard a weapon card (in your hand or equipped) to use it as a Peach or a
+    Duel."""
 
+    name = "live_by_the_sword"
+    as_names = ("peach", "duel")
+    equipment = True
 
-class Tesla(ViewAs):
-    """Once per turn, while you have a +1 or -1 Horse equipped, you may use or play any hand
-    card as a Strike or a Dodge."""
-
-    name = "tesla"
-    as_names = ("strike", "dodge")
-    per_turn = 1
-
-    def enabled(self, game, owner):
-        return _has_horse(game, owner)
+    def cards(self, game, owner):
+        return [
+            c.id for c in [*owner.hand, *owner.equips]
+            if getattr(game.card_def(c), "slot", None) == EquipSlot.WEAPON
+        ]
 
 
 class SpaceX(Skill):
@@ -1333,6 +1338,7 @@ class DeepSeek(ActiveSkill):
     def activate(self, game, owner, cards, targets) -> Gen:
         yield from game.discard(owner.seat, cards, reason=self.name)
         ids = game._take_from_pile(3)
+        game.held.update(ids)  # (a draw set off by taking one must not take the others)
         faces = [game.cards[i].to_dict() for i in ids]
         game._log("reveal", reason=self.name, cards=faces)
         cid = yield from game.ask(ChooseCardRequest(seat=owner.seat, reason=self.name, options=list(ids), shown=faces))
@@ -1341,12 +1347,14 @@ class DeepSeek(ActiveSkill):
         rest = [i for i in ids if i != cid and game.location[i][0] == Zone.DRAW_PILE]
         moving = set(rest)
         game.draw_pile[:] = [*(game.cards[i] for i in rest), *(c for c in game.draw_pile if c.id not in moving)]
+        game.held.difference_update(ids)
         game._log("arrange", seat=owner.seat, top=0, bottom=len(rest), reason=self.name)
 
 
 class Distillation(Skill):
-    """Once per turn, after another player uses a trick in their play phase, you may discard a
-    basic hand card to use a copy of that trick yourself (you choose its targets)."""
+    """Once per turn, after another player uses a trick in their play phase, you may discard
+    any 2 cards (hand or equipment) to use a copy of that trick yourself (you choose its
+    targets)."""
 
     name = "distillation"
     per_turn = 1
@@ -1361,18 +1369,20 @@ class Distillation(Skill):
     def can_trigger(self, game, owner, event, use):
         return (
             use.source != owner.seat and game.current == use.source and game.phase == Phase.PLAY
-            and game.skill_ready(owner, self) and bool(_basics(game, owner))
+            and game.skill_ready(owner, self) and len(_owned(owner)) >= 2
             and self._spec(game, owner, use) is not None
         )
 
     def on_trigger(self, game, owner, event, use) -> Gen:
         name = use.card.name
-        cid = yield from game.ask(
-            ChooseCardRequest(seat=owner.seat, reason=self.name, about=owner.seat, options=_basics(game, owner),
-                              optional=True, context={"card": name, "source": use.source})
-        )
-        if cid is None:
+        context = {"card": name, "source": use.source}
+        if not (yield from game.ask(ConfirmRequest(seat=owner.seat, reason=self.name, about=use.source, context=context))):
             return
+        paid = yield from game.ask(
+            DiscardRequest(seat=owner.seat, count=2, options=_owned(owner), reason=self.name,
+                           about=use.source, context=context)
+        )
+        paid = list(paid)
         spec = self._spec(game, owner, use)
         if spec is None:
             return
@@ -1391,9 +1401,9 @@ class Distillation(Skill):
                 break
             targets.append(pick)
         game.note_skill_used(owner, self)
-        card = game.make_virtual(name, [cid], use.card.nature)
+        card = game.make_virtual(name, paid, use.card.nature)
         game._virtual_via[card.id] = self.name
-        yield from game.use_card(owner.seat, card, targets, subcards=[cid])
+        yield from game.use_card(owner.seat, card, targets, subcards=paid)
 
 
 # ================================================================= roster
@@ -1436,8 +1446,8 @@ HEROES: list[Hero] = [
     Hero("chairman", "The Chairman", Q, 4, "male", (AuraFarmer(), DoNothingWin(), WhatsUpBeijing()), custom=True),
     Hero("marks", "Marks", Q, 3, "male", (Communism(), Sharing()), custom=True),
     Hero("donald", "Donald", Q, 4, "male", (Tariffs(), DodgedABullet()), custom=True),
-    Hero("diddy", "Diddy", Q, 4, "male", (BabyOil(),), custom=True),
-    Hero("yilong_ma", "Yilong Ma", Q, 4, "male", (Tesla(), SpaceX()), custom=True),
+    Hero("diddy", "Diddy", Q, 3, "male", (BabyOil(),), custom=True),
+    Hero("yilong_ma", "Yilong Ma", Q, 4, "male", (LiveByTheSword(), SpaceX()), custom=True),
     Hero("mr_liang", "Mr. Liang", Q, 3, "male", (DeepSeek(), Distillation()), custom=True),
 ]
 

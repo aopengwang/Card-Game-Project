@@ -5,7 +5,7 @@ from bots import SimpleBot, SmartBot
 from content.heroes import MODERN
 from content.names import content_info
 from content.standard import STANDARD, new_game
-from engine import Event, GameOver, Phase, Play, Suit
+from engine import Event, GameOver, Phase, Play, Suit, Zone
 from engine.driver import drive, play_game
 from engine.sandbox import set_tokens
 from engine.view import view_for
@@ -85,19 +85,45 @@ def test_whats_up_beijing_needs_a_card_free_turn_and_the_lord():
 # ================================================================= Marks
 
 
-def test_communism_uses_a_red_basic_as_harvest_once_per_turn():
-    g = heroes("marks", None, None, None)
-    r1 = give_where(g, 0, lambda c: c.is_red and c.name == "dodge")
-    r2 = give_where(g, 0, lambda c: c.is_red and c.name == "strike")
-    give_where(g, 0, lambda c: c.is_black and c.name == "strike")
-    give_where(g, 0, lambda c: c.is_red and c.name == "ex_nihilo")  # red, but not basic
-    conv = next(c for c in g.play_conversions(g.players[0]) if c.skill == "communism")
-    assert set(conv.cards) == {r1, r2}
-    drive(g.phase_play(g.players[0]), script(Play(skill="communism", cards=(r1,)), choose_card=lambda r: r.options[0]))
-    use = next(e for e in g.log if e["type"] == "use")
-    assert use["card"]["name"] == "harvest" and use["via"] == "communism"
-    assert all(len(g.players[s].hand) == 1 for s in (1, 2, 3))
-    assert not any(c.skill == "communism" for c in g.play_conversions(g.players[0]))
+def test_communism_draws_when_others_gain_cards_while_short_of_hp():
+    g = heroes(None, "marks", None, None)  # 3 HP
+    drive(g.draw(0, 2), pass_all)
+    assert len(g.players[1].hand) == 1  # once per gain, however many cards it was
+    drive(g.draw(2, 1), pass_all)
+    drive(g.draw(3, 1), pass_all)
+    assert len(g.players[1].hand) == 3
+    drive(g.draw(2, 1), pass_all)
+    assert len(g.players[1].hand) == 3  # not below HP any more
+    g.players[1].hp = 4
+    g.players[1].max_hp = 4
+    drive(g.draw(0, 1), pass_all)
+    assert len(g.players[1].hand) == 4
+    assert [e for e in g.log if e["type"] == "skill" and e["skill"] == "communism"]
+    assert_cards_conserved(g)
+
+
+def test_communism_counts_any_gain_but_not_the_deal_or_his_own():
+    g = heroes(None, "marks", None, None)
+    drive(g.draw(0, 4, reason="deal"), pass_all)
+    assert g.players[1].hand == []  # the opening deal
+    drive(g.draw(1, 1), pass_all)
+    assert len(g.players[1].hand) == 1  # his own draw sets nothing off
+    horse = equip(g, 2, "plus_horse")
+    drive(g.move_cards([horse], Zone.HAND, 2, reason="test"), pass_all)
+    assert len(g.players[1].hand) == 1  # taking back your own card isn't gaining one
+    drive(g.move_cards([horse], Zone.HAND, 3, reason="test"), pass_all)
+    assert len(g.players[1].hand) == 2  # taken from another player
+    assert_cards_conserved(g)
+
+
+def test_a_draw_set_off_by_deepseek_leaves_the_revealed_cards_alone():
+    g = heroes("mr_liang", "marks", None, None)
+    (c,) = give(g, 0, "dodge")
+    a, b, d = (stack_top(g, lambda x, n=n: x.name == n) for n in ("peach", "strike", "duel"))
+    drive(g.phase_play(g.players[0]), script(Play(skill="deepseek", cards=(c,)), choose_card=lambda r: b))
+    assert hand_ids(g, 0) == [b] and len(g.players[1].hand) == 1
+    assert {g.draw_pile[0].id, g.draw_pile[1].id} == {a, d} and not g.held
+    assert_cards_conserved(g)
 
 
 def test_sharing_the_most_gives_the_fewest_a_random_card():
@@ -237,18 +263,35 @@ def test_baby_oil_marks_whoever_hurts_diddy():
 # ================================================================= Yilong Ma
 
 
-def test_tesla_any_hand_card_as_strike_or_dodge_while_a_horse_is_equipped():
+def test_live_by_the_sword_turns_weapons_into_peaches_and_duels():
     g = heroes("yilong_ma", None, None, None)
-    (p,) = give(g, 0, "peach")
-    assert not any(c.skill == "tesla" for c in g.play_conversions(g.players[0]))
-    equip(g, 0, "plus_horse")
-    conv = next(c for c in g.play_conversions(g.players[0]) if c.skill == "tesla")
-    assert conv.as_name == "strike" and conv.cards == (p,)
-    assert g.response_conversions(g.players[0], "dodge")
-    drive(g.phase_play(g.players[0]), script(Play(skill="tesla", cards=(p,), targets=(1,))))
-    assert g.players[1].hp == 3
-    give(g, 0, "ex_nihilo")
-    assert g.response_conversions(g.players[0], "dodge") == []  # once per turn
+    sword = equip(g, 0, "crossbow")
+    (spare,) = give(g, 0, "stone_axe")
+    give(g, 0, "dodge")  # not a weapon
+    me = g.players[0]
+    offered = [(c.as_name, set(c.cards)) for c in g.play_conversions(me) if c.skill == "live_by_the_sword"]
+    assert offered == [("duel", {sword, spare})]  # at full HP there's no Peach to use
+    me.hp -= 1
+    offered = [c.as_name for c in g.play_conversions(me) if c.skill == "live_by_the_sword"]
+    assert offered == ["peach", "duel"]
+    drive(
+        g.phase_play(me),
+        script(
+            Play(skill="live_by_the_sword", cards=(spare,), as_name="peach"),
+            Play(skill="live_by_the_sword", cards=(sword,), targets=(1,), as_name="duel"),
+        ),
+    )
+    uses = [(e["card"]["name"], e["via"]) for e in g.log if e["type"] == "use"]
+    assert uses == [("peach", "live_by_the_sword"), ("duel", "live_by_the_sword")]
+    assert me.hp == me.max_hp and g.players[1].hp == 3 and me.equips == []
+    assert_cards_conserved(g)
+
+
+def test_live_by_the_sword_saves_the_dying():
+    g = heroes("yilong_ma", None, None, None)
+    (w,) = give(g, 0, "crossbow")
+    assert [c.cards for c in g.response_conversions(g.players[0], "peach")] == [(w,)]
+    assert g.response_conversions(g.players[0], "strike") == []
 
 
 def test_spacex_launches_straight_away_for_the_rest_of_the_play_phase():
@@ -346,49 +389,69 @@ def test_deepseek_reveals_three_keeps_one_and_buries_the_rest():
     assert_cards_conserved(g)
 
 
-def test_distillation_copies_another_players_trick_for_a_basic_card():
+def test_distillation_copies_another_players_trick_for_any_two_cards():
     g = heroes(None, "mr_liang", None, None)
-    (b,) = give(g, 1, "dodge")
+    (a,) = give(g, 1, "nullify")
+    horse = equip(g, 1, "plus_horse")
     (x,) = give(g, 0, "ex_nihilo")
     g.phase = Phase.PLAY
-    drive(g.use_card(0, x, []), script(choose_card=lambda r: b))
-    assert drawn(g, "ex_nihilo") == 4 and len(g.players[1].hand) == 2
+    drive(g.use_card(0, x, []), script(confirm=True, discard=[a, horse]))
+    assert drawn(g, "ex_nihilo") == 4 and len(g.players[1].hand) == 2 and g.players[1].equips == []
     copy = [e for e in g.log if e["type"] == "use"][1]
     assert copy["seat"] == 1 and copy["card"]["name"] == "ex_nihilo" and copy["via"] == "distillation"
     (x,) = give(g, 0, "ex_nihilo")  # once per turn
     asked = []
-    drive(g.use_card(0, x, []), script(choose_card=lambda r: asked.append(r)))
+    drive(g.use_card(0, x, []), script(confirm=lambda r: asked.append(r) or False))
     assert asked == []
+    assert_cards_conserved(g)
+
+
+def test_distillation_needs_two_cards():
+    g = heroes(None, "mr_liang", None, None)
+    give(g, 1, "dodge")
+    (x,) = give(g, 0, "ex_nihilo")
+    g.phase = Phase.PLAY
+    asked = []
+    drive(g.use_card(0, x, []), script(confirm=lambda r: asked.append(r) or True))
+    assert asked == []
+
+
+def test_distillation_of_a_delayed_trick_places_one_card_and_discards_the_other():
+    g = heroes(None, "mr_liang", None, None)
+    a, b = give(g, 1, "dodge", "strike")
+    (x,) = give(g, 0, "indulgence")
+    g.phase = Phase.PLAY
+    drive(g.use_card(0, x, [2]), script(confirm=True, discard=[a, b], choose_player=lambda r: 3))
+    assert [c.id for c in g.players[3].judge] == [a] and g.judge_name(g.cards[a]) == "indulgence"
+    assert g.cards[b] in g.discard_pile
+    assert_cards_conserved(g)
 
 
 def test_distillation_picks_its_own_targets():
     g = heroes(None, "mr_liang", None, None)
-    (b,) = give(g, 1, "strike")
+    a, b = give(g, 1, "strike", "strike")
     give(g, 3, "peach")
     (d,) = give(g, 2, "dodge")
     (sn,) = give(g, 0, "snatch")
     g.phase = Phase.PLAY
     players = []
 
-    def card(req):
-        return b if req.reason == "distillation" else req.default()
-
     def player(req):
         players.append(req.options)
         return 2
 
-    drive(g.use_card(0, sn, [3]), script(choose_card=card, choose_player=player))
+    drive(g.use_card(0, sn, [3]), script(confirm=True, discard=[a, b], choose_player=player))
     assert players == [[2, 0]]  # within Liang's own reach (seat 3 has nothing left)
     assert hand_ids(g, 1) == [d] and g.players[2].hand == []
 
 
 def test_distillation_only_in_the_users_play_phase():
     g = heroes(None, "mr_liang", None, None)
-    give(g, 1, "dodge")
+    give(g, 1, "dodge", "strike")
     (x,) = give(g, 0, "ex_nihilo")
     g.phase = Phase.DISCARD
     asked = []
-    drive(g.use_card(0, x, []), script(choose_card=lambda r: asked.append(r)))
+    drive(g.use_card(0, x, []), script(confirm=lambda r: asked.append(r) or False))
     assert asked == []
 
 

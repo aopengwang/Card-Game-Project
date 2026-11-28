@@ -10,12 +10,12 @@ from engine import Phase, Play, Suit
 from engine.driver import drive, play_game
 from engine.view import view_for
 
-from .helpers import L, R, S, Y, assert_cards_conserved, equip, give, give_where, pass_all, stack_top
+from .helpers import L, R, S, Y, assert_cards_conserved, equip, give, give_where, level_lord, pass_all, stack_top
 from .test_heroes import first, script
 
 
 def battle(seed=0, roles=(L, Y, R, S)):
-    return new_game(len(roles), seed, list(roles), battle=True)
+    return level_lord(new_game(len(roles), seed, list(roles), battle=True))
 
 
 def strike(g, seat, nature="normal") -> int:

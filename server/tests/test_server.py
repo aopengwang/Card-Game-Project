@@ -575,7 +575,7 @@ def test_test_room_fills_with_passive_bots_and_changes_the_table():
 
         await room.handle(host, h.conn, {"type": "test", "action": "hero", "seat": 0, "hero": "zhou_yu"})
         p = game.players[0]
-        assert p.hero == "zhou_yu" and p.hp == p.max_hp == HERO_MAP["zhou_yu"].max_hp  # (4 players: no Lord bonus)
+        assert p.hero == "zhou_yu" and p.hp == p.max_hp == HERO_MAP["zhou_yu"].max_hp + 1  # the Lord's extra HP
         await room.handle(host, h.conn, {"type": "test", "action": "hp", "seat": 0, "hp": 1})
         await room.handle(host, h.conn, {"type": "test", "action": "card", "seat": 0, "name": "peach", "suit": "heart"})
         await asyncio.sleep(0.05)

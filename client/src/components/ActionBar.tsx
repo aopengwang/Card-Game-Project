@@ -180,11 +180,11 @@ export function ActionBar({ request, view, sel, setSel, name, waitingText }: Pro
           <>
             {r.conversions.map((c) => (
               <SealButton
-                key={c.skill}
+                key={`${c.skill}:${c.as_name}`}
                 char={sealFor(c.skill)}
                 label={t("act.convert", { skill: reasonTitle(c.skill), card: cardTitle(c.as_name) })}
-                active={skillOn(c.skill)}
-                onClick={() => setSel(chooseSkill(sel, c.skill))}
+                active={sel.mode?.type === "skill" && sel.mode.skill === c.skill && sel.mode.as === c.as_name}
+                onClick={() => setSel(chooseSkill(sel, c.skill, c.as_name))}
               />
             ))}
             {r.skills.map((sk) => (

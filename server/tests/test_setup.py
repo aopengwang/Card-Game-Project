@@ -16,7 +16,7 @@ def test_role_distribution(n):
     assert g.current == g.lord_seat
 
 
-@pytest.mark.parametrize("n,lord_hp", [(4, 4), (5, 5), (6, 5)])
+@pytest.mark.parametrize("n,lord_hp", [(4, 5), (5, 5), (6, 5)])
 def test_lord_bonus_hp(n, lord_hp):
     g = new_game(n, seed=0)
     lord = g.players[g.lord_seat]

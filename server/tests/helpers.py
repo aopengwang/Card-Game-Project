@@ -8,9 +8,19 @@ from engine import Game, Request, Role, Zone
 L, Y, R, S = Role.LORD, Role.LOYALIST, Role.REBEL, Role.SPY
 
 
+def level_lord(game: Game) -> Game:
+    """Drop the Lord's extra HP at tables of fewer than 5, so rule tests can count from the
+    printed HP (the bonus itself is tested in test_setup)."""
+    if len(game.players) < 5:
+        lord = game.players[game.lord_seat]
+        lord.max_hp -= 1
+        lord.hp = lord.max_hp
+    return game
+
+
 def game4(*roles: Role, seed: int = 0) -> Game:
     roles = roles or (L, Y, R, S)
-    return new_game(len(roles), seed, list(roles))
+    return level_lord(new_game(len(roles), seed, list(roles)))
 
 
 def give(game: Game, seat: int, *names: str) -> list[int]:

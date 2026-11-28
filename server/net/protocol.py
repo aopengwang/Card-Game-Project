@@ -69,6 +69,7 @@ def parse_answer(req: Request, raw: Any) -> Any:
             targets=_ints(raw.get("targets", [])),
             skill=None if skill is None else _str(skill),
             cards=_ints(raw.get("cards", [])),
+            as_name=None if raw.get("as_name") is None else _str(raw["as_name"]),
         )
     if kind == "respond":
         if raw is None:

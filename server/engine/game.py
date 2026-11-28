@@ -172,6 +172,8 @@ class Game:
         # A physical card placed in a judgment area *as* a delayed trick (e.g. a Diamond used
         # as Indulgence) acts as that trick while it stays there: card id -> trick name.
         self.judge_as: dict[int, str] = {}
+        # Cards a skill is looking at on top of the draw pile: draws pass over them.
+        self.held: set[int] = set()
         self.draft = draft
 
         if heroes is not None:
@@ -188,10 +190,10 @@ class Game:
     # ------------------------------------------------------------------ heroes
 
     def _apply_lord_bonus(self) -> None:
-        if len(self.players) >= 5:
-            lord = self.players[self.lord_seat]
-            lord.max_hp += 1
-            lord.hp = lord.max_hp
+        """The Lord has 1 extra HP, at every table size (house rule)."""
+        lord = self.players[self.lord_seat]
+        lord.max_hp += 1
+        lord.hp = lord.max_hp
 
     def assign_hero(self, seat: int, hero_id: str) -> None:
         hero = self.ruleset.heroes[hero_id]
@@ -383,7 +385,7 @@ class Game:
         """Put a delayed trick into `owner`'s judgment area (a converted one goes in as its
         physical card, remembered as the trick)."""
         if card.is_virtual:
-            (cid,) = subcards
+            cid = subcards[0]  # (the first stays; any others spent on it are discarded)
             self.judge_as[cid] = card.name
         else:
             cid = card.id
@@ -429,7 +431,7 @@ class Game:
         for v in self.conversions(p):
             if not v.in_play:
                 continue
-            for as_name in v.names():
+            for as_name in v.names():  # one option per card it can become right now
                 cards = v.cards_as(self, p, as_name)
                 if len(cards) < v.count:
                     continue
@@ -437,7 +439,6 @@ class Game:
                 spec = self._target_spec(p, self.ruleset.card_defs[as_name], whole_hand)
                 if spec is not None:
                     out.append(ConvertOption(v.name, as_name, v.count, tuple(cards), spec[0], spec[2], spec[1]))
-                    break  # one play-phase option per skill
         return out
 
     def response_conversions(self, p: Player, card_name: str) -> list[ConvertOption]:
@@ -539,6 +540,8 @@ class Game:
         self._zone_list(frm, frm_owner).remove(card)
         self._zone_list(to, owner).append(card)
         self.location[card_id] = (to, owner if to in OWNED_ZONES else None)
+        if to != Zone.DRAW_PILE:
+            self.held.discard(card_id)
         if frm == Zone.JUDGE and to != Zone.JUDGE:
             self.judge_as.pop(card_id, None)  # out of the judgment area: an ordinary card again
 
@@ -563,7 +566,7 @@ class Game:
         yield from self.draw(seat, 1, reason="recast")
 
     def _take_from_pile(self, n: int) -> list[int]:
-        if len(self.draw_pile) < n:
+        if len(self.draw_pile) - len(self.held) < n:
             remaining = list(self.draw_pile)
             refill = list(self.discard_pile)
             self.rng.shuffle(refill)
@@ -571,9 +574,10 @@ class Game:
                 self._raw_move(c.id, Zone.DRAW_PILE)
             self.draw_pile[:] = refill + remaining  # old cards stay on top
             self._log("reshuffle", draw_pile=len(self.draw_pile))
-        if len(self.draw_pile) < n:
+        top = [c.id for c in reversed(self.draw_pile) if c.id not in self.held]
+        if len(top) < n:
             raise GameOver(GameResult("draw", []))
-        return [self.draw_pile[-1 - i].id for i in range(n)]
+        return top[:n]
 
     def draw(self, seat: int, n: int, reason: str = "draw") -> Gen:
         ids = self._take_from_pile(n)
@@ -1069,7 +1073,7 @@ class Game:
                 continue
             skill = self.find_skill(p, answer.skill)
             self.note_skill_used(p, skill)  # type: ignore[arg-type]
-            conv = req.conversion(answer.skill)
+            conv = req.conversion(answer.skill, answer.as_name)
             if conv is not None:
                 card = self.make_virtual(conv.as_name, cards, getattr(skill, "as_nature", "normal"))
                 self._virtual_via[card.id] = answer.skill

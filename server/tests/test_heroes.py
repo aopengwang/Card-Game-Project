@@ -9,13 +9,13 @@ from engine import CardType, ChooseHeroRequest, Convert, Event, Phase, Play, Pla
 from engine.driver import drive, play_game
 from engine.view import log_for, view_for
 
-from .helpers import L, R, S, Y, assert_cards_conserved, equip, give, give_where, pass_all, stack_top
+from .helpers import L, R, S, Y, assert_cards_conserved, equip, give, give_where, level_lord, pass_all, stack_top
 
 FIVE = (L, Y, R, R, S)
 
 
 def heroes(*ids, roles=(L, Y, R, S), seed=0):
-    return new_game(len(ids), seed, list(roles), heroes=list(ids))
+    return level_lord(new_game(len(ids), seed, list(roles), heroes=list(ids)))
 
 
 def script(*plays, **by_kind):
@@ -753,4 +753,4 @@ def test_bot_uses_a_black_card_as_dismantle_on_an_enemy():
     b = give_where(g, 0, lambda c: c.is_black and c.name not in ("nullify", "dismantle"))
     equip(g, 2, "eight_trigrams")
     play = SmartBot(1)(g, PlayRequest(seat=0, options={}, conversions=g.play_conversions(g.players[0]), skills=[]))
-    assert play == Play(skill="pirates_raid", cards=(b,), targets=(2,))
+    assert play == Play(skill="pirates_raid", cards=(b,), targets=(2,), as_name="dismantle")
