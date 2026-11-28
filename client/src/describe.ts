@@ -1,4 +1,4 @@
-import { cardText, cardTitle, heroName, reasonTitle, roleName, skillTitle } from "./content";
+import { cardText, heroName, reasonTitle, roleName, skillTitle } from "./content";
 import { joinList, t, tMaybe } from "./i18n";
 import type { Card, LogEntry } from "./types";
 
@@ -115,8 +115,6 @@ export function describe(e: LogEntry, name: (seat: number | null | undefined) =>
       );
     case "voided":
       return line(t("log.voided", { reason: reasonTitle(e.reason), card: cardText(e.card) }), "skill");
-    case "placed":
-      return line(t("log.placed", { name: name(e.seat), card: cardText(e.card), as: cardTitle(e.as_name) }));
     case "chose":
       return line(t("log.chose", { name: name(e.seat), choice: tMaybe(`opt.${e.choice}`) ?? e.choice }));
     case "extra_phase":

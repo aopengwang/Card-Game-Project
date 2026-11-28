@@ -878,8 +878,12 @@ class SmartBot:
             return "discard_two" if p.hp <= 2 or two <= 8 else "take_damage"
         if req.reason == "false_letter":
             return self.rng.choice(req.choices)  # it can't see the cards: any suit is a guess
-        if req.reason == "tariffs":  # one random card beats probably skipping a draw phase
-            return "tariff_give" if "tariff_give" in req.choices else req.choices[0]
+        if req.reason == "tariffs":  # throw away two cards only if they're junk
+            if "tariff_give" not in req.choices:
+                return req.choices[0]
+            owned = [c.id for c in (*p.hand, *p.equips)]
+            two = sum(self._value(game, me, c) for c in self._lowest(game, me, owned, 2))
+            return "tariff_discard" if "tariff_discard" in req.choices and two <= 6 else "tariff_give"
         if req.reason == "twin_swords" and "discard" in req.choices:
             cheap = min((self._value(game, me, c.id) for c in p.hand), default=99)
             return "let_draw" if r >= FRIEND or cheap > 3 else "discard"

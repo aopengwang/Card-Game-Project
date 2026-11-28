@@ -116,27 +116,49 @@ def test_sharing_the_most_gives_the_fewest_a_random_card():
 # ================================================================= Donald
 
 
-def test_tariff_cashed_in_as_a_supply_shortage():
+def test_tariff_cashed_in_as_two_discards():
+    g = heroes("donald", None, None, None)
+    a, b = give(g, 0, "dodge", "strike")
+    drive(g.phase_play(g.players[0]), script(Play(skill="tariffs", targets=(1,))))
+    assert g.players[1].tokens == {"tariff": 1}
+    peach, kept = give(g, 1, "peach", "dodge")
+    horse = equip(g, 1, "plus_horse")
+    paid = []
+
+    def discard(req):
+        paid.append((req.seat, req.count, req.reason))
+        return [a] if req.seat == 0 else [peach, horse]  # Donald pays one, then they pay two
+
+    drive(
+        g.trigger(Event.TURN_START, g.players[1]),
+        script(confirm=True, discard=discard, choose_option="tariff_discard"),
+    )
+    assert paid == [(0, 1, "tariffs"), (1, 2, "tariff_penalty")]
+    assert hand_ids(g, 1) == [kept] and g.players[1].equips == [] and g.players[1].judge == []
+    assert hand_ids(g, 0) == [b] and g.players[1].tokens == {}
+    assert_cards_conserved(g)
+
+
+def test_tariff_offers_two_discards_only_with_two_cards():
     g = heroes("donald", None, None, None)
     a, _ = give(g, 0, "dodge", "strike")
     drive(g.phase_play(g.players[0]), script(Play(skill="tariffs", targets=(1,))))
-    assert g.players[1].tokens == {"tariff": 1}
     give(g, 1, "peach")
-    drive(
-        g.trigger(Event.TURN_START, g.players[1]),
-        script(confirm=True, discard=[a], choose_option="tariff_shortage"),
-    )
-    assert [c.id for c in g.players[1].judge] == [a] and g.judge_name(g.cards[a]) == "supply_shortage"
-    assert g.players[1].tokens == {}
-    assert view_for(g, 0)["players"][1]["judge"][0]["name"] == "supply_shortage"
-    assert_cards_conserved(g)
+    asked = []
+
+    def choose(req):
+        asked.append(req.choices)
+        return "tariff_give"
+
+    drive(g.trigger(Event.TURN_START, g.players[1]), script(confirm=True, discard=[a], choose_option=choose))
+    assert asked == [["tariff_give"]]
 
 
 def test_tariff_cashed_in_as_a_random_card():
     g = heroes("donald", None, None, None)
     a, b = give(g, 0, "dodge", "strike")
     drive(g.phase_play(g.players[0]), script(Play(skill="tariffs", targets=(2,))))
-    (p,) = give(g, 2, "peach")
+    p, q = give(g, 2, "peach", "peach")
     asked = []
 
     def choose(req):
@@ -144,8 +166,8 @@ def test_tariff_cashed_in_as_a_random_card():
         return "tariff_give"
 
     drive(g.trigger(Event.TURN_START, g.players[2]), script(confirm=True, discard=[a], choose_option=choose))
-    assert asked == [["tariff_give", "tariff_shortage"]]
-    assert set(hand_ids(g, 0)) == {b, p} and g.players[2].hand == []
+    assert asked == [["tariff_give", "tariff_discard"]]
+    assert len(g.players[2].hand) == 1 and set(hand_ids(g, 0)) in ({b, p}, {b, q})
 
 
 def test_a_declined_tariff_stays():

@@ -1116,14 +1116,13 @@ class Sharing(ActiveSkill):
             yield from _give(game, giver.seat, taker.seat, game.rng.choice(giver.hand).id, self.name)
 
 
-TARIFF_CHOICES = ("tariff_give", "tariff_shortage")
+TARIFF_CHOICES = ("tariff_give", "tariff_discard")
 
 
 class Tariffs(ActiveSkill, Skill):
     """Once per turn, in your play phase: put a Tariff on another player who has none. At the
     start of their turn, you may remove it and discard a card (hand or equipment). They then
-    choose: give you a random hand card, or take the card you discarded into their judgment
-    area as a Supply Shortage (not if they already have one)."""
+    choose: give you a random hand card, or discard two cards (hand or equipment)."""
 
     name = "tariffs"
     min_targets = max_targets = 1
@@ -1143,8 +1142,8 @@ class Tariffs(ActiveSkill, Skill):
         out = []
         if p.hand:
             out.append("tariff_give")
-        if not game.has_in_judge(p, "supply_shortage"):
-            out.append("tariff_shortage")
+        if len(_owned(p)) >= 2:
+            out.append("tariff_discard")
         return out
 
     def can_trigger(self, game, owner, event, p):
@@ -1171,10 +1170,11 @@ class Tariffs(ActiveSkill, Skill):
         if pick == "tariff_give":
             if p.hand and owner.alive:
                 yield from _give(game, p.seat, owner.seat, game.rng.choice(p.hand).id, self.name)
-        elif game.location[cid][0] == Zone.DISCARD_PILE:
-            game.judge_as[cid] = "supply_shortage"
-            game._log("placed", seat=p.seat, card=game.cards[cid].to_dict(), as_name="supply_shortage", reason=self.name)
-            yield from game.move_cards([cid], Zone.JUDGE, p.seat, reason=self.name)
+        else:
+            ids = yield from game.ask(
+                DiscardRequest(seat=p.seat, count=2, options=_owned(p), reason="tariff_penalty", about=owner.seat)
+            )
+            yield from game.discard(p.seat, list(ids), reason=self.name)
 
 
 class DodgedABullet(Skill):
